@@ -1,0 +1,1256 @@
+{
+  "schema": 1,
+  "mods": [
+    "gitview",
+    "gitview-agents",
+    "gitview-ask",
+    "gitview-diff",
+    "gitview-keys",
+    "gitview-mark",
+    "gitview-sidebar",
+    "gitview-tab",
+    "gitview-tracing",
+    "kanso-arrange",
+    "kanso-chrome",
+    "kanso-containers",
+    "kanso-dojo",
+    "kanso-guard",
+    "kanso-help",
+    "kanso-menu",
+    "kanso-panel",
+    "kanso-prompt",
+    "kanso-prompt-editor",
+    "kanso-send",
+    "kanso-settings",
+    "kanso-sleep",
+    "kanso-spaces",
+    "kanso-spend",
+    "kanso-status",
+    "kanso-strip",
+    "kanso-tabs",
+    "kanso-toast",
+    "local-cloudflare",
+    "local-cloudflare-entry",
+    "local-git-tools",
+    "local-gitview-entry",
+    "local-komari",
+    "local-magpie",
+    "local-sync-bootstrap",
+    "local-tapd",
+    "local-tapd-entry",
+    "local-tool-window",
+    "open-with",
+    "skillshare"
+  ],
+  "files": {
+    ".gitignore": {
+      "sha256": "756d6fa7db6635e47ca258219817c9653073d9121f76aaf3c93ec71a590113bf"
+    },
+    "README.md": {
+      "sha256": "70ff7e9caad4da4f9c999e166c50874d1b14f66d79689f475ac6f1a4f1c012d4"
+    },
+    "keys.json": {
+      "sha256": "33e17b63bbb4cc4cfdb8a902d2467cdb6297d6861db0e5e222111d0241cee899"
+    },
+    "layouts/herdr-skillshare.json": {
+      "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
+    },
+    "layouts/kanso.json": {
+      "sha256": "3e6428a23999fbb25380aaa1eadb338b107c2cd51a535a08fcd298778db3a68e"
+    },
+    "mods/gitview-agents/engine.js": {
+      "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
+    },
+    "mods/gitview-agents/main.js": {
+      "sha256": "f33600825d2978fc816b89ddadfce5cc8f380ef8d43b18276d5c1a1cd6ca8312"
+    },
+    "mods/gitview-agents/mod.json": {
+      "sha256": "8020ede4b387d87a73750cdfd0600efbc391e62469b4457b92c83b31d8b270ee"
+    },
+    "mods/gitview-agents/model.js": {
+      "sha256": "c7fcf3bf36524e8a140237df23765c444f7cc2ef5425773d80704a6ddf961586"
+    },
+    "mods/gitview-agents/shared.js": {
+      "sha256": "a28f9cf33c75d3ef190b2f5e37a29dbac5c3b36f51229fff6ea52c6dc1ef7a2f"
+    },
+    "mods/gitview-agents/telemetry.js": {
+      "sha256": "4ee61657736a912a057b7313e066d5fa5683a5071e09bb982358aba4ffafd4a6"
+    },
+    "mods/gitview-ask/main.js": {
+      "sha256": "45cc275c64ea6b0bf8f3f4350a97c48cc6dcfff18a3807f0b26bde22ba129c73"
+    },
+    "mods/gitview-ask/mod.json": {
+      "sha256": "fe2a84094da74a1b119484c3aa4574bea27c932798f0fb5e30de61e84356143a"
+    },
+    "mods/gitview-diff/actions.js": {
+      "sha256": "d883a8ae9a3c130dc4e8cc9609d6996f58cb80fd42e1ae1fae243be5658fea83"
+    },
+    "mods/gitview-diff/chrome.js": {
+      "sha256": "660112e673d1e94a6a5e77c320920d9b67c02f113b8ec3a435e176b262bc043a"
+    },
+    "mods/gitview-diff/diffview.js": {
+      "sha256": "ecd49da14c1b32500ee2cb951eb6fe5ba3a681dedda930e48741f25d7fa1bb83"
+    },
+    "mods/gitview-diff/editors.js": {
+      "sha256": "da9b612c2393554a5d3f690029fc0f509ef0a8bbc6146c10fca8b1971ad91398"
+    },
+    "mods/gitview-diff/engine.js": {
+      "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
+    },
+    "mods/gitview-diff/keymap.js": {
+      "sha256": "021814cdea8ae03b31382bd5b8b3c1a7cd66d67c4225059b6efc5fcc078a2990"
+    },
+    "mods/gitview-diff/layout.js": {
+      "sha256": "445e01e57590c435f7d1b5fafd40295e85d04efcbfe30b97c9086aac5aa8e642"
+    },
+    "mods/gitview-diff/main.js": {
+      "sha256": "96f097b470f9826399fa5cdb72fb2afe32056b3a531a1eea6ff012572586d145"
+    },
+    "mods/gitview-diff/mod.json": {
+      "sha256": "20fa9f8176b4ae3bc08a9d8153ac0b70a3f4b86c7cef238440aba15f85355272"
+    },
+    "mods/gitview-diff/model.js": {
+      "sha256": "c7fcf3bf36524e8a140237df23765c444f7cc2ef5425773d80704a6ddf961586"
+    },
+    "mods/gitview-diff/modkit.js": {
+      "sha256": "68cf027ca6fe8856415c147086a23d8aed282444dcbf81a1548fa6a4a5e9c4ca"
+    },
+    "mods/gitview-diff/nvim.js": {
+      "sha256": "a1d3949391aec8c838b813c5bce3faf523f38853902940b58504b21673a93324"
+    },
+    "mods/gitview-diff/placement.js": {
+      "sha256": "81d4acdce71a8c70560681dfd68d79e034dc9ab3fe4476f576abf98831c39342"
+    },
+    "mods/gitview-diff/preview.js": {
+      "sha256": "fede2a4c9c844d40f8a7a7f9188ca85835add45418cc37626228aab9861b5f4c"
+    },
+    "mods/gitview-diff/scroller.js": {
+      "sha256": "9aeaad7694fe8cbcbc3cff6065a42211a61ffaaa015d750e7df4d5f918ac6480"
+    },
+    "mods/gitview-diff/shared.js": {
+      "sha256": "a28f9cf33c75d3ef190b2f5e37a29dbac5c3b36f51229fff6ea52c6dc1ef7a2f"
+    },
+    "mods/gitview-diff/telemetry.js": {
+      "sha256": "4ee61657736a912a057b7313e066d5fa5683a5071e09bb982358aba4ffafd4a6"
+    },
+    "mods/gitview-keys/chrome.js": {
+      "sha256": "660112e673d1e94a6a5e77c320920d9b67c02f113b8ec3a435e176b262bc043a"
+    },
+    "mods/gitview-keys/main.js": {
+      "sha256": "3d3ef60f818b4404080ff93e2e84fe7e0d587990631bfe60bde8f3a4255bd963"
+    },
+    "mods/gitview-keys/mod.json": {
+      "sha256": "0535b0ecd73b76c8ab048b57e1559f20a0bf3cd98d3ac0c60b7c3faef4fa053b"
+    },
+    "mods/gitview-keys/model.js": {
+      "sha256": "c7fcf3bf36524e8a140237df23765c444f7cc2ef5425773d80704a6ddf961586"
+    },
+    "mods/gitview-mark/engine.js": {
+      "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
+    },
+    "mods/gitview-mark/main.js": {
+      "sha256": "c55fda5b4bbc69bb2c48b29a07ae98a3849c1c568abbb81d8e5dcef61a0b9ee5"
+    },
+    "mods/gitview-mark/mod.json": {
+      "sha256": "e02897c1f55947038796103d62af0d43b4b7e3c3aba8fa1b2f038ca0b2640058"
+    },
+    "mods/gitview-mark/model.js": {
+      "sha256": "c7fcf3bf36524e8a140237df23765c444f7cc2ef5425773d80704a6ddf961586"
+    },
+    "mods/gitview-mark/modkit.js": {
+      "sha256": "68cf027ca6fe8856415c147086a23d8aed282444dcbf81a1548fa6a4a5e9c4ca"
+    },
+    "mods/gitview-mark/shared.js": {
+      "sha256": "a28f9cf33c75d3ef190b2f5e37a29dbac5c3b36f51229fff6ea52c6dc1ef7a2f"
+    },
+    "mods/gitview-mark/telemetry.js": {
+      "sha256": "4ee61657736a912a057b7313e066d5fa5683a5071e09bb982358aba4ffafd4a6"
+    },
+    "mods/gitview-sidebar/engine.js": {
+      "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
+    },
+    "mods/gitview-sidebar/layout.js": {
+      "sha256": "445e01e57590c435f7d1b5fafd40295e85d04efcbfe30b97c9086aac5aa8e642"
+    },
+    "mods/gitview-sidebar/main.js": {
+      "sha256": "e25f61632185658ced0c091158589906a35de71ef1fcabbfd0e99ca6f2204db8"
+    },
+    "mods/gitview-sidebar/mod.json": {
+      "sha256": "601ae2550bd02aa7ffb957d3676967df7502b40f20c16686e3382a7e46fe2f6e"
+    },
+    "mods/gitview-sidebar/model.js": {
+      "sha256": "c7fcf3bf36524e8a140237df23765c444f7cc2ef5425773d80704a6ddf961586"
+    },
+    "mods/gitview-sidebar/modkit.js": {
+      "sha256": "68cf027ca6fe8856415c147086a23d8aed282444dcbf81a1548fa6a4a5e9c4ca"
+    },
+    "mods/gitview-sidebar/shared.js": {
+      "sha256": "a28f9cf33c75d3ef190b2f5e37a29dbac5c3b36f51229fff6ea52c6dc1ef7a2f"
+    },
+    "mods/gitview-sidebar/telemetry.js": {
+      "sha256": "4ee61657736a912a057b7313e066d5fa5683a5071e09bb982358aba4ffafd4a6"
+    },
+    "mods/gitview-tab/editors.js": {
+      "sha256": "da9b612c2393554a5d3f690029fc0f509ef0a8bbc6146c10fca8b1971ad91398"
+    },
+    "mods/gitview-tab/engine.js": {
+      "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
+    },
+    "mods/gitview-tab/layout.js": {
+      "sha256": "445e01e57590c435f7d1b5fafd40295e85d04efcbfe30b97c9086aac5aa8e642"
+    },
+    "mods/gitview-tab/main.js": {
+      "sha256": "05e3f66868617ead1ff2120e56ce00847fe611b7aa9b78e62b48d813b48cb9bc"
+    },
+    "mods/gitview-tab/mod.json": {
+      "sha256": "db784963f3efcd7ee0630a67a7d49a6d0d9936efc10dbbab4ee12edb45b8777d"
+    },
+    "mods/gitview-tab/model.js": {
+      "sha256": "c7fcf3bf36524e8a140237df23765c444f7cc2ef5425773d80704a6ddf961586"
+    },
+    "mods/gitview-tab/modkit.js": {
+      "sha256": "68cf027ca6fe8856415c147086a23d8aed282444dcbf81a1548fa6a4a5e9c4ca"
+    },
+    "mods/gitview-tab/shared.js": {
+      "sha256": "a28f9cf33c75d3ef190b2f5e37a29dbac5c3b36f51229fff6ea52c6dc1ef7a2f"
+    },
+    "mods/gitview-tab/telemetry.js": {
+      "sha256": "4ee61657736a912a057b7313e066d5fa5683a5071e09bb982358aba4ffafd4a6"
+    },
+    "mods/gitview-tracing/engine.js": {
+      "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
+    },
+    "mods/gitview-tracing/main.js": {
+      "sha256": "abb4d16fca3b7e295954a96c9571c4faaa07f96a39b632c2971d64b9dbc1e77d"
+    },
+    "mods/gitview-tracing/mod.json": {
+      "sha256": "af50030563cd8fa3314c2e9c50dbd0cc368c0897dbca09c1840795a804227049"
+    },
+    "mods/gitview-tracing/model.js": {
+      "sha256": "c7fcf3bf36524e8a140237df23765c444f7cc2ef5425773d80704a6ddf961586"
+    },
+    "mods/gitview-tracing/modkit.js": {
+      "sha256": "68cf027ca6fe8856415c147086a23d8aed282444dcbf81a1548fa6a4a5e9c4ca"
+    },
+    "mods/gitview-tracing/shared.js": {
+      "sha256": "a28f9cf33c75d3ef190b2f5e37a29dbac5c3b36f51229fff6ea52c6dc1ef7a2f"
+    },
+    "mods/gitview-tracing/telemetry.js": {
+      "sha256": "4ee61657736a912a057b7313e066d5fa5683a5071e09bb982358aba4ffafd4a6"
+    },
+    "mods/gitview/actions.js": {
+      "sha256": "d883a8ae9a3c130dc4e8cc9609d6996f58cb80fd42e1ae1fae243be5658fea83"
+    },
+    "mods/gitview/chrome.js": {
+      "sha256": "660112e673d1e94a6a5e77c320920d9b67c02f113b8ec3a435e176b262bc043a"
+    },
+    "mods/gitview/editors.js": {
+      "sha256": "da9b612c2393554a5d3f690029fc0f509ef0a8bbc6146c10fca8b1971ad91398"
+    },
+    "mods/gitview/engine.js": {
+      "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
+    },
+    "mods/gitview/filelist.js": {
+      "sha256": "b4e38723e8dbfd072482ed5005492ea7502c3ee52ed72c097fca3d369a8f239c"
+    },
+    "mods/gitview/history.js": {
+      "sha256": "c9eab6414048862bba5a58cbe12db005f5c81e1b25dda74b479fec0747d13a0d"
+    },
+    "mods/gitview/icons/arrow-left.svg": {
+      "sha256": "dd1494a8de570a9fa5b7a54dd80101b27433d4287712b004d6bfaeea9aeba4d7"
+    },
+    "mods/gitview/icons/branch.svg": {
+      "sha256": "bbf940ed6c52ade3af49a635f8c4fdf17ce2c4431401f42f17de6ef3cc06f8ee"
+    },
+    "mods/gitview/icons/chevron-down.svg": {
+      "sha256": "7345b09168970e85352af7a397ba107fd9d8b12db292ccbc74e2dee1d536efd5"
+    },
+    "mods/gitview/icons/chevron-right.svg": {
+      "sha256": "8c66c30b7ed586a7ee8f801d0eb4aa5a5ee69ea8357cab7eb00f90ee24ba20c5"
+    },
+    "mods/gitview/icons/diff.svg": {
+      "sha256": "f7928832b582692065f7371387011db29c71e68414fa7b4e724a7d70c7c3892e"
+    },
+    "mods/gitview/icons/eye.svg": {
+      "sha256": "78d7cf310cd31e2cbc24d9a640cf29537c9ebd6bec7262301aa7a14855d03429"
+    },
+    "mods/gitview/icons/folder.svg": {
+      "sha256": "eac6c63496c68a0d1a5898d03220fdb063058fa050245eaca759dcd5fa07e55a"
+    },
+    "mods/gitview/icons/history.svg": {
+      "sha256": "2b71bba53aac1cfc8690f6c505e627e8d038f88e516cbb173e905453447ba657"
+    },
+    "mods/gitview/icons/list-tree.svg": {
+      "sha256": "6170761aacefca59f75185d95e64b44982f1769c8d275221d98975ecb88c440d"
+    },
+    "mods/gitview/icons/list.svg": {
+      "sha256": "ee233ea4ec61ba72fa2c5ee4e3dd74c26285fa78777502ea12ce7deec970c4f6"
+    },
+    "mods/gitview/icons/minus.svg": {
+      "sha256": "6847a007eebaea4883eaabe4ac7e49a306f0f32fba58655890cc901f07919112"
+    },
+    "mods/gitview/icons/plus.svg": {
+      "sha256": "24fad69418db84378f6d368e7609d85f89364381a5ecbc7f5c10687d9204f18c"
+    },
+    "mods/gitview/icons/send.svg": {
+      "sha256": "f7c54a2f3043852ee1af009d7592aaab2050f498d4498e8882d92f7353bd7628"
+    },
+    "mods/gitview/icons/undo.svg": {
+      "sha256": "b9ce20499a019676b7ecd229b2556c1b9516d1cae01b99387fdd0732094e7483"
+    },
+    "mods/gitview/icons/x.svg": {
+      "sha256": "3bfde5660f68acb8e7f4a530a9e2e67d47022d4240d1faa9aa2fc86251e046ca"
+    },
+    "mods/gitview/keymap.js": {
+      "sha256": "021814cdea8ae03b31382bd5b8b3c1a7cd66d67c4225059b6efc5fcc078a2990"
+    },
+    "mods/gitview/keys.js": {
+      "sha256": "46f8ed6d8f8f3d81ca03bcd639695f6ab35c96c235aa073d073079d0aba74130"
+    },
+    "mods/gitview/layout.js": {
+      "sha256": "445e01e57590c435f7d1b5fafd40295e85d04efcbfe30b97c9086aac5aa8e642"
+    },
+    "mods/gitview/listview.js": {
+      "sha256": "62a38dd342a58cc5ce2b49650ff57b35c00ab87859bd2de007bfee68e8754d64"
+    },
+    "mods/gitview/main.js": {
+      "sha256": "088e4ed2f01df7e19690884fbca2a7542ea0d83426dd4d9a4a52c3b2145c26f6"
+    },
+    "mods/gitview/mod.json": {
+      "sha256": "bfcd9e67413d340122e5504bdb77219e833df1f893ab47da9e3ef48361db8aaa"
+    },
+    "mods/gitview/model.js": {
+      "sha256": "c7fcf3bf36524e8a140237df23765c444f7cc2ef5425773d80704a6ddf961586"
+    },
+    "mods/gitview/modes.js": {
+      "sha256": "c42d586ca044135f1b7de8b40ebcea5a4000e5ddbf8a7aa9b32a2d1a77baddfa"
+    },
+    "mods/gitview/modkit.js": {
+      "sha256": "68cf027ca6fe8856415c147086a23d8aed282444dcbf81a1548fa6a4a5e9c4ca"
+    },
+    "mods/gitview/notesview.js": {
+      "sha256": "57cd163e5e4c1f885cd1c93b0cad08700bbf2e5b800b355c16d245a5a19cf086"
+    },
+    "mods/gitview/notice.js": {
+      "sha256": "9abe284dcee4e5bd085a79e815c11e15488d3514bff405b56612fc9cc1fc74c2"
+    },
+    "mods/gitview/nvim.js": {
+      "sha256": "a1d3949391aec8c838b813c5bce3faf523f38853902940b58504b21673a93324"
+    },
+    "mods/gitview/placement.js": {
+      "sha256": "81d4acdce71a8c70560681dfd68d79e034dc9ab3fe4476f576abf98831c39342"
+    },
+    "mods/gitview/scroller.js": {
+      "sha256": "9aeaad7694fe8cbcbc3cff6065a42211a61ffaaa015d750e7df4d5f918ac6480"
+    },
+    "mods/gitview/shared.js": {
+      "sha256": "a28f9cf33c75d3ef190b2f5e37a29dbac5c3b36f51229fff6ea52c6dc1ef7a2f"
+    },
+    "mods/gitview/telemetry.js": {
+      "sha256": "4ee61657736a912a057b7313e066d5fa5683a5071e09bb982358aba4ffafd4a6"
+    },
+    "mods/kanso-arrange/listkeys.js": {
+      "sha256": "c2491c2944e52319d2832d6a36c41307da652f03599b8ba8fa80397130932197"
+    },
+    "mods/kanso-arrange/main.js": {
+      "sha256": "d74474ac0253814c323cb23766757c37a5d2fbd9cfc86e50c6e31ef7e7183f3d"
+    },
+    "mods/kanso-arrange/mod.json": {
+      "sha256": "18106d469f4416c3b7b031b78f8c7e36a7e4824b60bc658fcd1b871ddca955e5"
+    },
+    "mods/kanso-arrange/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-arrange/resume.js": {
+      "sha256": "ffa74607213774f528f21f20d346acb0f5318682d9291ab60cfc8c3947192039"
+    },
+    "mods/kanso-arrange/store.js": {
+      "sha256": "879a48c4661c6504147b60238682bdcb900a8da5ebd462da07e0e584345dd8d1"
+    },
+    "mods/kanso-arrange/tabkit.js": {
+      "sha256": "462bb11351f7d1d43bbfe5f7fb421a24dc4b2927f0b8ea0fe53a626c8ef94907"
+    },
+    "mods/kanso-chrome/icons/branch.svg": {
+      "sha256": "18728f77acb2aa241f3250b06d5c33a428123966083bf10a56c544ab03ade159"
+    },
+    "mods/kanso-chrome/icons/changes.svg": {
+      "sha256": "26ec15b5b9caa20de8fbd4e0aa8b017ecfebfc241fc0c17cf856c99e7a0753e7"
+    },
+    "mods/kanso-chrome/icons/chart.svg": {
+      "sha256": "cb406aae7aff46c1f625b46cf67b01c6bcb1e8006b49ca0ff718106977c0ebb9"
+    },
+    "mods/kanso-chrome/icons/check.svg": {
+      "sha256": "d86b7109fc2345560c295d3e0d2141e3d5cf7f1bc6a7f13e09af15736e3049b3"
+    },
+    "mods/kanso-chrome/icons/chevron-down.svg": {
+      "sha256": "be2f2e86753c4c6bc19b1cc196611b18597cc7a553580ed2bdf80f26a5e2440d"
+    },
+    "mods/kanso-chrome/icons/chevron-left.svg": {
+      "sha256": "079e014e8966a1ff8b93c9deed9ac7b7f5c82af7a522527868bf4383706311ca"
+    },
+    "mods/kanso-chrome/icons/chevron-right.svg": {
+      "sha256": "280d2c796344a22fb6cb7086edc90868a27c7812405cffb9be66a3c5835aa898"
+    },
+    "mods/kanso-chrome/icons/clock.svg": {
+      "sha256": "c436a06b0a6f0113c8c4fcf6c091235d6c5eeec5a7d62f06efc850b8da1e1f36"
+    },
+    "mods/kanso-chrome/icons/close.svg": {
+      "sha256": "5671dc734fb6b4dccfa18a9180f73c298191d829d1bb6ab877c54f7403cd98c6"
+    },
+    "mods/kanso-chrome/icons/container.svg": {
+      "sha256": "76848df8d5ce0eecb07f70a17b0911bdf5aae008f9b8c56bacae1b01fae89c3d"
+    },
+    "mods/kanso-chrome/icons/copy.svg": {
+      "sha256": "29121869b9a56a18c598fc36d14ddfb3bd65b8e89477d4a49075440dce58920c"
+    },
+    "mods/kanso-chrome/icons/edit.svg": {
+      "sha256": "adbb9306a466db97310a6c321b6f4812512c05cbc0f3a625d1646a50287c4d25"
+    },
+    "mods/kanso-chrome/icons/enso-idle.svg": {
+      "sha256": "461bc124f78f69a90d861c77f694d89d662f9941b02f8c2e88aac699b7f0d825"
+    },
+    "mods/kanso-chrome/icons/enso.svg": {
+      "sha256": "2559b121f4df5ccca397c1fb340d08231f8a250e633836b7d37a4d0977735f03"
+    },
+    "mods/kanso-chrome/icons/eye.svg": {
+      "sha256": "17b516e5e9405dbe2d79f21e4ebf65107d3bd50f7f501682540ee3b53ff84c01"
+    },
+    "mods/kanso-chrome/icons/file-text.svg": {
+      "sha256": "b00717747452168438e35e9ec6828e779bcace9497e3f6dc63f7a618a80cf4f4"
+    },
+    "mods/kanso-chrome/icons/file.svg": {
+      "sha256": "aad5bc0712faa95774727b83b9b7d1bc3ff28d781a838fc7693b9c9ae7383a4b"
+    },
+    "mods/kanso-chrome/icons/folder-plus.svg": {
+      "sha256": "02f140d3f19eb3a636cd1f4ca12ef0e01f6b89d71a75b60b3bc02469aac7340a"
+    },
+    "mods/kanso-chrome/icons/folder.svg": {
+      "sha256": "712f2d5e98ef0126d4fd077f1bf872083b7d9dd1127914c376cc80c2e0ce1b9b"
+    },
+    "mods/kanso-chrome/icons/grip-vertical.svg": {
+      "sha256": "4f8057a0ea694a518c421c14a2f6a18ae08efc96190cabcc9ef60263c8aa3a87"
+    },
+    "mods/kanso-chrome/icons/help.svg": {
+      "sha256": "9bad0b604278fa27ea145229c3062c0e7d8288e1651622802d5054335283340e"
+    },
+    "mods/kanso-chrome/icons/layers.svg": {
+      "sha256": "88091fae958598e3c481b27452b3b042fbfc1b607431ba9007ff9851f6952043"
+    },
+    "mods/kanso-chrome/icons/memory.svg": {
+      "sha256": "8e2d2a3bd686e976b7c6f9353fa2c409502cec382023b370a37e7b11f9892b6e"
+    },
+    "mods/kanso-chrome/icons/message.svg": {
+      "sha256": "b67278c170d5bc6a474a3ad9163f3f89d9b80a2b86f8f8d1f087053cc82d704a"
+    },
+    "mods/kanso-chrome/icons/monitor.svg": {
+      "sha256": "3d220570dfba4d60c28f88185b9ecd40e3efd1efe632be60f64de7b5dcb32c53"
+    },
+    "mods/kanso-chrome/icons/moon.svg": {
+      "sha256": "94f8e5101ecc101395311b632c6877e669bad30722db827529454e12e4b58d6c"
+    },
+    "mods/kanso-chrome/icons/more-vertical.svg": {
+      "sha256": "93b6b2931a75f067eb30ce6b5e3b8177e99a7c93dc3aa5d9bfa621f72ffeb1bb"
+    },
+    "mods/kanso-chrome/icons/open-with.svg": {
+      "sha256": "7ee41f5011bca1a8fe92b5dbcf6c5b9554dbdc2f5b4354e6fc6c15a2f4184aa7"
+    },
+    "mods/kanso-chrome/icons/pin.svg": {
+      "sha256": "dcf0024d0bade94a86aeed8779b9805a0f8c50e907c0ab8900e4aa38a669b78f"
+    },
+    "mods/kanso-chrome/icons/plug.svg": {
+      "sha256": "78224d44d1940058644e03b7736e7ad7325db9fbd0b6a271da0424a2fa9f1c60"
+    },
+    "mods/kanso-chrome/icons/plus.svg": {
+      "sha256": "109da7afa021037ac0278aa9f5e72fd53e2fa2ea1f8ea32fbf78e7d98e6301e6"
+    },
+    "mods/kanso-chrome/icons/pull-request.svg": {
+      "sha256": "3594dde4991e17f2e4ca3f05c6ded46a6e781f230e5ccaa2d9706919617cce18"
+    },
+    "mods/kanso-chrome/icons/pulse.svg": {
+      "sha256": "4d71bc863cc08ce78d9a0d04ea2994d16fdfece173685baeb5e69103010ae1d1"
+    },
+    "mods/kanso-chrome/icons/refresh.svg": {
+      "sha256": "13bf57a34295ff9aeb3b874a6264979288d4b7f0e45fedc076ecb16f9764931e"
+    },
+    "mods/kanso-chrome/icons/search.svg": {
+      "sha256": "8f10a13b468aac4774e9e56091886ade9f3666ef79e9ed0a948e3369c4db5232"
+    },
+    "mods/kanso-chrome/icons/send.svg": {
+      "sha256": "17ee5c0dc0e13b37e99376979cd9fd89113c3e7dc53882dbd8ebfcfc61031360"
+    },
+    "mods/kanso-chrome/icons/server.svg": {
+      "sha256": "5f8bac73631c5ca0e87978cc52b461998d3100fb9c89fba85e787b9e4dfb26c5"
+    },
+    "mods/kanso-chrome/icons/settings.svg": {
+      "sha256": "2f8dba8fb2a34431d93f83409b1058e95bf8cf3a54906f90d534a2d1a814b6e2"
+    },
+    "mods/kanso-chrome/icons/share.svg": {
+      "sha256": "bbc432635d5b4ff94d4b9beef7f72d830aadcb299ac24faa2b0a4d1c175d8000"
+    },
+    "mods/kanso-chrome/icons/sidebar.svg": {
+      "sha256": "1e5a8f433ad95e8f78ad45a228e73aa969e06c1c12f9694435a329c87befa63d"
+    },
+    "mods/kanso-chrome/icons/sort.svg": {
+      "sha256": "fd0e9739e10a467c72a43dbbae8a7244cc3b4d04435b126fedc630e4703dddb4"
+    },
+    "mods/kanso-chrome/icons/split-down.svg": {
+      "sha256": "843f8463311189917e66d577419fda46b5db0b8f0f3521b6903611325271cdf5"
+    },
+    "mods/kanso-chrome/icons/split-right.svg": {
+      "sha256": "eb4ac2cc28b5a1796fa0f82e16ffd469b5e2c730d5cd81481765aebefa662a8c"
+    },
+    "mods/kanso-chrome/icons/sun.svg": {
+      "sha256": "632bc08ed4b9cb65aee0c096d4f9e5e74d2fece3090926b9d1b37f4c1da5b50c"
+    },
+    "mods/kanso-chrome/icons/tag.svg": {
+      "sha256": "5579cec716be2be4dae8d65e0b2ee3f7ceca2f3a84b6cad3c48225f2ea3cc736"
+    },
+    "mods/kanso-chrome/icons/trophy.svg": {
+      "sha256": "a4f175d17947d15b3b74a1ac6aee981826479c0cd06f09ce6f744781b23f475e"
+    },
+    "mods/kanso-chrome/icons/undo.svg": {
+      "sha256": "993f1941f3e64d13b1e404ea5284f61629c0e8791c69cf3da2078da150841916"
+    },
+    "mods/kanso-chrome/icons/unzoom.svg": {
+      "sha256": "9fab9d799fae4b480cf828b00badf05cf3f624fb77839b46600ad901f2cb1e68"
+    },
+    "mods/kanso-chrome/icons/user-plus.svg": {
+      "sha256": "e02157c6d82988117a5cef9c2a542673bed1661eb25efb49f2892044be8df6ef"
+    },
+    "mods/kanso-chrome/icons/working.svg": {
+      "sha256": "87c9efca301ae16c452f6063d41c75704cd8955dbff648bd0d1eba056110239c"
+    },
+    "mods/kanso-chrome/icons/worktree.svg": {
+      "sha256": "046ac232d266b49f9dbbf5127e301149ac3500a20f42540c1435f0d55f292fe4"
+    },
+    "mods/kanso-chrome/icons/zoom.svg": {
+      "sha256": "255cabc2875eed9aa38195d6b355c14a9550b65343e20e8996b2752282d4197d"
+    },
+    "mods/kanso-chrome/main.js": {
+      "sha256": "e461f7460d466926c6f789754cd5d768a8cd704cb8c4385819fd991650f6f97c"
+    },
+    "mods/kanso-chrome/mod.json": {
+      "sha256": "58d21b1522f57e9ad0b40d6b368ef6d4e86929371272b97cec3be9f681e523bb"
+    },
+    "mods/kanso-chrome/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-chrome/update.js": {
+      "sha256": "75183927c990ad0c20f14f5ac7fbd7848eb3b0752d436e1f63742c7ab1ae5ccd"
+    },
+    "mods/kanso-chrome/version.json": {
+      "sha256": "66da377ca2b82e449d79acf69b8efb005074fb26e59695709352e4e0eb44f5f6"
+    },
+    "mods/kanso-containers/main.js": {
+      "sha256": "9e2a494a7f566ffb0c0e56a31f8b48d7850b175b90128a976a8b73aaf1ab5b86"
+    },
+    "mods/kanso-containers/mod.json": {
+      "sha256": "feec56113564b57ef892c1c78830770ede2f6bd06bfec62e45a1f2164a2d62d4"
+    },
+    "mods/kanso-containers/model.js": {
+      "sha256": "ebbf974e2fc28a25be7a3762091e6ec4d1b33d9bcdff29f9e8f248211eb726fe"
+    },
+    "mods/kanso-containers/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-containers/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/kanso-dojo/card.js": {
+      "sha256": "2b8c95c7a99d0c706be7053758eebae9cf3a8b93a650bf326ce62e86feacccc5"
+    },
+    "mods/kanso-dojo/dojo.js": {
+      "sha256": "f84a8c567d1e2e8b8b412679f4a0e216d8870004dfdd748016567d745445604a"
+    },
+    "mods/kanso-dojo/main.js": {
+      "sha256": "c51889e5ff121edff7e7ad10475ebd760c2d911366fe70c6878852d2d4d8cbbc"
+    },
+    "mods/kanso-dojo/mascot.js": {
+      "sha256": "a0023eca6b6a4d86db83eec12567f91f2a729f2e07df2a46d144eeec0342e9de"
+    },
+    "mods/kanso-dojo/mod.json": {
+      "sha256": "3fe76c269edefc813807f93ef7427c330ccb1d10438dda5a86f7714b0b66a4d6"
+    },
+    "mods/kanso-dojo/pets.js": {
+      "sha256": "4828bd46bfcb34e957c924eb91a887b4a625759062ccb178ce38351de38289f2"
+    },
+    "mods/kanso-dojo/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-dojo/share.js": {
+      "sha256": "4a09a6be423022c15538204120dc9a92f3f9f30942e04fa5f9f5528d04748282"
+    },
+    "mods/kanso-dojo/store.js": {
+      "sha256": "df870eb5361acfd5cb7f22d9d9dff496b48f1f0242a1906baca49ae7ae384e50"
+    },
+    "mods/kanso-dojo/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/kanso-guard/guard.mjs": {
+      "sha256": "cc2c4ac25eae3155ce8c27294e240300e512261b351dd669c0a4abbb121a9607"
+    },
+    "mods/kanso-guard/main.js": {
+      "sha256": "da965fbafe222ef451f6b4dc60a4081a63f2d53697c0c9488521ef15785c37aa"
+    },
+    "mods/kanso-guard/memory-card.js": {
+      "sha256": "b5420773c5cde1a7fce3f41aa97c23d8a0ca7406d6486c4dccc3506c7dc7c4f8"
+    },
+    "mods/kanso-guard/mod.json": {
+      "sha256": "e47ca2ab08508096b700a24c37074a3d67aaeeb760dbebd6d70b50340921cd8c"
+    },
+    "mods/kanso-guard/model.js": {
+      "sha256": "8864533c83275eb9634cb8cbc7613bb1f9b9ab240bec023d81bfcc5b90efc117"
+    },
+    "mods/kanso-guard/procs.js": {
+      "sha256": "29dd52bfda472ce1a35280b81736df38b330b0d76f46a806974091138ca73a1b"
+    },
+    "mods/kanso-guard/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-guard/resume.js": {
+      "sha256": "ffa74607213774f528f21f20d346acb0f5318682d9291ab60cfc8c3947192039"
+    },
+    "mods/kanso-guard/runtime.json": {
+      "sha256": "93ea18640fddffbeec3f707737af3a6753e66040394ff257ee075b1323b588bc"
+    },
+    "mods/kanso-guard/share.js": {
+      "sha256": "4a09a6be423022c15538204120dc9a92f3f9f30942e04fa5f9f5528d04748282"
+    },
+    "mods/kanso-guard/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/kanso-help/keymap.js": {
+      "sha256": "1ed6192cb9de82672da3d14dcbe058febacc84b32228f95f44a593091d28fb85"
+    },
+    "mods/kanso-help/main.js": {
+      "sha256": "5b007c86f6e99f39c3a7aee47406df9304ae487ba857c1cc09cf2848d41d0de6"
+    },
+    "mods/kanso-help/marks.js": {
+      "sha256": "b0b1932865574b02df771461d6af3d39ae2548da2da3e05d1ceb91d447fa042a"
+    },
+    "mods/kanso-help/mascot.js": {
+      "sha256": "a0023eca6b6a4d86db83eec12567f91f2a729f2e07df2a46d144eeec0342e9de"
+    },
+    "mods/kanso-help/mod.json": {
+      "sha256": "4195313b880d2aad88f43279dfe7b92a548e44134b4289736e1e5b85b6bd27b9"
+    },
+    "mods/kanso-help/pets.js": {
+      "sha256": "4828bd46bfcb34e957c924eb91a887b4a625759062ccb178ce38351de38289f2"
+    },
+    "mods/kanso-help/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-help/store.js": {
+      "sha256": "df870eb5361acfd5cb7f22d9d9dff496b48f1f0242a1906baca49ae7ae384e50"
+    },
+    "mods/kanso-help/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/kanso-menu/listkeys.js": {
+      "sha256": "c2491c2944e52319d2832d6a36c41307da652f03599b8ba8fa80397130932197"
+    },
+    "mods/kanso-menu/main.js": {
+      "sha256": "e79a3402a2d7325d9604de9ace8349255af49d6481fd44afb9d2f634338729b1"
+    },
+    "mods/kanso-menu/mod.json": {
+      "sha256": "6877d929b2fe5cbfd78f76b8efceb7221def392821ff6d47db05a5de7bbbdef5"
+    },
+    "mods/kanso-menu/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-panel/blocks.js": {
+      "sha256": "1d951da6f73fda1bb9cd6eb60123b46e88fc5fe753d5f41a6ba91fbd621edfd1"
+    },
+    "mods/kanso-panel/chevron-down.svg": {
+      "sha256": "be2f2e86753c4c6bc19b1cc196611b18597cc7a553580ed2bdf80f26a5e2440d"
+    },
+    "mods/kanso-panel/chevron-right.svg": {
+      "sha256": "280d2c796344a22fb6cb7086edc90868a27c7812405cffb9be66a3c5835aa898"
+    },
+    "mods/kanso-panel/deliver.js": {
+      "sha256": "e1053880546c04af8a53d4ecc8c81f9851a4ca10c5cca7b086d30bea039a4d39"
+    },
+    "mods/kanso-panel/doc.js": {
+      "sha256": "d2ddc0082b8c1c564f8da3d9520126396b31f6ba99a961a1f18c0a05dda2d65f"
+    },
+    "mods/kanso-panel/file.svg": {
+      "sha256": "aad5bc0712faa95774727b83b9b7d1bc3ff28d781a838fc7693b9c9ae7383a4b"
+    },
+    "mods/kanso-panel/files.js": {
+      "sha256": "284f13eee09eb63fe40a831975cba947f6407ba445820ae2c0b4d1a0ca8d716d"
+    },
+    "mods/kanso-panel/folder.svg": {
+      "sha256": "9d7567649afffe0523114fcff3ac9da0504ac24cabc35e0b1dc0a4d90a34beb8"
+    },
+    "mods/kanso-panel/ghchecks.js": {
+      "sha256": "190c370dd50b48815f5b987ddb0cb15daad4d54d08921d8a9cdab33e76447bb4"
+    },
+    "mods/kanso-panel/kdb.js": {
+      "sha256": "35e5ce71844682811eef51b4d6ef7056cdbe3770f6d8bbc818e3972b3657ed15"
+    },
+    "mods/kanso-panel/kinds.js": {
+      "sha256": "e80b2759852f42fc7c862106b471d62249624a8772b213038d0956ea29f2f346"
+    },
+    "mods/kanso-panel/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/kanso-panel/lib.js": {
+      "sha256": "e05217e2d8b4311ac08f53fb2eeed50233d5519704b479b45b29ff5495ecf1f9"
+    },
+    "mods/kanso-panel/look-model.js": {
+      "sha256": "cc9cf99bb22d154524e4ec540c714021c3149b09e7d0710e8b4d65d23377879b"
+    },
+    "mods/kanso-panel/look.js": {
+      "sha256": "7103dc5953e176717286805fdf13dd3a1cff2c56197fcd43c37356e3f176a530"
+    },
+    "mods/kanso-panel/main.js": {
+      "sha256": "d5e94ab927ab64fc7940e6e638613f5bb9fc895d31b2af38360bfd5e7ce4c8f5"
+    },
+    "mods/kanso-panel/marks.js": {
+      "sha256": "b0b1932865574b02df771461d6af3d39ae2548da2da3e05d1ceb91d447fa042a"
+    },
+    "mods/kanso-panel/mod.json": {
+      "sha256": "85ea298e96a48d1e3b06bf969a5130c1bb7826aed5c19f130f4045c448cd2610"
+    },
+    "mods/kanso-panel/ports-card.js": {
+      "sha256": "4156f9f12e3b5b341412c4e609c5ebcf6bf4e1eb482ab6b2835052352347fbe7"
+    },
+    "mods/kanso-panel/ports-model.js": {
+      "sha256": "d8bce61ef1f83016f3e17512ed2b9dcde344541bb245503ce59827797c8a5187"
+    },
+    "mods/kanso-panel/ports.js": {
+      "sha256": "57b7d913b6195e08d5cfca1877700712d578cc93773d359f8df83b47945ff3c0"
+    },
+    "mods/kanso-panel/pr-github.js": {
+      "sha256": "261e2ccf5c1d40402a06ffad705a811fedae7915cc8244fb11e364c3c98c0cc6"
+    },
+    "mods/kanso-panel/pr-inbox.js": {
+      "sha256": "25b3374b8e8cdb30a53037f253eaabb51a46d1a46bb0e4691374eba96d4f9624"
+    },
+    "mods/kanso-panel/pr-providers.js": {
+      "sha256": "41c551925934fdb08e4294ef008706c0fdbca69991bee9265b3ebaf98ade226a"
+    },
+    "mods/kanso-panel/pr-remote.js": {
+      "sha256": "52cbd10e6ac23456311b557dc7fc431fc65e15df5ea33dc746ee2acd7d301f21"
+    },
+    "mods/kanso-panel/pr.js": {
+      "sha256": "d25ed594e671e063447dc73b1d2392c631f0389b2bbee2a5dc8f0413634e13d8"
+    },
+    "mods/kanso-panel/preview.js": {
+      "sha256": "0ca090c3e276de656bb7ccb3925671ab09d897e69c908c5366106c874bdceb67"
+    },
+    "mods/kanso-panel/procs.js": {
+      "sha256": "29dd52bfda472ce1a35280b81736df38b330b0d76f46a806974091138ca73a1b"
+    },
+    "mods/kanso-panel/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-panel/share.js": {
+      "sha256": "4a09a6be423022c15538204120dc9a92f3f9f30942e04fa5f9f5528d04748282"
+    },
+    "mods/kanso-panel/shipped-card.js": {
+      "sha256": "21ba877f8c1ffd596a63839a3ab89ee64fe769d6f11809c52a6eac72e01a5352"
+    },
+    "mods/kanso-panel/shipped-store.js": {
+      "sha256": "8630937d054a514d07b42b5814bbba415fd84e2a5421e464189afa667153230b"
+    },
+    "mods/kanso-panel/shipped.js": {
+      "sha256": "140811a8496e9f607aca203e2caff9bf1b5fbdda86b2db69c5ade2e427b04a61"
+    },
+    "mods/kanso-panel/transcript.js": {
+      "sha256": "5e73d78ef993f46c3a8f31aa120b3ecac7ea8175c1dcad6b9b6bc92361ed7c02"
+    },
+    "mods/kanso-panel/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/kanso-panel/worktrees-store.js": {
+      "sha256": "5824dfcdd882a5cdf68831a1e996d85a99d7e550b175a5d21de1195ee1b8ffbc"
+    },
+    "mods/kanso-panel/worktrees.js": {
+      "sha256": "8a3d73c60124c6672b41cc236ab90f240bfd767bce92c4f8626114b814e08715"
+    },
+    "mods/kanso-prompt-editor/main.js": {
+      "sha256": "e68db2358d3535bafb34aa8d2fed9a850eb1c54c052286f5ed2427e17070e808"
+    },
+    "mods/kanso-prompt-editor/mod.json": {
+      "sha256": "427e815ff986c973411e2892adbb909b36179583bda3b5e057a60b28b3d7137c"
+    },
+    "mods/kanso-prompt-editor/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-prompt/main.js": {
+      "sha256": "bbd0f4166faa056fcfd75328e5ed0501db947a2131ee59098028280ab11e3f88"
+    },
+    "mods/kanso-prompt/mod.json": {
+      "sha256": "b5d8c1d908a8a8b4eee8c047c077ef07731c5ba7c03d8b3b5e772a841b635dd2"
+    },
+    "mods/kanso-prompt/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-send/deliver.js": {
+      "sha256": "e1053880546c04af8a53d4ecc8c81f9851a4ca10c5cca7b086d30bea039a4d39"
+    },
+    "mods/kanso-send/main.js": {
+      "sha256": "1898744931b24e5557e8b2329f56b0b702cff227bdbb8c3720929d34de1ce8d5"
+    },
+    "mods/kanso-send/marks.js": {
+      "sha256": "b0b1932865574b02df771461d6af3d39ae2548da2da3e05d1ceb91d447fa042a"
+    },
+    "mods/kanso-send/mod.json": {
+      "sha256": "983d2173a5dc855bc05f9de138baef6760548802070246c4a0e14da079f0edac"
+    },
+    "mods/kanso-send/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-settings/actions.js": {
+      "sha256": "b0f71b7c62c09ac14a0063998be934a2b97231a16849eeb2b5bdc952eb6f1500"
+    },
+    "mods/kanso-settings/changelog.js": {
+      "sha256": "754e31878cd6697c1e391c1d1eff508e171250fbff7ee9138b287381b486fcae"
+    },
+    "mods/kanso-settings/defaults.js": {
+      "sha256": "7318ef931c6bcbffe78cee6eef70fb851fda24c9b50a4e8a4ff7ebe689c7a95a"
+    },
+    "mods/kanso-settings/main.js": {
+      "sha256": "6664ed07eab776e6ff838522bebd8587a219bc9ee558e08c08aafa4f82a40703"
+    },
+    "mods/kanso-settings/marks.js": {
+      "sha256": "b0b1932865574b02df771461d6af3d39ae2548da2da3e05d1ceb91d447fa042a"
+    },
+    "mods/kanso-settings/mod.json": {
+      "sha256": "9c0738aa9990e1f15332693d713cfa13dd56e2cff1d66616e1eb26c9af9892d9"
+    },
+    "mods/kanso-settings/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-settings/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/kanso-sleep/kdb.js": {
+      "sha256": "35e5ce71844682811eef51b4d6ef7056cdbe3770f6d8bbc818e3972b3657ed15"
+    },
+    "mods/kanso-sleep/listkeys.js": {
+      "sha256": "c2491c2944e52319d2832d6a36c41307da652f03599b8ba8fa80397130932197"
+    },
+    "mods/kanso-sleep/main.js": {
+      "sha256": "bf3e5f1e2007179f2bc63b2173debfb6130b09a26cd10dd1756d012185c4bf25"
+    },
+    "mods/kanso-sleep/mod.json": {
+      "sha256": "01f473b4dd4a111859e4217f4b823cac13e4853b66d0293b1623a69e905ee9cc"
+    },
+    "mods/kanso-sleep/procs.js": {
+      "sha256": "29dd52bfda472ce1a35280b81736df38b330b0d76f46a806974091138ca73a1b"
+    },
+    "mods/kanso-sleep/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-sleep/resume.js": {
+      "sha256": "ffa74607213774f528f21f20d346acb0f5318682d9291ab60cfc8c3947192039"
+    },
+    "mods/kanso-sleep/sleepwork.js": {
+      "sha256": "e084f9f51f35be7acb79f7d198a12dde074b36e6edd20f3c0379e1003c7f7cf6"
+    },
+    "mods/kanso-sleep/store.js": {
+      "sha256": "4f37da3dd622c34beebfe8a5d0b31264888abb4502c859a2ec87651e6f95e206"
+    },
+    "mods/kanso-sleep/tabkit.js": {
+      "sha256": "462bb11351f7d1d43bbfe5f7fb421a24dc4b2927f0b8ea0fe53a626c8ef94907"
+    },
+    "mods/kanso-spaces/agents.js": {
+      "sha256": "a07f70e1b090b34a508e75e26f27980007b54dd86ca2258807637c5e33cd2a1b"
+    },
+    "mods/kanso-spaces/kdb.js": {
+      "sha256": "35e5ce71844682811eef51b4d6ef7056cdbe3770f6d8bbc818e3972b3657ed15"
+    },
+    "mods/kanso-spaces/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/kanso-spaces/listkeys.js": {
+      "sha256": "c2491c2944e52319d2832d6a36c41307da652f03599b8ba8fa80397130932197"
+    },
+    "mods/kanso-spaces/main.js": {
+      "sha256": "9f3353219a3b34a13ad308e9872576ac7fc55aee1a2d27134881c4e74b0a4a76"
+    },
+    "mods/kanso-spaces/marks.js": {
+      "sha256": "b0b1932865574b02df771461d6af3d39ae2548da2da3e05d1ceb91d447fa042a"
+    },
+    "mods/kanso-spaces/mod.json": {
+      "sha256": "c708f6e2cd21b5642d55eec5d90619e639ed3d137f1c603ed67506533f71da16"
+    },
+    "mods/kanso-spaces/panel.js": {
+      "sha256": "15e1d857f191a44d5f1c60385c9ab662c35891088dc4100b05ec01173101f495"
+    },
+    "mods/kanso-spaces/procs.js": {
+      "sha256": "29dd52bfda472ce1a35280b81736df38b330b0d76f46a806974091138ca73a1b"
+    },
+    "mods/kanso-spaces/projects.js": {
+      "sha256": "bc74f2a72e2059aa38403a9b1963c47f7bda782b45ee4344ecf23012e5b01ebf"
+    },
+    "mods/kanso-spaces/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-spaces/resume.js": {
+      "sha256": "ffa74607213774f528f21f20d346acb0f5318682d9291ab60cfc8c3947192039"
+    },
+    "mods/kanso-spaces/roster.js": {
+      "sha256": "8ee894fe7bc4484fa4f125d83a8f49f6a647330c304ee5d9c386923442435d39"
+    },
+    "mods/kanso-spaces/sleepwork.js": {
+      "sha256": "e084f9f51f35be7acb79f7d198a12dde074b36e6edd20f3c0379e1003c7f7cf6"
+    },
+    "mods/kanso-spaces/store.js": {
+      "sha256": "4f37da3dd622c34beebfe8a5d0b31264888abb4502c859a2ec87651e6f95e206"
+    },
+    "mods/kanso-spaces/tabkit.js": {
+      "sha256": "462bb11351f7d1d43bbfe5f7fb421a24dc4b2927f0b8ea0fe53a626c8ef94907"
+    },
+    "mods/kanso-spaces/threads.js": {
+      "sha256": "a2f02c5202b35846653ad4be9e776171c21ff933ad831e7ad72086acdba75414"
+    },
+    "mods/kanso-spend/collector.mjs": {
+      "sha256": "1e31e4d033aa5ff4b73e662c8820304b41d8a5860bd9e764b9a563ea6b8047ab"
+    },
+    "mods/kanso-spend/core/adapters.mjs": {
+      "sha256": "0f6f21cb60554fd37b862bc64b9866597e084e0f94fe92b3dabfa8b680549ca1"
+    },
+    "mods/kanso-spend/core/config.mjs": {
+      "sha256": "9c5ebfd3c10fe2d51369ef25bd972282f7a5c19f99a1e3d566dd005be84118b4"
+    },
+    "mods/kanso-spend/core/costs.mjs": {
+      "sha256": "439609ee6894e703480de1a84979bd0c18c8f3257b5a880af7ffae8ba1a11d93"
+    },
+    "mods/kanso-spend/core/demo.mjs": {
+      "sha256": "18a009bbc76fc4e9270670322efb7c82ee4cf386398ba05e7b2b01139c47a904"
+    },
+    "mods/kanso-spend/core/labels.mjs": {
+      "sha256": "f92786522587e762ada9d5042f9abd6f49ff917111a80852ce6cde96be2c312e"
+    },
+    "mods/kanso-spend/core/pmap.mjs": {
+      "sha256": "ae9e4dc610b21d9bfc9c0336a68b5b9c3a6a98e63e0d076c6a56efba4f2915a0"
+    },
+    "mods/kanso-spend/core/scan.mjs": {
+      "sha256": "5baee8a77af03075bc1575859c0c728215444d751a4c46cd9e164f4ee710278d"
+    },
+    "mods/kanso-spend/core/store.mjs": {
+      "sha256": "061a7eba3113c170706227599c5be44dc0fd53df05536ea9c1f7d1cf9170ab61"
+    },
+    "mods/kanso-spend/core/util.mjs": {
+      "sha256": "3f66e853d22321a3534eed6dd7aa5cf458ed5134ebfd5b9f5ffd1dfde25f1d45"
+    },
+    "mods/kanso-spend/icons/back.svg": {
+      "sha256": "4f875176d1917e09fc3d539746ce46c733513f8eb36d19fcd8e146c06106f2ab"
+    },
+    "mods/kanso-spend/icons/close.svg": {
+      "sha256": "5671dc734fb6b4dccfa18a9180f73c298191d829d1bb6ab877c54f7403cd98c6"
+    },
+    "mods/kanso-spend/icons/refresh.svg": {
+      "sha256": "44b6352c1a84a826976ccbd3465de7fc10aa7ebb8bafd9496acaad0d71cb8ac8"
+    },
+    "mods/kanso-spend/icons/settings.svg": {
+      "sha256": "2f8dba8fb2a34431d93f83409b1058e95bf8cf3a54906f90d534a2d1a814b6e2"
+    },
+    "mods/kanso-spend/icons/share.svg": {
+      "sha256": "bbc432635d5b4ff94d4b9beef7f72d830aadcb299ac24faa2b0a4d1c175d8000"
+    },
+    "mods/kanso-spend/main.js": {
+      "sha256": "c8c4425fd5faef1b2825b12719ad2102f212260e439cb753f3bac263dfeb3b34"
+    },
+    "mods/kanso-spend/mod.json": {
+      "sha256": "6a105a66eac68cd3aa672ff11aeb12f79835edceda9e2e3b4e45183bb164c3dd"
+    },
+    "mods/kanso-spend/presenter.mjs": {
+      "sha256": "246c5f938ff37452a16c45920ee34d83820028ed16c0d7c946bff28d89ad59bc"
+    },
+    "mods/kanso-spend/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-spend/runtime.json": {
+      "sha256": "93ea18640fddffbeec3f707737af3a6753e66040394ff257ee075b1323b588bc"
+    },
+    "mods/kanso-spend/share.js": {
+      "sha256": "4a09a6be423022c15538204120dc9a92f3f9f30942e04fa5f9f5528d04748282"
+    },
+    "mods/kanso-spend/spend-card.js": {
+      "sha256": "90c8c6ab90c2a910b6db2683264be27524345aa8a549f4ce3903381ff1deda16"
+    },
+    "mods/kanso-spend/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/kanso-status/main.js": {
+      "sha256": "738e93a5ac0d2ee33af6b7dc6da7d449d6ebde9423154c966118d30e421d6cc7"
+    },
+    "mods/kanso-status/marks.js": {
+      "sha256": "b0b1932865574b02df771461d6af3d39ae2548da2da3e05d1ceb91d447fa042a"
+    },
+    "mods/kanso-status/mod.json": {
+      "sha256": "58d21b1522f57e9ad0b40d6b368ef6d4e86929371272b97cec3be9f681e523bb"
+    },
+    "mods/kanso-status/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-strip/ghchecks.js": {
+      "sha256": "190c370dd50b48815f5b987ddb0cb15daad4d54d08921d8a9cdab33e76447bb4"
+    },
+    "mods/kanso-strip/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/kanso-strip/main.js": {
+      "sha256": "e9454753b5e7d74c8ef9095ad2fecebf92d0b3eb1e0259a4e57097aaa326b632"
+    },
+    "mods/kanso-strip/marks.js": {
+      "sha256": "b0b1932865574b02df771461d6af3d39ae2548da2da3e05d1ceb91d447fa042a"
+    },
+    "mods/kanso-strip/mod.json": {
+      "sha256": "9921824a5aee4b9da85b739adfd211635d0cf4888065a349da9c4eeb478635a8"
+    },
+    "mods/kanso-strip/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-tabs/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/kanso-tabs/main.js": {
+      "sha256": "323cc04f85a2a39a0d3406010b9d838efa00383f73fff7bef264f0327344c4e6"
+    },
+    "mods/kanso-tabs/markdown-handler.sh": {
+      "sha256": "f0e516bd8705346fbda5b3ade3294053f260990fa525286772e3a310c09c8261"
+    },
+    "mods/kanso-tabs/marks.js": {
+      "sha256": "b0b1932865574b02df771461d6af3d39ae2548da2da3e05d1ceb91d447fa042a"
+    },
+    "mods/kanso-tabs/mod.json": {
+      "sha256": "34b4692c1e0de939458476af46e2f1a3995e37ffe57ebd7ea724420bb8d73a06"
+    },
+    "mods/kanso-tabs/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/kanso-tabs/update.js": {
+      "sha256": "75183927c990ad0c20f14f5ac7fbd7848eb3b0752d436e1f63742c7ab1ae5ccd"
+    },
+    "mods/kanso-toast/main.js": {
+      "sha256": "15c311f52665aac54efa0a671fb7276efc94e8ea5ed77a22244c1d4ee6461ea4"
+    },
+    "mods/kanso-toast/mod.json": {
+      "sha256": "e8e0a91d23a0addf19f9f4dab48f597f252a1d44e5063e4d6ae884a88cbf735d"
+    },
+    "mods/kanso-toast/stack.js": {
+      "sha256": "a10c663d81fac2d35017622940d3b665a9ab4e132b18fafd762fad07fb6c4592"
+    },
+    "mods/local-cloudflare-entry/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/local-cloudflare-entry/main.js": {
+      "sha256": "8568f70b5eb70957fdc51e225eac91a763180684b5400a10d46d8a0972e59ec3"
+    },
+    "mods/local-cloudflare-entry/mod.json": {
+      "sha256": "4e8ae6ea20632b842c811f8c9c90c5bbed9691f5278f8e69d04829c73140e511"
+    },
+    "mods/local-cloudflare/cloudflare.py": {
+      "sha256": "af7f80ded49915603b4ad31c4ef36e3806cae8561559fdc785dc8f0d4ff12ce5"
+    },
+    "mods/local-cloudflare/icon.svg": {
+      "sha256": "f8d0057c50164b41255d362a250be804fc8a4889ee6a75f402dd71f2336bbe3e"
+    },
+    "mods/local-cloudflare/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/local-cloudflare/main.js": {
+      "sha256": "7827b7d9da642da8592c52a4fdc40e3f7a50e9c368a72a9b1872c01097ebb2ae"
+    },
+    "mods/local-cloudflare/mod.json": {
+      "sha256": "5d1ddd06d277aacd4b7ee5bd12e4f5648a201bffd0996dcef89a9cb2983f26bc"
+    },
+    "mods/local-cloudflare/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/local-git-tools/main.js": {
+      "sha256": "b203077d1a086360941dfc9a5e6626beddfab8a9f0b1683dd9f44ab4bb5a7c7c"
+    },
+    "mods/local-git-tools/mod.json": {
+      "sha256": "a9f7b9bf2115ce82ef614ea6aac4a550505e5b2749b71f7e7cc2142687438f56"
+    },
+    "mods/local-gitview-entry/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/local-gitview-entry/main.js": {
+      "sha256": "1782f756ef630102027ee27b484d1781ddefef9bf60bb423c911a5d888a54aff"
+    },
+    "mods/local-gitview-entry/mod.json": {
+      "sha256": "f27c83fb4fd4b98511a7a89070560e2ee6fab9aa31b1b44a48985045a19179b0"
+    },
+    "mods/local-komari/DESIGN.md": {
+      "sha256": "95918e0593f0dfad2da15e10fd353b6c2aad4b1885827b7821dd62178874ed28"
+    },
+    "mods/local-komari/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/local-komari/main.js": {
+      "sha256": "d38efd169e96fcca2aea7872647b429d5b4e8390056bbc3bcfa74998022a8352"
+    },
+    "mods/local-komari/mod.json": {
+      "sha256": "228ca62c4f3fc489e99f5dae6225a6b7d15fc8a2940f8fcb02835915898b81b9"
+    },
+    "mods/local-komari/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/local-magpie/DESIGN.md": {
+      "sha256": "650880f3e73fd9f28aca11ffcf9dea46400f9c19d8a476e98096b09be8beba0b"
+    },
+    "mods/local-magpie/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/local-magpie/library.py": {
+      "sha256": "e5dae1a335d277580a80ef8ce6f0c1e1e5e4899dcd6aaf05d9cbc5f4c7dee9b1"
+    },
+    "mods/local-magpie/magpie.svg": {
+      "sha256": "233d8ccc814b6063a1f47c4a2b9c3aaea935f49709424be969d3de329ec73dab"
+    },
+    "mods/local-magpie/main.js": {
+      "sha256": "2edbfc791527d2bfe00b0d4c233c61b13ad61f03d27af4ac6d2db2adb9a0bca1"
+    },
+    "mods/local-magpie/mod.json": {
+      "sha256": "80957e7e44c27a336ba455cedf0c6ae3da0798c05a487555c0bc63e7850b55ad"
+    },
+    "mods/local-magpie/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/local-sync-bootstrap/main.js": {
+      "sha256": "4fb983f7df6dc3c38bc9f62589a19adbf0dacc5f170c51d692e3ab8d7f6608f2"
+    },
+    "mods/local-sync-bootstrap/mod.json": {
+      "sha256": "7fba8a98d6f547f73bb91483d47eefdf0dcc279c51410a51afd6a79382b7060d"
+    },
+    "mods/local-tapd-entry/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/local-tapd-entry/main.js": {
+      "sha256": "4bd8b528c2a24760d71eda96da378a7efb23851d909034aff600302806d55617"
+    },
+    "mods/local-tapd-entry/mod.json": {
+      "sha256": "f61d1b2eb2366a0e1285457daa7b040c602682fc6a7a650bc4bed4362de8e05f"
+    },
+    "mods/local-tapd/icon.svg": {
+      "sha256": "13f3d23588a232062b46e1d02035c9c9706e62bb06a9d87a1bd187132fd623be"
+    },
+    "mods/local-tapd/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/local-tapd/main.js": {
+      "sha256": "d6649cb6a61ab5ceb10500fee4b8fc56e77d92e633dac2aae73bff4b7c351878"
+    },
+    "mods/local-tapd/mod.json": {
+      "sha256": "64c721e077fbfbb0b04ddc155ba3f8fad1abb713893779bbeff5869873a33126"
+    },
+    "mods/local-tapd/tapd_bridge.py": {
+      "sha256": "3703a52e39d163facad49b5846541844eed11ab43e47ac4dd49473575af50845"
+    },
+    "mods/local-tapd/ui.js": {
+      "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
+    },
+    "mods/local-tool-window/main.js": {
+      "sha256": "0aef809802228b4b308108452546f051c40b907cf6af76dffee691360f794c9f"
+    },
+    "mods/local-tool-window/mod.json": {
+      "sha256": "8a2e01754a50fb4b75421ae6f2f5da3771a3e5d8d2e3cd99e01fe6314d1aa990"
+    },
+    "mods/open-with/kinds.js": {
+      "sha256": "e80b2759852f42fc7c862106b471d62249624a8772b213038d0956ea29f2f346"
+    },
+    "mods/open-with/layout.js": {
+      "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"
+    },
+    "mods/open-with/listkeys.js": {
+      "sha256": "c2491c2944e52319d2832d6a36c41307da652f03599b8ba8fa80397130932197"
+    },
+    "mods/open-with/main.js": {
+      "sha256": "236e4e3af070a0115ea1b9221c7763e4af8b09b0f746356bf271e399cb4380f3"
+    },
+    "mods/open-with/mod.json": {
+      "sha256": "367bcc185bc16c566b8c692d30728e993c39b6f7bcfd3a453ab26fde581c04fc"
+    },
+    "mods/open-with/pure.js": {
+      "sha256": "50693fa885346f8e6bbad903822d40ffeea42d8de6a60949d2b9716486b7d197"
+    },
+    "mods/skillshare/channel.js": {
+      "sha256": "4c3d3d907cfef3c311c2a43dce8c77106b4055314a6194c804f105313d21c7be"
+    },
+    "mods/skillshare/icons/alert.svg": {
+      "sha256": "6a4fb3ca0908ff4e743c7fc93a4c83fda904ef4fea8f1f6db9a5f87320f04015"
+    },
+    "mods/skillshare/icons/both.svg": {
+      "sha256": "d2e16c1e7b944b74a9ca550187f7f5f1a5fc2862c94e0ca4746917eed49cc7e3"
+    },
+    "mods/skillshare/icons/check.svg": {
+      "sha256": "4a45e6843f7e523b1168c1a4482d7613f390dcbdb4c890ce2f443e1b191aa119"
+    },
+    "mods/skillshare/icons/chevron-down.svg": {
+      "sha256": "d31a4e3a0d93fea7d41ce1dd0dcd77615d0c51e369021aa9feca38d62a7dc164"
+    },
+    "mods/skillshare/icons/chevron-right.svg": {
+      "sha256": "a8f5527dac775780f648cf6fb23953dd24d56c331e5596985770aab4f9b7279e"
+    },
+    "mods/skillshare/icons/close.svg": {
+      "sha256": "da6d3d64d9f8228777362dab04a1afe3d7206c1bcdb96829fe2b1bbcd7f48ebf"
+    },
+    "mods/skillshare/icons/external.svg": {
+      "sha256": "0adf9cba3a825c13efdcd6c4eafad2860b08b97192f61085044dc9eb71bd4761"
+    },
+    "mods/skillshare/icons/folder.svg": {
+      "sha256": "abc492fedf0a2f6c58468065cc009ef5ea14ead1920bd4e11ac4924a2d71c979"
+    },
+    "mods/skillshare/icons/git.svg": {
+      "sha256": "28dd09d8ab835c2c134b38afac55ec8111dd5cf3d80f7a04d29c53adac929c4e"
+    },
+    "mods/skillshare/icons/plus.svg": {
+      "sha256": "bce17bc91b519ed053dfde50cc0e2975289acd18959ed2b8c6b62d057e0a8d0c"
+    },
+    "mods/skillshare/icons/ring.svg": {
+      "sha256": "9cfee72b7ebd881a00e67ff522c4f568ea10da1b893b6424b199607e1b02beeb"
+    },
+    "mods/skillshare/icons/search.svg": {
+      "sha256": "108f0cb97170e8acaa0d58d46680128fb0a3117f91410492bfb8739de85a8d05"
+    },
+    "mods/skillshare/icons/shield.svg": {
+      "sha256": "25022c4bb38f6babffe9085c355625026a777ab7ffd100f2b83ffa36faa24467"
+    },
+    "mods/skillshare/icons/sync.svg": {
+      "sha256": "63237db742a0852773fb0a91afc110b60a2e1d394bac8cb157a3dcf618c9a745"
+    },
+    "mods/skillshare/icons/trash.svg": {
+      "sha256": "6340dca13106990f394007c0219e3c913b5b1250c69d03fb07c0da09faa58373"
+    },
+    "mods/skillshare/jobs.js": {
+      "sha256": "9e3facaac8a803ce86db085b04ee20563edbc307e73183ad3ba55dd767653bf1"
+    },
+    "mods/skillshare/loader.js": {
+      "sha256": "42ef1cf242fc764b29a9107ac2a0b3e7f78af91b3e888bbe590ca44c3454eb5e"
+    },
+    "mods/skillshare/main.js": {
+      "sha256": "fa94e5f03fa4d20e626ab36097584f756a4bfebcfe916c655f32ac32befdd8ea"
+    },
+    "mods/skillshare/mark.svg": {
+      "sha256": "a5f96fd590d65bd9f101fbebc9a4845372361d972afbe6601a647ce1227968d9"
+    },
+    "mods/skillshare/mod.json": {
+      "sha256": "cbeda5656b22d1ae5b749e0877d709443b599b0250515d8de7bf5681fa2ccfa8"
+    },
+    "mods/skillshare/model.js": {
+      "sha256": "c1db5bd205cf82d031f31f14316d830a7c412a5d4e67a2e5bf9c36ff111a9d7b"
+    },
+    "mods/skillshare/operations.js": {
+      "sha256": "9c76db9807de56e2344b034173177ce687ae2106324bd58fff0894f4ba6d81e8"
+    },
+    "settings.json": {
+      "sha256": "f1eff3f96a1da7434fb2fb235f22bdbce3d1ba4d68addd57af43aa5bcd32f7d3"
+    },
+    "sync-app.py": {
+      "sha256": "f1c9f66c4258e5eb53fd8afdb608011170e8b923140dd7dc9537ed5ced758e56"
+    },
+    "themes/kanso-day.json": {
+      "sha256": "47149b8493a16c92872653f5e72f49bfd680e4a5d5926694cea0806528a5233c"
+    },
+    "themes/kanso.json": {
+      "sha256": "e54ef62e9ee9786ce2a54d887af18d14fd47b5b3cd10d9c8992ffb41277e8a53"
+    }
+  }
+}
