@@ -148,17 +148,17 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "files",
+                      "id": "cloudflare",
                       "type": "block",
                       "content": {
-                        "mod": "kanso-panel",
+                        "mod": "local-cloudflare",
                         "props": {
-                          "panel": "files"
+                          "role": "panel"
                         }
                       }
                     }
                   ],
-                  "active": "files",
+                  "active": "cloudflare",
                   "size": {
                     "px": 440
                   },
