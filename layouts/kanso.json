@@ -148,17 +148,17 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "komari",
+                      "id": "files",
                       "type": "block",
                       "content": {
-                        "mod": "local-komari",
+                        "mod": "kanso-panel",
                         "props": {
-                          "role": "panel"
+                          "panel": "files"
                         }
                       }
                     }
                   ],
-                  "active": "komari",
+                  "active": "files",
                   "size": {
                     "px": 440
                   },
