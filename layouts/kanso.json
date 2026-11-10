@@ -90,17 +90,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-workbox/ped1ea5b9866cffa7629ed9460e9a01de",
+                  "id": "strip-ped1ea5b9866cffa7629ed9460e9a01de",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-workbox/ped1ea5b9866cffa7629ed9460e9a01de",
+                      "id": "head-ped1ea5b9866cffa7629ed9460e9a01de",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "workbox/ped1ea5b9866cffa7629ed9460e9a01de",
-                          "terminal": "workbox/t6",
+                          "pane": "ped1ea5b9866cffa7629ed9460e9a01de",
+                          "terminal": "t6",
                           "strip": true
                         }
                       },
@@ -109,19 +109,19 @@
                       }
                     },
                     {
-                      "id": "term-workbox/ped1ea5b9866cffa7629ed9460e9a01de",
+                      "id": "term-ped1ea5b9866cffa7629ed9460e9a01de",
                       "type": "block",
                       "content": {
-                        "terminal": "workbox/t6"
+                        "terminal": "t6"
                       }
                     },
                     {
-                      "id": "strip-ruler-workbox/ped1ea5b9866cffa7629ed9460e9a01de",
+                      "id": "strip-ruler-ped1ea5b9866cffa7629ed9460e9a01de",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "workbox/ped1ea5b9866cffa7629ed9460e9a01de"
+                          "ruler": "ped1ea5b9866cffa7629ed9460e9a01de"
                         }
                       },
                       "size": {
@@ -146,13 +146,24 @@
                 {
                   "id": "panel-body",
                   "type": "stack",
-                  "children": [],
+                  "children": [
+                    {
+                      "id": "cloudflare",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-cloudflare",
+                        "props": {
+                          "role": "panel"
+                        }
+                      }
+                    }
+                  ],
+                  "active": "cloudflare",
                   "size": {
                     "px": 440
                   },
                   "min": 280,
                   "max": 900,
-                  "hidden": true,
                   "background": "background",
                   "radius": 8
                 }
