@@ -22,10 +22,22 @@ APP=Path.home()/'.config/herdr-app'
 STATE=Path.home()/'.config/herdr-app-sync/native-state.json'
 ROOT=STATE.parent/'repository'
 MARKER=b'__HERDR_' + b'SYNC_HOME__'
-TEXT={'.js','.mjs','.cjs','.py','.sh','.json','.md','.txt','.svg','.html','.css'}
+TEXT={'.js','.mjs','.cjs','.ts','.py','.sh','.json','.md','.txt','.svg','.html','.css'}
 ASSETS={'.png','.jpg','.jpeg','.webp','.ttf','.otf','.woff','.woff2'}
 OMIT={'node_modules','__pycache__','.git','bin','data','target','dist'}
 SECRET=re.compile(rb'gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9_-]{25,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|Bearer [A-Za-z0-9._-]{30,}')
+COORDINATOR=PurePosixPath('integrations/herdr-project-coordinator')
+
+def coordinator_source(rel):
+    """Only the installed coordinator's program and bundled skill, never its cache or state."""
+    if rel.parts[:2]!=COORDINATOR.parts:return False
+    tail=rel.parts[2:]
+    if tail in (('package.json',),('bun.lock',),('LICENSE',)):return True
+    if len(tail)<2 or tail[0] not in ('src','plugin'):return False
+    if any(x in OMIT for x in tail):return False
+    if any(x.startswith('.') for x in tail):
+        return tail==('plugin','.claude-plugin','plugin.json')
+    return rel.suffix in ('.ts','.json','.md')
 
 def digest(data):return hashlib.sha256(data).hexdigest()
 def read_json(path,default):return json.loads(path.read_text()) if path.exists() else default
@@ -54,6 +66,11 @@ def collect(app):
         if 'layout:'+p.stem not in installed and not p.name.startswith('.'):sources.append(p)
     sources.extend(p for p in (app/'themes').glob('*.json') if p.stem!='atom-one-dark' and p.stem not in installed)
     sources.extend(app/name for name in ('keys.json','settings.json','programs.json','sync-app.py','README.md','.gitignore') if (app/name).exists())
+    coordinator=app.joinpath(*COORDINATOR.parts)
+    if coordinator.exists():
+        for folder in ('src','plugin'):
+            sources.extend(p for p in (coordinator/folder).rglob('*') if p.is_file() and coordinator_source(PurePosixPath(p.relative_to(app).as_posix())))
+        sources.extend(coordinator/name for name in ('package.json','bun.lock','LICENSE') if (coordinator/name).exists())
     files={}
     for p in sources:
         if p.is_symlink():raise RuntimeError('Refusing symlink: '+str(p))
@@ -81,8 +98,9 @@ def validate():
     for name,info in m['files'].items():
         rel=PurePosixPath(name)
         if rel.is_absolute() or '..' in rel.parts or not rel.parts:raise RuntimeError('Unsafe snapshot path')
-        allowed=(rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','sync-app.py','README.md','.gitignore')
-        if not allowed or any((x.startswith('.') and name!='.gitignore') or x in OMIT for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
+        integration=coordinator_source(rel)
+        allowed=integration or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','sync-app.py','README.md','.gitignore')
+        if not allowed or any((x.startswith('.') and name!='.gitignore' and not integration) or x in OMIT for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
         if rel.parts[0]=='mods' and (rel.suffix not in TEXT|ASSETS and rel.name not in ('LICENSE','NOTICE')):raise RuntimeError('Unexpected mod file')
         p=folder.joinpath(*rel.parts)
         if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent!=ROOT.parent):raise RuntimeError('Snapshot contains a symlink')

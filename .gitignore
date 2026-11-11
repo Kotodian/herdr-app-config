@@ -12,6 +12,15 @@
 !/themes/*.json
 !/mods/
 !/mods/**
+!/integrations/
+!/integrations/herdr-project-coordinator/
+!/integrations/herdr-project-coordinator/src/
+!/integrations/herdr-project-coordinator/src/**
+!/integrations/herdr-project-coordinator/plugin/
+!/integrations/herdr-project-coordinator/plugin/**
+!/integrations/herdr-project-coordinator/package.json
+!/integrations/herdr-project-coordinator/bun.lock
+!/integrations/herdr-project-coordinator/LICENSE
 **/gpui-kit.d.ts
 **/herdr.d.ts
 **/jsconfig.json

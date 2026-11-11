@@ -47,10 +47,82 @@
   ],
   "files": {
     ".gitignore": {
-      "sha256": "756d6fa7db6635e47ca258219817c9653073d9121f76aaf3c93ec71a590113bf"
+      "sha256": "cf797af2faba88d8ef0daea31e0c311b92605d9d8c3bd453299777d686a8fbe7"
     },
     "README.md": {
       "sha256": "70ff7e9caad4da4f9c999e166c50874d1b14f66d79689f475ac6f1a4f1c012d4"
+    },
+    "integrations/herdr-project-coordinator/LICENSE": {
+      "sha256": "356dc52c6004af64d2707f2b1ea014f3af8183eade506d901b92888f4ddff221"
+    },
+    "integrations/herdr-project-coordinator/bun.lock": {
+      "sha256": "12d29a6e1bb31af14b0fb814b47b829e9a2460237d0fc51401fb4fc507fdd0cf"
+    },
+    "integrations/herdr-project-coordinator/package.json": {
+      "sha256": "88fa5170a954dea22e7654c8c57d166b487dd72b5f759572d140f046ef27d6d7"
+    },
+    "integrations/herdr-project-coordinator/plugin/.claude-plugin/plugin.json": {
+      "sha256": "f2ef824c461e5d16dad82593baa871d0549090e482430beb7531a0ac927c4f91"
+    },
+    "integrations/herdr-project-coordinator/plugin/skills/coordinator/SKILL.md": {
+      "sha256": "f9d8a7a1dd90bd069d785370d62c9ad1cc3fb235e109768d348cc098dc429dda"
+    },
+    "integrations/herdr-project-coordinator/src/agents.ts": {
+      "sha256": "7bef7b7a0f0fb612095225ed759b1ee7e025a6a5c34976a276910bf7c9c1793a"
+    },
+    "integrations/herdr-project-coordinator/src/board.ts": {
+      "sha256": "996f2bbe3fa9408ce3168bb3b5821a8e9ab966dfaf469a612011614ca4ae5806"
+    },
+    "integrations/herdr-project-coordinator/src/brief.ts": {
+      "sha256": "2078c728a08916a47fffd342700dfd48a4e043f27039c3cad78d299619dbfcc3"
+    },
+    "integrations/herdr-project-coordinator/src/cli.ts": {
+      "sha256": "18ea5bfaa28229a072fa65d05b0ceca6ecbf3d288129b7d679f0d6540fd85616"
+    },
+    "integrations/herdr-project-coordinator/src/config.ts": {
+      "sha256": "6903af9d0d554a06c7f25764d958ed26bc184f3191921afa3d0a9834ddc80a8d"
+    },
+    "integrations/herdr-project-coordinator/src/coordinator.ts": {
+      "sha256": "24d8291b2af82f505c4c352a37da4c029e3d62391df28d4125ed7fc62915b25e"
+    },
+    "integrations/herdr-project-coordinator/src/errors.ts": {
+      "sha256": "435c5ffdbc4cf700f1cfc435d94273376dc74d76a693472b748f8f45221a68f2"
+    },
+    "integrations/herdr-project-coordinator/src/fsutil.ts": {
+      "sha256": "3c9051cff28ada82b830eb1a61e03381cbcdf4a218134f64a302629a93a0c4c1"
+    },
+    "integrations/herdr-project-coordinator/src/git.ts": {
+      "sha256": "ae569921e5f9586373d8049493c13d1aff42eb34a71b401fd0e01eae7f469d62"
+    },
+    "integrations/herdr-project-coordinator/src/hc.ts": {
+      "sha256": "cfdad0d48a1c05435dc21f12d418a64c3b3c9a249fe57f4f1b7b068f748c3c4b"
+    },
+    "integrations/herdr-project-coordinator/src/log.ts": {
+      "sha256": "eb807170deebb53315ebe8d9a04028798137fa6a139fd5c10d82fe8ba5f5a93c"
+    },
+    "integrations/herdr-project-coordinator/src/model.ts": {
+      "sha256": "65ece978556523f5c02e223dec19b1038b440acbc5d3640855860655ffa85cd5"
+    },
+    "integrations/herdr-project-coordinator/src/modinstall.ts": {
+      "sha256": "ffa6d94518fb4e3c3d7f5dc3ab8b4e251b5edc7db3f72e4716b6f7c77f083965"
+    },
+    "integrations/herdr-project-coordinator/src/paths.ts": {
+      "sha256": "8fb562d5e73bd86e03c80cbb2c3aa491718d740d29b25b2c75ce4a22f77a8a68"
+    },
+    "integrations/herdr-project-coordinator/src/remove.ts": {
+      "sha256": "e0decf5e69648d36ed9b73b956c264ff30296aa466b840da45091198bc02e04d"
+    },
+    "integrations/herdr-project-coordinator/src/render.ts": {
+      "sha256": "4ca01993470074e0a712a8751e5b12a4614344f9cfcc353b7836d7d2537616bb"
+    },
+    "integrations/herdr-project-coordinator/src/settings.ts": {
+      "sha256": "53ed1866c8beeb188b187f8b5f042c3d240df96f2f183f6c9028899342e64dae"
+    },
+    "integrations/herdr-project-coordinator/src/store.ts": {
+      "sha256": "229580d3cd343b5955c71fa0a92bd0b9653c2ece3ab4b7a4b0ecde91c0cc7262"
+    },
+    "integrations/herdr-project-coordinator/src/workers.ts": {
+      "sha256": "31ae995f093b5fd8019e72c8e2449e4e31387018fb2443f1c2d57515501b80a1"
     },
     "keys.json": {
       "sha256": "3ab823aae0c2b594f06b1bf87e3279371ffd8b6dd631eb38833019877103ad53"
@@ -1718,7 +1790,7 @@
       "sha256": "f1eff3f96a1da7434fb2fb235f22bdbce3d1ba4d68addd57af43aa5bcd32f7d3"
     },
     "sync-app.py": {
-      "sha256": "e86eb29ab94fed596897718d55cea61d6d424dcae46bd864f53f58385b6d2358"
+      "sha256": "294fbabe311834662f005cae5525ff5fccb41187e35e935a3c2db731064f2f9d"
     },
     "themes/kanso-day.json": {
       "sha256": "47149b8493a16c92872653f5e72f49bfd680e4a5d5926694cea0806528a5233c"
