@@ -1,3 +1,7 @@
+import { sqliteApi } from "./platform-sqlite.js";
+import { localService } from "./platform-host.js";
+import { paths } from "./platform-paths.js";
+import { fileApi } from "./platform-files.js";
 // Kanso's one database, by jlopezlira (https://github.com/jlopezlira/herdr-kanso). Apache-2.0.
 // Agents are keyed by conversation: a terminal's address is reused, and a wake gives it a new one.
 // Every change that needs to hold the row says whether it did, so a window that lost it never acts as if it had.
@@ -109,25 +113,27 @@ export function layoutWithout(layout, ids) {
 }
 
 const CACHE_MS = 30_000;
-class Connections {
-  constructor() { this.files = new Map(); }
-  get(file) {
-    if (!this.files.has(file)) this.files.set(file, { ready: null, chain: Promise.resolve(), queue: [], cache: new Map(), cachedAt: Date.now() });
-    return this.files.get(file);
-  }
+// Files whose schema is in place. Plain values only: a view's queue and cache die with the view.
+class Schemas {
+  constructor() { this.files = new Set(); }
+  has(file) { return this.files.has(file); }
+  made(file) { this.files.add(file); }
 }
-const connections = new Connections();
+const schemas = new Schemas();
 
 export class Kdb {
-  constructor(dir = `${appHome()}/${DIR}`) {
+  constructor(dir = paths.join(appHome(), DIR)) {
     this.dir = dir;
-    this.file = `${dir}/kanso.db`;
-    this.connection = connections.get(this.file);
+    this.file = paths.join(dir, "kanso.db");
+    this.ready = null;
+    this.chain = Promise.resolve();
+    this.queue = [];
+    this.cache = new Map();
+    this.cachedAt = Date.now();
   }
 
-  // Each statement its own argument: -bail then stops at the first failure; in one argument, statements would run on past an error up to the COMMIT.
   execute(text) {
-    return exec("sqlite3", ["-bail", "-cmd", ".timeout 5000", "-json", this.file, ...statements(text)]);
+    return localService(sqliteApi).unchecked(this.file, statements(text), { json: true });
   }
 
   async sql(text) {
@@ -136,32 +142,34 @@ export class Kdb {
     return rowsOfOutput(r.stdout);
   }
 
-  // Ready once; a failure is tried again on the next call, never kept.
+  // Ready once per file; a failure is tried again on the next call, never kept.
   open() {
-    return (this.connection.ready ??= (async () => {
-      const ok = await exec("sqlite3", ["-version"]).catch(() => null);
-      if (ok?.code !== 0) throw new Error("Install sqlite3 to keep the sidebar's state.");
-      await exec("mkdir", ["-p", this.dir]);
-      await this.sql([...statements(SCHEMA), ONE_SLEEP]);
-      // CREATE TABLE IF NOT EXISTS leaves an older table as it was, so later columns are added here.
-      const has = { agents: (await this.sql("PRAGMA table_info(agents);")).map((c) => c.name), sleeps: (await this.sql("PRAGMA table_info(sleeps);")).map((c) => c.name), picture_scans: (await this.sql("PRAGMA table_info(picture_scans);")).map((c) => c.name) };
-      const missing = ADDED.filter(([table, name]) => !has[table].includes(name));
-      if (missing.length) await this.sql(missing.map(([table, name, type]) => `ALTER TABLE ${table} ADD COLUMN ${name} ${type};`).join(""));
-    })().catch((e) => { this.connection.ready = null; throw e; }));
+    return (this.ready ??= schemas.has(this.file) ? Promise.resolve() : this.create().then(() => schemas.made(this.file), (e) => { this.ready = null; throw e; }));
+  }
+
+  async create() {
+    const ok = await exec("sqlite3", ["-version"]).catch(() => null);
+    if (ok?.code !== 0) throw new Error("Install sqlite3 to keep the sidebar's state.");
+    await localService(fileApi).mkdir(this.dir);
+    await this.sql([...statements(SCHEMA), ONE_SLEEP]);
+    // CREATE TABLE IF NOT EXISTS leaves an older table as it was, so later columns are added here.
+    const has = { agents: (await this.sql("PRAGMA table_info(agents);")).map((c) => c.name), sleeps: (await this.sql("PRAGMA table_info(sleeps);")).map((c) => c.name), picture_scans: (await this.sql("PRAGMA table_info(picture_scans);")).map((c) => c.name) };
+    const missing = ADDED.filter(([table, name]) => !has[table].includes(name));
+    if (missing.length) await this.sql(missing.map(([table, name, type]) => `ALTER TABLE ${table} ADD COLUMN ${name} ${type};`).join(""));
   }
 
   enqueue(text) {
     return new Promise((resolve, reject) => {
-      this.connection.queue = [...this.connection.queue, { text, resolve, reject }];
-      if (this.connection.queue.length === 1) Promise.resolve().then(() => this.flush());
+      this.queue = [...this.queue, { text, resolve, reject }];
+      if (this.queue.length === 1) Promise.resolve().then(() => this.flush());
     });
   }
 
   flush() {
-    const batch = this.connection.queue;
-    this.connection.queue = [];
+    const batch = this.queue;
+    this.queue = [];
     const work = () => this.sendBatch(batch);
-    this.connection.chain = this.connection.chain.then(work, work);
+    this.chain = this.chain.then(work, work);
   }
 
   async sendBatch(batch) {
@@ -178,9 +186,17 @@ export class Kdb {
     } catch (error) { for (const call of batch) call.reject(error); }
   }
 
+  // Drops a call the host lost, so later calls start afresh instead of waiting behind it.
+  abandon() {
+    this.ready = null;
+    this.queue = [];
+    this.chain = Promise.resolve();
+    this.invalidate();
+  }
+
   invalidate() {
-    this.connection.cache.clear();
-    this.connection.cachedAt = Date.now();
+    this.cache.clear();
+    this.cachedAt = Date.now();
   }
 
   run(text) {
@@ -191,12 +207,12 @@ export class Kdb {
   async read(text) { await this.open(); return this.enqueue(text); }
 
   async cached(text) {
-    if (Date.now() - this.connection.cachedAt >= CACHE_MS) this.invalidate();
-    if (!this.connection.cache.has(text)) {
-      const result = this.read(text).catch((error) => { if (this.connection.cache.get(text) === result) this.connection.cache.delete(text); throw error; });
-      this.connection.cache.set(text, result);
+    if (Date.now() - this.cachedAt >= CACHE_MS) this.invalidate();
+    if (!this.cache.has(text)) {
+      const result = this.read(text).catch((error) => { if (this.cache.get(text) === result) this.cache.delete(text); throw error; });
+      this.cache.set(text, result);
     }
-    return (await this.connection.cache.get(text)).map((row) => ({ ...row }));
+    return (await this.cache.get(text)).map((row) => ({ ...row }));
   }
 
   // Enough to add a remote machine back. hc machine rm forgets it here; its terminals keep running there.
