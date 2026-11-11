@@ -90,17 +90,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-pcb3786ca9831721fc4b69a39b43b4746",
+                  "id": "strip-pc42ae4e2f1223725d9a495238f000020",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-pcb3786ca9831721fc4b69a39b43b4746",
+                      "id": "head-pc42ae4e2f1223725d9a495238f000020",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "pcb3786ca9831721fc4b69a39b43b4746",
-                          "terminal": "t1k",
+                          "pane": "pc42ae4e2f1223725d9a495238f000020",
+                          "terminal": "t1j",
                           "strip": true
                         }
                       },
@@ -109,19 +109,19 @@
                       }
                     },
                     {
-                      "id": "term-pcb3786ca9831721fc4b69a39b43b4746",
+                      "id": "term-pc42ae4e2f1223725d9a495238f000020",
                       "type": "block",
                       "content": {
-                        "terminal": "t1k"
+                        "terminal": "t1j"
                       }
                     },
                     {
-                      "id": "strip-ruler-pcb3786ca9831721fc4b69a39b43b4746",
+                      "id": "strip-ruler-pc42ae4e2f1223725d9a495238f000020",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "pcb3786ca9831721fc4b69a39b43b4746"
+                          "ruler": "pc42ae4e2f1223725d9a495238f000020"
                         }
                       },
                       "size": {
