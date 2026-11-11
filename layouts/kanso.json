@@ -90,17 +90,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-pfa2d5c455d38f2aa255767ae1e643556",
+                  "id": "strip-pe9ed471cecc9badabe85a4e96fc7ef6d",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-pfa2d5c455d38f2aa255767ae1e643556",
+                      "id": "head-pe9ed471cecc9badabe85a4e96fc7ef6d",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "pfa2d5c455d38f2aa255767ae1e643556",
-                          "terminal": "t18",
+                          "pane": "pe9ed471cecc9badabe85a4e96fc7ef6d",
+                          "terminal": "t1d",
                           "strip": true
                         }
                       },
@@ -109,19 +109,19 @@
                       }
                     },
                     {
-                      "id": "term-pfa2d5c455d38f2aa255767ae1e643556",
+                      "id": "term-pe9ed471cecc9badabe85a4e96fc7ef6d",
                       "type": "block",
                       "content": {
-                        "terminal": "t18"
+                        "terminal": "t1d"
                       }
                     },
                     {
-                      "id": "strip-ruler-pfa2d5c455d38f2aa255767ae1e643556",
+                      "id": "strip-ruler-pe9ed471cecc9badabe85a4e96fc7ef6d",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "pfa2d5c455d38f2aa255767ae1e643556"
+                          "ruler": "pe9ed471cecc9badabe85a4e96fc7ef6d"
                         }
                       },
                       "size": {
@@ -133,7 +133,7 @@
                     }
                   ],
                   "size": {
-                    "weight": 1000
+                    "weight": 250
                   },
                   "min": 140,
                   "background": "background",
