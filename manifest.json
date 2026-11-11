@@ -47,7 +47,7 @@
   ],
   "files": {
     ".gitignore": {
-      "sha256": "cf797af2faba88d8ef0daea31e0c311b92605d9d8c3bd453299777d686a8fbe7"
+      "sha256": "eb4162aa0bd1b731e14f4bc7953867e760b7aa7a5eaed13754cc16f976bc7e3a"
     },
     "README.md": {
       "sha256": "70ff7e9caad4da4f9c999e166c50874d1b14f66d79689f475ac6f1a4f1c012d4"
@@ -131,7 +131,7 @@
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
     },
     "layouts/kanso.json": {
-      "sha256": "97e98629c68ab1bd03150b1f0ac91097b09c4b267dfb0cd9f0f5235e97d23451"
+      "sha256": "bda85fa070c0b39e37c330fa93e04ef761e0f2f186325bbb6c02b768794ca86f"
     },
     "mods/agenttrail/agent-claude.svg": {
       "sha256": "1d8de3564ab1604c3d51954cf5b10e18d71c24d55f45d92980951f1d11e48de0"
@@ -1790,7 +1790,10 @@
       "sha256": "f1eff3f96a1da7434fb2fb235f22bdbce3d1ba4d68addd57af43aa5bcd32f7d3"
     },
     "sync-app.py": {
-      "sha256": "f7937d20bc4c511b691e91f2a3a112c57c87eb042761ab7ad9261ac3e040fbf8"
+      "sha256": "1d16e9a1d029a7ea0d7700fad9f1a47a4cd41d32be858e963681f6a116e74c26"
+    },
+    "tests/test_sync_app.py": {
+      "sha256": "b84a9ebc1cfad8460d64692b3c604852e8d14421d4c0a75ec33fb200d3ae9f0b"
     },
     "themes/kanso-day.json": {
       "sha256": "47149b8493a16c92872653f5e72f49bfd680e4a5d5926694cea0806528a5233c"

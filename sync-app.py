@@ -65,7 +65,7 @@ def collect(app):
     for p in (app/'layouts').glob('*.json'):
         if 'layout:'+p.stem not in installed and not p.name.startswith('.'):sources.append(p)
     sources.extend(p for p in (app/'themes').glob('*.json') if p.stem!='atom-one-dark' and p.stem not in installed)
-    sources.extend(app/name for name in ('keys.json','settings.json','programs.json','sync-app.py','README.md','.gitignore') if (app/name).exists())
+    sources.extend(app/name for name in ('keys.json','settings.json','programs.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore') if (app/name).exists())
     coordinator=app.joinpath(*COORDINATOR.parts)
     if coordinator.exists():
         for folder in ('src','plugin'):
@@ -91,23 +91,39 @@ def snapshot(files,mods):
         p=ROOT/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
     (ROOT/'manifest.json').write_text(json.dumps(manifest(files,mods),ensure_ascii=False,indent=2)+'\n')
 
-def validate():
-    folder=ROOT;m=read_json(folder/'manifest.json',{})
+def validate(folder=None):
+    folder=ROOT if folder is None else folder
+    m=read_json(folder/'manifest.json',{})
     if m.get('schema')!=1:raise RuntimeError('Unsupported snapshot manifest')
     files={}
     for name,info in m['files'].items():
         rel=PurePosixPath(name)
         if rel.is_absolute() or '..' in rel.parts or not rel.parts:raise RuntimeError('Unsafe snapshot path')
         integration=coordinator_source(rel)
-        allowed=integration or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','sync-app.py','README.md','.gitignore')
+        allowed=integration or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore')
         if not allowed or any((x.startswith('.') and name!='.gitignore' and not integration) or x in OMIT for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
         if rel.parts[0]=='mods' and (rel.suffix not in TEXT|ASSETS and rel.name not in ('LICENSE','NOTICE')):raise RuntimeError('Unexpected mod file')
         p=folder.joinpath(*rel.parts)
-        if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent!=ROOT.parent):raise RuntimeError('Snapshot contains a symlink')
+        if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent!=folder.parent):raise RuntimeError('Snapshot contains a symlink')
         data=p.read_bytes()
         if digest(data)!=info['sha256'] or SECRET.search(data):raise RuntimeError('Snapshot integrity/secret check failed: '+name)
         files[name]=data
     return m,files
+
+def revision_files(revision):
+    """Read a divergent remote snapshot without checking it out over local commits."""
+    result=subprocess.run(['git','archive','--format=tar',revision],cwd=ROOT,capture_output=True,timeout=120)
+    if result.returncode:raise RuntimeError('Unable to read the remote configuration snapshot')
+    with tempfile.TemporaryDirectory(prefix='herdr-remote-') as directory:
+        folder=Path(directory).resolve()
+        with tarfile.open(fileobj=io.BytesIO(result.stdout),mode='r:') as archive:
+            for member in archive.getmembers():
+                rel=PurePosixPath(member.name)
+                if rel.is_absolute() or '..' in rel.parts or member.issym() or member.islnk():raise RuntimeError('Unsafe remote snapshot archive')
+                if not member.isfile():continue
+                path=folder.joinpath(*rel.parts);path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_bytes(archive.extractfile(member).read())
+        return validate(folder)
 
 def hashes(files):return {k:digest(v) for k,v in files.items()}
 def remember_bases(files):
@@ -379,17 +395,20 @@ def record_status(status,**extra):
     tmp=path.with_suffix('.json.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n');tmp.replace(path)
 
 def auto_sync(app):
+    history_merge_started=False
     try:
         if not STATE.exists():
             _,initial=validate();save_state(initial)
         if git('branch','--show-current')!='main':raise RuntimeError('Expected main branch')
         if git('status','--porcelain','--untracked-files=no'):raise RuntimeError('Repository has pending edits; automatic sync paused')
         git('fetch','origin','main')
-        try:git('merge','--no-edit','--no-gpg-sign','origin/main')
-        except RuntimeError:
-            if (ROOT/'.git/MERGE_HEAD').exists():git('merge','--abort')
-            raise RuntimeError('Git histories conflict; local commits retained for review') from None
-        _,remote=validate();local,_=collect(app);baseline=read_json(STATE,{}).get('files',{})
+        ahead,behind=map(int,git('rev-list','--left-right','--count','HEAD...origin/main').split())
+        if ahead:
+            _,remote=revision_files('origin/main')
+        else:
+            git('merge','--ff-only','origin/main')
+            _,remote=validate()
+        local,_=collect(app);baseline=read_json(STATE,{}).get('files',{})
         resolved=[]
         merged=merge_files(baseline,local,remote,resolved)
         validate_changes(merged,{name:data for name,data in local.items() if remote.get(name)==data},app)
@@ -400,11 +419,19 @@ def auto_sync(app):
             return
         incoming=sum(local.get(name)!=data for name,data in merged.items())
         outgoing=sum(remote.get(name)!=data for name,data in merged.items())
-        if hashes(merged)!=hashes(remote):
+        if ahead and behind:
+            # File-level reconciliation above decided the content. Preserve both histories;
+            # the temporary ours tree is replaced by that validated content before committing.
+            git('merge','--no-commit','--no-ff','--strategy=ours','origin/main')
+            history_merge_started=True
+        _,checkout=validate()
+        if hashes(merged)!=hashes(checkout) or history_merge_started:
             mods=sorted({PurePosixPath(n).parts[1] for n in merged if n.startswith('mods/')})
             snapshot(merged,mods);validate()
             git('add','-A','--','.')
-            if git('diff','--cached','--name-only'):git('commit','-m','Automatically sync Herdr App configuration')
+            if git('diff','--cached','--name-only') or history_merge_started:
+                git('commit','-m','Automatically sync Herdr App configuration')
+            history_merge_started=False
         # Push before applying incoming changes. A failed push leaves the base intact.
         git('push','origin','HEAD:main')
         # Kanso can save a new terminal/panel layout while the push is in flight.
@@ -422,6 +449,7 @@ def auto_sync(app):
         record_status('ok',commit=commit,uploaded_files=outgoing,applied_files=incoming,auto_merged=resolved)
         print(f'Auto sync OK: {outgoing} uploaded, {incoming} applied; {commit[:12]}',flush=True)
     except Exception as e:
+        if history_merge_started and (ROOT/'.git/MERGE_HEAD').exists():git('merge','--abort')
         if isinstance(e,ConfigurationConflict):save_conflicts(e.details)
         record_status('error',error=str(e));raise
 

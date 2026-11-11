@@ -2,6 +2,8 @@
 !/.gitignore
 !/README.md
 !/sync-app.py
+!/tests/
+!/tests/test_sync_app.py
 !/manifest.json
 !/keys.json
 !/settings.json
