@@ -146,25 +146,13 @@
                 {
                   "id": "panel-body",
                   "type": "stack",
-                  "children": [
-                    {
-                      "id": "magpie",
-                      "type": "block",
-                      "content": {
-                        "mod": "local-magpie",
-                        "props": {
-                          "role": "panel",
-                          "at": 1794375165938
-                        }
-                      }
-                    }
-                  ],
-                  "active": "magpie",
+                  "children": [],
                   "size": {
                     "px": 440
                   },
                   "min": 280,
                   "max": 900,
+                  "hidden": true,
                   "background": "background",
                   "radius": 8
                 }
