@@ -627,37 +627,44 @@ export async function cancelTask(idArg: string): Promise<Outcome> {
   return out;
 }
 
-/** Removes a finished task's worktree, only if git says it is clean and merged. Keeps the branch. */
+/** Removes a finished task's terminal and clean, merged checkout, even if the checkout is already gone. Keeps the branch. */
 export async function cleanTask(idArg: string): Promise<Outcome> {
   const { meta, task } = findTask(idArg);
   const id = task.id;
   if (!FINAL_STATES.includes(task.state)) {
     throw new HcoordError(`${id} is ${task.state}; only merged, done, failed or cancelled tasks can be cleaned`);
   }
-  if (!task.worktree) throw new HcoordError(`${id} has no worktree`);
+  const worktree = task.worktree;
+  const checkoutExists = worktree !== undefined && existsSync(worktree);
   const lines: string[] = [];
-  if (existsSync(task.worktree)) {
-    const dirty = dirtyFiles(task.worktree);
-    if (dirty) throw new HcoordError(`${task.worktree} has uncommitted changes; not removing it:\n${dirty}`);
+  if (checkoutExists) {
+    const dirty = dirtyFiles(worktree);
+    if (dirty) throw new HcoordError(`${worktree} has uncommitted changes; not removing it:\n${dirty}`);
     const lanePath = meta.lanes[task.lane]?.path ?? task.repo;
     const { target, merged } = mergedInto(lanePath, task.branch);
     if (!merged) {
       throw new HcoordError(`${task.branch} isn't merged into ${target} in ${lanePath}; not removing the worktree (hcoord task merge ${id})`);
     }
-    const term = ourTerminal(task);
-    if (term) {
-      if (term.state === "live") hcKill(term.address);
-      hcRm(term.address);
-      lines.push(`removed terminal ${term.name} (${term.address})`);
+  }
+  // A manually removed checkout must not leave its worker running, including after an earlier clean.
+  const term = ourTerminal(task);
+  if (term) {
+    if (term.state === "live") {
+      const stopped = hcKill(term.address);
+      if (!stopped.ok) throw new HcoordError(`stopping ${term.name}: ${stopped.error}`);
     }
-    removeWorktree(task.repo, task.worktree);
-    lines.push(`removed worktree ${task.worktree}; branch ${task.branch} kept`);
+    const removed = hcRm(term.address);
+    if (!removed.ok) throw new HcoordError(`removing terminal ${term.name}: ${removed.error}`);
+    lines.push(`removed terminal ${term.name} (${term.address})`);
+  }
+  if (checkoutExists) {
+    removeWorktree(task.repo, worktree);
+    lines.push(`removed worktree ${worktree}; branch ${task.branch} kept`);
   } else {
-    lines.push(`worktree ${task.worktree} was already gone`);
+    lines.push(worktree ? `worktree ${worktree} was already gone` : `${id} has no remaining worktree`);
   }
   await mutate(meta.slug, ({ file, now }) => {
     const t = get(file, id);
-    const worktree = t.worktree;
     delete t.worktree;
     t.updatedAt = now;
     return { result: null, events: [{ type: "task.cleaned", task: id, data: { worktree, branch: t.branch } }] };
