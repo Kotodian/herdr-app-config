@@ -64,8 +64,11 @@
     "integrations/herdr-project-coordinator/plugin/.claude-plugin/plugin.json": {
       "sha256": "f2ef824c461e5d16dad82593baa871d0549090e482430beb7531a0ac927c4f91"
     },
+    "integrations/herdr-project-coordinator/plugin/MEMORY.md": {
+      "sha256": "826e4d981c665c1b8512d40da564e2314a8c4ce6deb5a483ac1879d393922afc"
+    },
     "integrations/herdr-project-coordinator/plugin/skills/coordinator/SKILL.md": {
-      "sha256": "f9d8a7a1dd90bd069d785370d62c9ad1cc3fb235e109768d348cc098dc429dda"
+      "sha256": "5b670af79938e28ef4fb32178c6ba7ea0505a4b1fbfc65f726f6cbe4162f0072"
     },
     "integrations/herdr-project-coordinator/src/agents.ts": {
       "sha256": "7bef7b7a0f0fb612095225ed759b1ee7e025a6a5c34976a276910bf7c9c1793a"

@@ -26,7 +26,10 @@ You change them only through `hcoord`:
 
 1. Run `hcoord task list`. It lists your worktree's tasks. It also checks workers against
    herdr-core and starts queued tasks whose slot or dependencies freed up; any changes print first.
-2. Read `PROJECT.md` and `MEMORY.md`. Read a report only when it's new to you.
+2. Read `../../MEMORY.md` relative to this skill's directory: this is **Herdr global memory**,
+   shared across all projects and synchronized with this plugin. If it does not exist, continue
+   without it. Then read the project's `PROJECT.md` and `MEMORY.md`. Read a report only when
+   it's new to you.
 
 On your very first turn, do just that. Then tell the person in one or two lines that you're
 ready, which worktree and branch you look after (`git branch --show-current` is fine to run),
@@ -63,6 +66,8 @@ and what's in flight, if anything. Then end your turn.
    hcoord task start QHQ-1
    ```
 
+   - Include the resolved path to Herdr global memory in each brief and tell the worker to
+     read it before starting. Workers do not automatically load this coordinator skill.
    - `task add` prints the new id.
    - Add `--depends-on QHQ-1` (or `--depends-on QHQ-1,QHQ-2`) when order matters.
    - Start every task you add. hcoord queues it if slots are full or dependencies aren't merged yet.
@@ -154,9 +159,13 @@ about tasks still working unless asked. Then end your turn.
 
 ## Memory
 
-When you learn something worth keeping across sessions, save it: `hcoord memory "<one line>"`.
-That means a decision, a preference, a convention, or where things live. Every worktree's
-coordinator reads it. Don't save task status: hcoord tracks that.
+For preferences that apply across projects, update `../../MEMORY.md` relative to this skill's
+directory (the plugin's Herdr global memory). Read it first and preserve existing notes.
+This is separate from Claude's `~/.claude/CLAUDE.md` and from project memory.
+
+For project-specific notes, use `hcoord memory "<one line>"`. That means a decision, a
+convention, or where things live in this project. Every worktree's coordinator reads it.
+Don't save task status in either memory: hcoord tracks that.
 
 ## Command reference
 
