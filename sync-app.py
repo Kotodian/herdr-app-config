@@ -233,6 +233,23 @@ def merge_node_order(base,left,right,kept):
     return result
 
 def merge_json(base,left,right,path=(),kanso=False):
+    if kanso and isinstance(left,dict) and isinstance(right,dict) and left.get('id')=='panel-body':
+        before=dict(base) if isinstance(base,dict) else base
+        right=dict(right)
+        for key in ('children','active','hidden'):
+            for value in (before,right):
+                if not isinstance(value,dict):continue
+                if key in left:value[key]=left[key]
+                else:value.pop(key,None)
+        base=before
+    if kanso and len(path)>1 and path[-2:]==('work-body','children') and keyed_nodes(base) and keyed_nodes(left) and keyed_nodes(right):
+        live=lambda node:node['id']=='main' or node['id'].startswith('strip-')
+        if any(live(node) for nodes in (base,left,right) for node in nodes):
+            stable=lambda nodes:[node for node in nodes if not live(node)]
+            merged=merge_json(stable(base),stable(left),stable(right),path,kanso=True)
+            runtime=[node for node in left if live(node)]
+            at=next((i for i,n in enumerate(left) if live(n)),0)
+            return merged[:at]+runtime+merged[at:]
     if left==right:return left
     if left==base:return right
     if right==base:return left
@@ -247,13 +264,6 @@ def merge_json(base,left,right,path=(),kanso=False):
             if value is not MISSING:result[key]=value
         return result
     if keyed_nodes(base) and keyed_nodes(left) and keyed_nodes(right):
-        if kanso and len(path)>1 and path[-2:]==('work-body','children'):
-            live=lambda node:node['id']=='main' or node['id'].startswith('strip-')
-            stable=lambda nodes:[node for node in nodes if not live(node)]
-            merged=merge_json(stable(base),stable(left),stable(right),path,kanso=False)
-            runtime=[node for node in left if live(node)]
-            at=next((i for i,n in enumerate(left) if live(n)),0)
-            return merged[:at]+runtime+merged[at:]
         b={v['id']:v for v in base};l={v['id']:v for v in left};r={v['id']:v for v in right};result={}
         for key in dict.fromkeys([*l,*r,*b]):
             value=merge_json(b.get(key,MISSING),l.get(key,MISSING),r.get(key,MISSING),path+(key,),kanso)
@@ -277,6 +287,34 @@ def merge_content(name,base,left,right):
         return None,'overlapping text changes'
     return None,'binary changes require review'
 
+def keep_kanso_runtime(target,local):
+    """Merge preferences while keeping this screen's live terminals and selected panel."""
+    source={}
+    def index(node):
+        if not isinstance(node,dict):return
+        if isinstance(node.get('id'),str):source[node['id']]=node
+        for child in node.get('children',[]):index(child)
+    index(local)
+    def preserve(node):
+        if not isinstance(node,dict):return node
+        result=dict(node);here=source.get(node.get('id'),{})
+        if node.get('id')=='panel-body':
+            for key in ('children','active','hidden'):
+                if key in here:result[key]=here[key]
+                else:result.pop(key,None)
+        elif 'children' in result:
+            children=[preserve(child) for child in result['children']]
+            if node.get('id')=='work-body' and here:
+                live=lambda n:n.get('id')=='main' or str(n.get('id','')).startswith('strip-')
+                runtime=[n for n in here.get('children',[]) if live(n)]
+                if runtime:
+                    stable=[n for n in children if not live(n)]
+                    before=next((i for i,n in enumerate(here['children']) if live(n)),0)
+                    children=stable[:before]+runtime+stable[before:]
+            result['children']=children
+        return result
+    return preserve(target)
+
 def save_conflicts(details):
     for item in details:
         key=digest((item['name']+''.join(digest(item[k]) if item[k] is not None else '-' for k in ('base','local','remote'))).encode())
@@ -294,6 +332,8 @@ def merge_files(baseline,local,remote,resolved=None):
         lh=None if left is None else digest(left);rh=None if right is None else digest(right)
         if lh==rh:
             if left is not None:merged[name]=left
+        elif old is not None and (left is None or right is None):
+            conflicts.append({'name':name,'base':load_base(name,old),'local':left,'remote':right,'reason':'removal requires review'})
         elif lh==old:
             if right is not None:merged[name]=right
         elif rh==old:
@@ -306,6 +346,11 @@ def merge_files(baseline,local,remote,resolved=None):
                 if resolved is not None:resolved.append(name)
             else:conflicts.append({'name':name,'base':base,'local':left,'remote':right,'reason':reason})
     if conflicts:raise ConfigurationConflict(conflicts)
+    name='layouts/kanso.json'
+    if name in merged and name in local and merged[name]!=local[name]:
+        target=json.loads(merged[name])
+        preserved=keep_kanso_runtime(target,json.loads(local[name]))
+        if preserved!=target:merged[name]=(json.dumps(preserved,ensure_ascii=False,indent=2)+'\n').encode()
     return merged
 
 def validate_changes(merged,local,app):
