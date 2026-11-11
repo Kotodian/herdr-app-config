@@ -59,7 +59,7 @@
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
     },
     "layouts/kanso.json": {
-      "sha256": "97e98629c68ab1bd03150b1f0ac91097b09c4b267dfb0cd9f0f5235e97d23451"
+      "sha256": "bda85fa070c0b39e37c330fa93e04ef761e0f2f186325bbb6c02b768794ca86f"
     },
     "mods/agenttrail/agent-claude.svg": {
       "sha256": "1d8de3564ab1604c3d51954cf5b10e18d71c24d55f45d92980951f1d11e48de0"
@@ -1580,7 +1580,7 @@
       "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
     },
     "mods/local-sync-bootstrap/main.js": {
-      "sha256": "4fb983f7df6dc3c38bc9f62589a19adbf0dacc5f170c51d692e3ab8d7f6608f2"
+      "sha256": "e1f51fbf6429e0ca937f588720b141e2cebc9ee5e2ae1843411baf1cdd5b0dce"
     },
     "mods/local-sync-bootstrap/mod.json": {
       "sha256": "7fba8a98d6f547f73bb91483d47eefdf0dcc279c51410a51afd6a79382b7060d"
@@ -1718,7 +1718,7 @@
       "sha256": "f1eff3f96a1da7434fb2fb235f22bdbce3d1ba4d68addd57af43aa5bcd32f7d3"
     },
     "sync-app.py": {
-      "sha256": "f1c9f66c4258e5eb53fd8afdb608011170e8b923140dd7dc9537ed5ced758e56"
+      "sha256": "e86eb29ab94fed596897718d55cea61d6d424dcae46bd864f53f58385b6d2358"
     },
     "themes/kanso-day.json": {
       "sha256": "47149b8493a16c92872653f5e72f49bfd680e4a5d5926694cea0806528a5233c"

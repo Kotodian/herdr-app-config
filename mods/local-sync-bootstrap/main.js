@@ -25,7 +25,7 @@ export default class ConfigSync extends View {
     // Offline first launches retry automatically as well.
     cx.timer.every(300000,cx=>{if(this.error)this.sync(cx,true);});
   }
-  readStatus(cx){cx.spawn(async cx=>{try{this.status=JSON.parse(await readTextFile(`${home()}/.config/herdr-app-sync/native-status.json`));}catch(_){}cx.notify();});}
+  readStatus(cx){cx.spawn(async cx=>{try{this.status=JSON.parse(await readTextFile(`${home()}/.config/herdr-app-sync/native-status.json`));if(this.status?.status==="ok"||this.status?.status==="pending")this.error=null;}catch(_){}cx.notify();});}
   sync(cx,first=false){
     if(this.busy)return;this.busy=true;this.error=null;cx.notify();
     cx.spawn(async cx=>{try{
@@ -35,9 +35,9 @@ export default class ConfigSync extends View {
     this.busy=false;this.readStatus(cx);cx.notify();});
   }
   render(){
-    const c=theme(),failed=Boolean(this.error)||this.status?.status==="error";
-    const label=this.busy?"同步中":failed?"同步 !":this.status?.last_success?"同步 ✓":"同步";
-    const tip=this.busy?"正在初始化或同步配置":failed?(this.status?.error||this.error):`自动同步 · 登录时及每 5 分钟${this.status?.last_success?` · 上次成功 ${new Date(this.status.last_success).toLocaleTimeString()}`:""}`;
+    const c=theme(),failed=Boolean(this.error)||this.status?.status==="error",pending=this.status?.status==="pending";
+    const label=this.busy?"同步中":failed?"同步 !":pending?"待同步":this.status?.last_success?"同步 ✓":"同步";
+    const tip=this.busy?"正在初始化或同步配置":failed?(this.status?.error||this.error):pending?"配置有新变化，将在下一轮继续同步":`自动同步 · 登录时及每 5 分钟${this.status?.last_success?` · 上次成功 ${new Date(this.status.last_success).toLocaleTimeString()}`:""}`;
     return Button.new("native-config-sync").size_full().rounded(6).items_center().justify_center().cursor_pointer().disabled(this.busy)
       .accessibility_label(label).tooltip(tip).hover(s=>s.bg(c.hover)).on_click((_e,cx)=>this.sync(cx))
       .child(h_flex().gap(6).items_center().text_size(11.5).text_color(failed?c.ansi3:c.muted)

@@ -92,9 +92,21 @@ def validate():
     return m,files
 
 def hashes(files):return {k:digest(v) for k,v in files.items()}
-def save_state(files):
+def save_hash_state(files):
     STATE.parent.mkdir(parents=True,exist_ok=True)
-    tmp=STATE.with_suffix('.json.tmp');tmp.write_text(json.dumps({'files':hashes(files)},indent=2)+'\n');tmp.replace(STATE)
+    tmp=STATE.with_suffix('.json.tmp');tmp.write_text(json.dumps({'files':files},indent=2)+'\n');tmp.replace(STATE)
+
+def save_state(files):
+    save_hash_state(hashes(files))
+
+def published_baseline(baseline,local,published):
+    """Acknowledge uploaded bytes, but never acknowledge incoming files before applying them."""
+    result=dict(baseline)
+    for name in set(baseline)|set(local)|set(published):
+        if local.get(name)!=published.get(name):continue
+        if name in published:result[name]=digest(published[name])
+        else:result.pop(name,None)
+    return result
 
 def apply(app,overwrite=False,execute=False):
     m,files=validate();baseline=read_json(STATE,{}).get('files',{})
@@ -194,7 +206,10 @@ def record_status(status,**extra):
     path=STATE.with_name('native-status.json');previous=read_json(path,{})
     now=datetime.datetime.now().astimezone().isoformat()
     data={**previous,'status':status,'last_attempt':now,**extra}
-    if status=='ok':data['last_success']=now;data.pop('error',None)
+    if status=='ok':
+        data['last_success']=now
+        data.pop('error',None)
+        data.pop('pending_reason',None)
     path.parent.mkdir(parents=True,exist_ok=True)
     tmp=path.with_suffix('.json.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n');tmp.replace(path)
 
@@ -213,7 +228,10 @@ def auto_sync(app):
         merged=merge_files(baseline,local,remote)
         validate_changes(merged,{name:data for name,data in local.items() if remote.get(name)==data},app)
         # Edits made while network/checks were running stay with the editor; retry later.
-        if hashes(collect(app)[0])!=hashes(local):raise RuntimeError('App configuration changed during sync; retrying next cycle')
+        if hashes(collect(app)[0])!=hashes(local):
+            record_status('pending',error=None,pending_reason='App configuration changed during sync; retrying next cycle')
+            print('Configuration changed during checks; local edits retained for the next cycle',flush=True)
+            return
         incoming=sum(local.get(name)!=data for name,data in merged.items())
         outgoing=sum(remote.get(name)!=data for name,data in merged.items())
         if hashes(merged)!=hashes(remote):
@@ -223,7 +241,14 @@ def auto_sync(app):
             if git('diff','--cached','--name-only'):git('commit','-m','Automatically sync Herdr App configuration')
         # Push before applying incoming changes. A failed push leaves the base intact.
         git('push','origin','HEAD:main')
-        if hashes(collect(app)[0])!=hashes(local):raise RuntimeError('App configuration changed during push; retrying next cycle')
+        # Kanso can save a new terminal/panel layout while the push is in flight.
+        # Record the bytes that actually reached Git before checking the live files again.
+        save_hash_state(published_baseline(baseline,local,merged))
+        if hashes(collect(app)[0])!=hashes(local):
+            record_status('pending',commit=git('rev-parse','HEAD'),uploaded_files=outgoing,applied_files=0,
+                          error=None,pending_reason='Upload succeeded; newer local edits will sync next cycle')
+            print('Upload succeeded; newer local edits retained for the next cycle',flush=True)
+            return
         if incoming:apply(app,False,True)
         else:save_state(merged)
         commit=git('rev-parse','HEAD')
