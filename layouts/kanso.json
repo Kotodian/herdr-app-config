@@ -38,7 +38,7 @@
             }
           },
           "size": {
-            "px": 192
+            "px": 156
           }
         }
       ],
@@ -146,13 +146,25 @@
                 {
                   "id": "panel-body",
                   "type": "stack",
-                  "children": [],
+                  "children": [
+                    {
+                      "id": "komari",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-komari",
+                        "props": {
+                          "role": "panel",
+                          "at": 1794377430754
+                        }
+                      }
+                    }
+                  ],
+                  "active": "komari",
                   "size": {
                     "px": 440
                   },
                   "min": 280,
                   "max": 900,
-                  "hidden": true,
                   "background": "background",
                   "radius": 8
                 }
