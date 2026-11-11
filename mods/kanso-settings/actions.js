@@ -12,7 +12,7 @@ export const GROUPS = [
   ] },
   { name: "Panes", section: "layout:kanso", actions: [
     { action: "kanso-strip.new-left", label: "New pane to the left" },
-    { action: "kanso-strip.next-needs-you", label: "Next agent that needs you" },
+    { action: "kanso-spaces.needs-you.next", label: "Next agent that needs you" },
     { action: "kanso-strip.send", label: "Send the pane's work to an agent" },
     { action: "kanso-strip.pin", label: "Pin the pane to its side" },
     { action: "kanso-strip.arrange", label: "Arrangements" },
@@ -49,8 +49,8 @@ export const GROUPS = [
   ] },
 ];
 
-// Herdr's own commands the strip does its own way, on Herdr's keys; the Keys page leaves them out.
-export const HERDRS = /^(kanso-strip\.(new-right|new-down|close|go-(left|right|up|down)|move-(left|right|up|down)|width)|kanso-spaces\.space-\d|mod\.open:kanso-help)$/;
+// Herdr's own commands, on Herdr's keys; the Keys page leaves them out.
+export const HERDRS = /^(kanso-strip\.(new-right|new-down|close|go-(left|right|up|down)|move-(left|right|up|down)|width|find)|kanso-spaces\.space-\d|mod\.open:kanso-help|terminal\.search)$/;
 
 export const ofRow = (row, action) => (row.family ? new RegExp(`^${row.family.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[1-9]$`).test(action) : action === row.action);
 

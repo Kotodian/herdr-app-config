@@ -2,7 +2,10 @@ import { div, svg } from "gpui-kit";
 import { v_flex, h_flex, Editor } from "gpui-base";
 import { readTextFile, watchFolder, theme, openOverlay } from "herdr";
 import { codeState, isMarkdown, showPanel } from "./lib.js";
-import { MarkdownDoc, tildePath } from "./doc.js";
+import { MarkdownDoc, tildePath, readingLines } from "./doc.js";
+import { skeleton } from "./ui.js";
+import { tryOrAsync } from "./pure.js";
+import { fileMemory } from "./panel-state.js";
 
 const folderOf = (path) => path.replace(/[\\/][^\\/]*$/, "") || "/";
 const nameOf = (path) => path.split(/[\\/]/).at(-1);
@@ -11,16 +14,36 @@ const BACK = { files: "Back to Files", look: "Back to Look" };
 
 export class Preview {
   init(cx, p) {
-    this.on = p.on ?? null;
-    this.back = BACK[p.back] ? p.back : null;
+    const kept = this.kept;
+    this.kept = null;
+    this.on = p.on ?? kept?.on ?? null;
+    this.back = BACK[p.back] ? p.back : (kept?.back && BACK[kept.back] ? kept.back : null);
     this.handle = cx.focus_handle();
-    this.open(p.path ?? "", cx);
+    this.open(p.path || kept?.path || "", cx);
+  }
+
+  saveState() {
+    if (!this.path) return null;
+    return { path: this.path, back: this.back, on: this.on };
+  }
+
+  // A file that is gone leaves the preview empty, with no error.
+  async restoreState(state) {
+    const path = typeof state?.path === "string" ? state.path : "";
+    if (!path) return false;
+    const text = await tryOrAsync(() => readTextFile(path, { on: state.on ?? null }));
+    if (text == null || String(text).includes("\0")) return false;
+    const next = fileMemory(state, () => true);
+    if (!next) return false;
+    this.kept = next;
+    return true;
   }
 
   open(path, cx) {
     this.path = path;
     this.doc?.release(); this.doc = null;
     this.code?.release(); this.code = null; this.error = null;
+    if (!path) { cx.notify(); return; }
     if (isMarkdown(path)) this.doc = new MarkdownDoc(path, this.on, (to) => this.follow(to, cx));
     this.load(cx);
     this.watch(cx);
@@ -71,6 +94,14 @@ export class Preview {
     this.leave(cx, () => showPanel(this.back, { mod: "kanso-panel", props: { panel: this.back } }));
   }
 
+  bones(c) {
+    const { header } = skeleton(c);
+    return v_flex().size_full().min_h(0).bg(c.canvas).text_color(c.text)
+      .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(c.border)
+        .child(header(120, 13)))
+      .child(readingLines(c));
+  }
+
   render() {
     const t = theme();
     const button = (id, icon, tip, action) => div().id(id).p(4).rounded(6).cursor_pointer().text_color(t.muted).tooltip(tip)
@@ -90,6 +121,6 @@ export class Preview {
       .child(this.doc ? this.doc.body(t, "preview-md")
         : this.error ? div().p(12).text_color(t.dim).child(this.error)
         : this.code ? Editor.new(this.code).flex_1().min_h(0)
-        : div().p(12).text_color(t.dim).child("Reading…"));
+        : this.path ? readingLines(t) : div().flex_1());
   }
 }

@@ -7,6 +7,9 @@ import { v_flex, h_flex, Editor, v_virtual_list, Scrollbar } from "gpui-base";
 import { exec, readTextFile, watchFolder, theme, window, openOverlay, shared, setShared } from "herdr";
 import { location, key, codeState, markdownView, isMarkdown, insideRoot, showPanel, mapWith } from "./lib.js";
 import { mapSeries } from "./pure.js";
+import { filesMemory } from "./panel-state.js";
+import { readingLines } from "./doc.js";
+import { skeleton, breathe } from "./ui.js";
 
 const PER_FOLDER = 500, TOTAL = 5000;
 const RETURN = "kanso.files.return";
@@ -51,7 +54,6 @@ test -d "$1"`;
   return Array.from({ length: Math.floor(fields.length / 2) }, (_, k) => ({ name: fields[2 * k + 1], dir: fields[2 * k] === "d" }));
 }
 
-// Exists only while shown (kanso-tabs mounts it on demand), so there is no idle state to keep.
 export class Files {
   constructor() { this.rev = 0; } // bumped whenever the rows would differ; the tree is rebuilt only then
 
@@ -65,6 +67,16 @@ export class Files {
     }
     this.refresh(cx);
     cx.timer.every(10000, cx => this.refresh(cx));
+  }
+
+  saveState() {
+    if (!this.root) return undefined;
+    return { cwd: this.root, folders: [...this.folders], file: this.file ?? null };
+  }
+
+  restoreState(state) {
+    this.kept = state;
+    return Boolean(state?.cwd);
   }
 
   watch(root, cx) {
@@ -104,8 +116,14 @@ export class Files {
   refresh(cx) {
     if (this.loading) { this.later(cx); return; }
     const { cwd, on } = location(), context = key();
+    // No folder yet: keep the remembered tree until the place is known.
+    if (!cwd && this.kept) return;
     if (context !== this.context) {
-      this.context = context; this.root = cwd; this.on = on; this.entries = new Map(); this.folders = new Set();
+      const mem = filesMemory(this.kept, cwd, () => true);
+      this.kept = null;
+      this.context = context; this.root = cwd; this.on = on; this.entries = new Map();
+      this.folders = new Set(mem?.folders ?? []);
+      this.pendingFile = mem?.file ?? null;
       this.pending = new Set(); this.marks = {}; this.show(null); this.watched = null; this.error = null; this.limited = false;
       this.rev = this.rev + 1;
     }
@@ -114,7 +132,10 @@ export class Files {
     this.limited = false;
     cx.spawn(async cx => {
       try {
-        await mapSeries(["", ...this.folders], (path) => this.loadFolder(path, context));
+        await mapSeries(["", ...this.folders], async (path) => {
+          try { await this.loadFolder(path, context); }
+          catch (e) { if (path) this.folders = new Set([...this.folders].filter((folder) => folder !== path && !folder.startsWith(`${path}/`))); else throw e; }
+        });
         const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, on }).catch(() => null);
         const status = top?.code === 0
           ? await exec("git", ["status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=normal"], { cwd, on }).catch(() => null)
@@ -125,6 +146,7 @@ export class Files {
         }) : []);
         if (key() !== context) return;
         this.marks = marks; this.rev = this.rev + 1; this.error = null; this.watch(cwd, cx);
+        if (this.pendingFile) { const file = this.pendingFile; this.pendingFile = null; this.show(file, cx, true); }
       } catch (e) { if (key() === context) this.error = String(e); }
       finally { this.loading = false; cx.notify(); }
     });
@@ -163,19 +185,22 @@ export class Files {
     showPanel("preview", { mod: "kanso-panel", props: { panel: "preview", path: `${this.root}/${path}`, on: this.on, back: "files" } });
   }
 
-  show(path, cx) {
+  show(path, cx, quiet = false) {
     this.code?.release(); this.code = null; this.text = null; this.file = path; this.fileError = null;
     if (!path || !cx) return;
-    if (!insideRoot(path)) { this.fileError = "Cannot preview this file"; return; }
+    if (!insideRoot(path)) { if (quiet) this.file = null; else this.fileError = "Cannot preview this file"; return; }
     const context = this.context, root = this.root, on = this.on;
     cx.spawn(async cx => {
       try {
         const text = await readTextFile(`${root}/${path}`, { on });
         if (this.file !== path || key() !== context) return;
-        if (text === null) { this.fileError = "This file is no longer available"; return; }
-        if (text.includes("\0")) { this.fileError = "Binary file · no text preview"; return; }
+        if (text === null || text.includes("\0")) {
+          if (quiet) { this.file = null; this.fileError = null; return; }
+          this.fileError = text === null ? "This file is no longer available" : "Binary file · no text preview";
+          return;
+        }
         if (isMarkdown(path)) this.text = text; else this.code = codeState(path, text);
-      } catch { if (this.file === path && key() === context) this.fileError = "Cannot preview this file (binary, too large, or unreadable)"; }
+      } catch { if (this.file === path && key() === context) { if (quiet) { this.file = null; this.fileError = null; } else this.fileError = "Cannot preview this file (binary, too large, or unreadable)"; } }
       finally { cx.notify(); }
     });
   }
@@ -203,6 +228,19 @@ export class Files {
       .child(svg(`mods/kanso-panel/${entry.dir ? "folder" : "file"}.svg`).size(14).flex_none().text_color(t.muted))
       .child(div().flex_1().min_w(0).truncate().child(entry.name))
       .when(Boolean(mark), el => el.child(div().text_size(11).text_color(mark === "A" ? t.ansi2 : mark === "D" || mark === "U" ? t.ansi1 : t.blocked).child(mark)));
+  }
+
+  listBones(c) {
+    const { row } = skeleton(c);
+    return breathe(v_flex().id("kanso-skeleton").w_full().p(6)).children([0, 1, 2, 3, 4, 5, 6].map((i) => row(i, 28)));
+  }
+
+  bones(c) {
+    const { header } = skeleton(c);
+    return v_flex().size_full().min_h(0).bg(c.canvas).text_color(c.text)
+      .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(c.border)
+        .child(header(52, 13)))
+      .child(this.listBones(c));
   }
 
   render(cx) {
@@ -233,10 +271,12 @@ export class Files {
               if (item && !item.entry.dir) this.openWith(path);
             }).size_full())
           .child(Scrollbar.vertical("files-rows").absolute().inset_0())))
-        .when(Boolean(this.error) || !this.entries.get("")?.length, el => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.error || (this.loading ? "Loading files…" : this.root ? "No files" : "No folder"))))
+        .when(Boolean(this.error), el => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.error)))
+        .when(!this.error && this.loading && !this.entries.get("")?.length, el => el.child(this.listBones({ border: t.border })))
+        .when(!this.error && !this.loading && !this.entries.get("")?.length, el => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.root ? "No files" : "No folder")))
         .when(this.limited, el => el.child(div().p(8).text_size(11).text_color(t.dim).child("File list limited to 500 entries per folder and 5,000 total")))))
       .when(Boolean(this.file), el => el.child(this.code ? Editor.new(this.code).flex_1().min_h(0)
         : this.text !== null ? markdownView("files-md", this.text, t)
-        : div().p(12).text_color(t.dim).child(this.fileError || "Loading file…")));
+        : this.fileError ? div().p(12).text_color(t.dim).child(this.fileError) : readingLines(t)));
   }
 }

@@ -4,10 +4,11 @@ import { exec, hc, panes, terminals, home, run, theme, appHome, readTextFile } f
 import { tilde } from "./lib.js";
 import { tryOr } from "./pure.js";
 import { parseProcesses, etimeSecs } from "./procs.js";
-import { G, Armed, tokens, quietLink, quietTabs, iconButton, section } from "./ui.js";
+import { G, Armed, tokens, quietLink, quietTabs, iconButton, section, ghost, breathe } from "./ui.js";
 import { Share } from "./share.js";
 import { portsSpec, portsText } from "./ports-card.js";
 import { parsePorts, historyOf, RANGES, activeSeries, portStats, historyLists, size, clock } from "./ports-model.js";
+import { portsMemory } from "./panel-state.js";
 
 // The guard's files: change the name here if it is installed under another.
 const GUARD = "kanso-guard";
@@ -82,11 +83,20 @@ export class Ports {
     return { spec: portsSpec(data), text: portsText(data), name: "ports", title: "Ports" };
   }
 
+  saveState() { return portsMemory({ range: this.range, tab: this.tab, showAll: this.showAll }); }
+
+  restoreState(state) {
+    const next = portsMemory(state);
+    if (!next) return false;
+    this.keptPorts = next;
+    return true;
+  }
+
   init(cx) {
     this.list = null; this.note = null; this.stopping = new Set(); this.forced = new Set(); this.width = 368;
     this.hist = null; // parsePorts(): { state, data }
     this.digest = null; // what the history draws, worked out once per read
-    this.histAt = 0; this.range = "day"; this.tab = null; this.showAll = false; this.busy = {};
+    this.histAt = 0; this.range = this.keptPorts?.range ?? "day"; this.tab = this.keptPorts?.tab ?? null; this.showAll = this.keptPorts?.showAll ?? false; this.busy = {};
     this.refresh(cx);
     cx.timer.every(EVERY_MS, (cx) => this.refresh(cx));
   }
@@ -334,6 +344,31 @@ export class Ports {
         .child(quietLink("pt-more", this.showAll ? "Show fewer" : `Show ${tab.rows.length - LIST_ROWS} more`, (cx) => { this.showAll = !this.showAll; cx.notify(); }, c))));
   }
 
+  skeleton(c, narrow) {
+    const { block, line } = ghost(c);
+    const heights = [28, 50, 36, 72, 40, 60, 24, 44, 32, 48, 20, 56];
+    const two = (i) => v_flex().w_full().py(10).gap(4)
+      .child(line([140, 110, 160, 96][i], 13)).child(line([180, 150, 120, 170][i], 11));
+    return breathe(v_flex().id("kanso-skeleton").w_full().gap(narrow ? 32 : 44))
+      .child(v_flex().gap(G.xs)
+        .child(line(160, 15))
+        .child(h_flex().items_end().gap(G.md).child(block(narrow ? 72 : 96, narrow ? 48 : 64, 6)).child(line(70, 13))))
+      .child(h_flex().gap(narrow ? G.xl : 48).children([52, 46, 64].map((w) => block(w, narrow ? 22 : 28, 4))))
+      .child(h_flex().w_full().h(72).items_end()
+        .children(heights.map((h) => v_flex().flex_1().min_w(0).items_center().justify_end().child(block(2, Math.min(h, 72), 1)))))
+      .child(v_flex().w_full().child(h_flex().pb(G.sm).child(line(70, 12))).children([0, 1, 2, 3].map(two)));
+  }
+
+  bones(c, narrow = true) {
+    const { header } = ghost(c);
+    const pad = narrow ? G.lg : 32;
+    return v_flex().size_full().min_h(0).bg(c.canvas).text_color(c.text)
+      .child(h_flex().flex_none().w_full().justify_center().px(pad).py(narrow ? G.lg : 28)
+        .child(v_flex().w_full().max_w(1080).gap(narrow ? 32 : 44)
+          .child(header(narrow ? 70 : 90, narrow ? 17 : 20))
+          .child(this.skeleton(c, narrow))));
+  }
+
   render(cx) {
     const c = tokens(theme()), narrow = (this.width || 368) < 560;
     const list = this.list ?? [];
@@ -345,7 +380,7 @@ export class Ports {
         .child(iconButton("pt-refresh", "refresh", "Read again", (cx) => this.refresh(cx, { history: true }), c, { spin: this.reading })));
     const history = this.history(c);
     const body = this.list === null
-      ? div().text_size(13).text_color(c.dim).child("Reading the ports")
+      ? this.skeleton(c, narrow)
       : v_flex().w_full().gap(narrow ? 32 : 44)
         .child(this.hero(c, list, narrow))
         .when(state !== undefined && state !== "ok", (el) => el.child(this.guardOff(c)))

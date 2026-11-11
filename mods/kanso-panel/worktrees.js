@@ -8,6 +8,7 @@ import { WorktreeStore } from "./worktrees-store.js";
 import { tilde, pool } from "./lib.js";
 import { G, PULSE, breathe, Armed, tokens, quietLink, iconButton, section, ghost } from "./ui.js";
 import { range, reduceSeries } from "./pure.js";
+import { worktreesMemory } from "./panel-state.js";
 
 const TEMP = ["/private/tmp", "/tmp"];
 
@@ -332,9 +333,19 @@ const idleMinutes = () => {
 export class Worktrees {
   constructor() { this.armed = new Armed(); } // removals ask for a second press
 
+  saveState() { return worktreesMemory({ picked: this.picked, more: [...this.more], allRepos: this.allRepos }); }
+
+  restoreState(state) {
+    const next = worktreesMemory(state);
+    if (!next) return false;
+    this.keptTrees = next;
+    return true;
+  }
+
   init(cx) {
-    this.groups = []; this.orphans = []; this.scan = 0; this.more = new Set(); this.allRepos = false;
-    this.picked = null; this.working = null; this.batch = null; this.phase = null; this.note = null; this.notice = null;
+    this.groups = []; this.orphans = []; this.scan = 0; this.more = new Set(this.keptTrees?.more ?? []); this.allRepos = this.keptTrees?.allRepos ?? false;
+    this.picked = null; this.heldPick = this.keptTrees ? this.keptTrees.picked : undefined;
+    this.working = null; this.batch = null; this.phase = null; this.note = null; this.notice = null;
     this.width = 368; this.done = false;
     this.share = new Share("kanso-panel");
     this.store = new WorktreeStore(); this.stored = false; this.known = new Map(); this.hist = null;
@@ -416,7 +427,7 @@ export class Worktrees {
   refresh(cx) {
     const id = this.scan + 1, { roots, search } = this.roots();
     this.scan = id;
-    this.phase = "Finding repositories"; this.note = null; this.picked = null; this.armed.clear(); this.done = false;
+    this.phase = "Finding repositories"; this.note = null; this.picked = this.heldPick === undefined ? null : this.heldPick; this.heldPick = undefined; this.armed.clear(); this.done = false;
     cx.spawn(async (cx) => {
       try {
         const found = await exec("bash", ["-c", DISCOVER, "worktrees", ...search]);
@@ -656,9 +667,29 @@ export class Worktrees {
         .child(iconButton("wt-refresh", "refresh", "Scan again", (cx) => { if (!this.working) this.refresh(cx); }, c, { spin: scanning })));
   }
 
+  freedBones(c, narrow) {
+    const { block, line } = ghost(c);
+    const heights = [28, 50, 36, 72, 40, 60, 24, 44, 32];
+    return breathe(v_flex().id("kanso-skeleton").w_full().gap(G.lg))
+      .child(h_flex().items_end().gap(G.md).child(block(narrow ? 90 : 120, narrow ? 36 : 48, 6)).child(line(80, 13)))
+      .child(line(200, 12))
+      .child(h_flex().w_full().h(96).items_end()
+        .children(heights.map((h) => v_flex().flex_1().min_w(0).items_center().justify_end().child(block(2, h, 1)))));
+  }
+
+  bones(c, narrow = true) {
+    const { header } = ghost(c);
+    const pad = narrow ? G.lg : 32;
+    return v_flex().size_full().min_h(0).bg(c.canvas).text_color(c.text)
+      .child(h_flex().flex_none().w_full().justify_center().px(pad).py(narrow ? G.lg : 28)
+        .child(v_flex().w_full().max_w(1080).gap(narrow ? 32 : 44)
+          .child(header(narrow ? 110 : 140, narrow ? 17 : 20))
+          .child(this.skeleton(c, narrow))));
+  }
+
   skeleton(c, narrow) {
     const { block, row } = ghost(c);
-    return breathe(v_flex().w_full().gap(narrow ? 36 : 48))
+    return breathe(v_flex().id("kanso-skeleton").w_full().gap(narrow ? 36 : 48))
       .child(v_flex().gap(G.md).child(block(110, 12)).child(block(narrow ? 150 : 220, narrow ? 40 : 58, 6)).child(block(200, 11))
         .child(h_flex().gap(narrow ? G.xl : 48).pt(G.md).children([30, 46, 40, 30].map((w) => block(w, narrow ? 18 : 22, 4)))))
       .child(v_flex().w_full().child(h_flex().pb(G.sm).child(block(90, 12))).children([0, 1, 2, 3].map(row)))
@@ -840,7 +871,7 @@ export class Worktrees {
   freed(c, narrow) {
     const h = this.hist;
     if (!h) return v_flex().w_full().child(section(c, "Freed"))
-      .child(div().text_size(12).text_color(this.storeNote ? c.red : c.dim).child(this.storeNote ?? "Reading the history…"));
+      .child(this.storeNote ? div().text_size(12).text_color(c.red).child(this.storeNote) : this.freedBones(c, narrow));
     const freedBars = this.bars(c, h.freedByDay, "Freed each day", 96, "fills as you remove")
       , diskBars = this.bars(c, h.diskByDay, "In worktrees each day", 56, "a bar per day with a scan");
     const stats = [

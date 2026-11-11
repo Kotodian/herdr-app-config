@@ -2,14 +2,15 @@
 // One of the kanso-panel mod's panels: it exists only while shown.
 import { div, svg } from "gpui-kit";
 import { v_flex, h_flex, Button, Popover, Input, InputState, TextView } from "gpui-base";
-import { exec, knownAgents, notify, openOverlay, run, theme } from "herdr";
+import { exec, knownAgents, notify, openOverlay, run, theme, setShared } from "herdr";
 import { location, key, diffRows, monoFont } from "./lib.js";
 import { G, PULSE, breathe, Armed, tokens, quietLink, quietTabs, iconButton, section, ghost } from "./ui.js";
 import { tryOr, tryOrAsync } from "./pure.js";
 import { STATES, checkState, onePerJob, checkSummary, mergeReadiness } from "./ghchecks.js";
 import { Kdb } from "./kdb.js";
 import { readyProviders } from "./pr-providers.js";
-import { groupInbox, inboxLabel, isNew, limitLine, mergeInbox, refreshInbox, seenSql } from "./pr-inbox.js";
+import { groupInbox, inboxLabel, isNew, limitLine, mergeInbox, refreshInbox, seenSql, recordPrFacts } from "./pr-inbox.js";
+import { prMemory } from "./panel-state.js";
 
 const ICON = "mods/kanso-chrome/icons/";
 const FIELDS = "number,title,body,state,isDraft,url,author,baseRefName,headRefName,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,latestReviews,reviewRequests,assignees,labels,additions,deletions,changedFiles,files,updatedAt";
@@ -111,7 +112,7 @@ const TASK_NAMES = { explain: "Explain", feedback: "Feedback", conflicts: "Confl
 export class PullRequest {
   constructor() { this.armed = new Armed(); } // Merge asks for a second press
 
-  init(cx) {
+  init(cx, props = {}) {
     this.pr = null; this.threads = []; this.diffs = null; this.openFile = null;
     this.expanded = { checks: false, files: false, body: false }; this.width = 368;
     this.openPrs = []; this.selected = null; // a pull request's URL; null: the branch's own, else the newest
@@ -122,6 +123,7 @@ export class PullRequest {
     this.picker = null; this.candidates = null; this.query = "";
     this.search = InputState.new({ placeholder: "Search" });
     this.search.on("change", (_e, cx) => { this.query = this.search.value(); cx.notify(); });
+    this.jumpUrl = props.url ?? null;
     this.refresh(cx);
     cx.timer.every(20000, (cx) => {
       if (this.picker) return;
@@ -135,6 +137,21 @@ export class PullRequest {
     const pr = this.pr;
     if (this.checked?.pr !== pr) this.checked = { pr, list: checksIn(pr?.statusCheckRollup) };
     return this.checked.list;
+  }
+
+  saveState() { return this.selected ? { url: this.selected } : null; }
+
+  restoreState(state) {
+    const kept = prMemory(state, () => "open");
+    if (!kept) return false;
+    this.keptUrl = kept.url;
+    return true;
+  }
+
+  // A remembered pull request that has closed, or cannot be read, is dropped for the usual empty panel.
+  dropRemembered() {
+    this.remembered = false;
+    this.selected = null; this.pr = null; this.error = null; this.none = false; this.missing = null;
   }
 
   gh(args) { return exec("gh", args, { cwd: this.root ?? this.cwd, on: this.on }); }
@@ -151,14 +168,17 @@ export class PullRequest {
     if (context !== this.context) {
       this.context = context; this.root = null; this.branch = null; this.pr = null; this.threads = []; this.diffs = null;
       this.openFile = null; this.error = null; this.note = null; this.none = false; this.armed.clear(); this.picker = null;
-      this.openPrs = []; this.selected = null; this.home = null; this.branchUrl = null; this.outside = false;
+      this.openPrs = []; this.selected = this.jumpUrl ?? this.keptUrl ?? null; this.remembered = !this.jumpUrl && Boolean(this.keptUrl);
+      this.home = null; this.branchUrl = null; this.outside = false;
       this.missing = null; this.pushed = false; this.behind = false; this.base = undefined;
       this.fallback = false; this.listing = false; this.tab = "open"; this.closedPrs = null;
-      this.inboxOn = false; this.inbox = null; this.inboxOpen = null; this.inboxTab = "needs"; this.inboxForce = false;
+      this.inboxOn = false; this.inbox = null; this.inboxOpen = this.jumpUrl ? false : null; this.inboxTab = "needs"; this.inboxForce = false;
+      this.jumpUrl = null;
       this.permission = null; this.permissionRepo = null;
     }
     if (this.listing && this.tab === "closed") this.loadClosed(cx);
     if (!cwd) return;
+    this.keptUrl = null;
     this.cwd = cwd; this.on = on;
     this.loading = true;
     const want = this.selected;
@@ -189,7 +209,7 @@ export class PullRequest {
         // Awaited in the finally so the read never outlives this refresh.
         const list = this.gh(["pr", "list", "--state", "open", "--limit", "100", "--json", OPEN]).catch(() => null);
         try { await this.readShown(context, want, list); }
-        catch (e) { failed(e); }
+        catch (e) { if (this.remembered) this.dropRemembered(); else failed(e); }
         finally { await list; }
       } catch (e) { failed(e); }
       finally {
@@ -244,6 +264,7 @@ export class PullRequest {
   }
 
   async noteSeen(url) {
+    if (url && this.inboxOpen !== true) setShared("kanso.pr.seen", { url, at: Date.now() });
     if (!url || this.inboxOpen !== false || !this.inboxDb) return;
     const now = Date.now();
     try { await this.inboxDb.run(seenSql(url, now)); }
@@ -264,19 +285,33 @@ export class PullRequest {
     return ahead !== 0 || Number.isNaN(ahead) ? "unpushed" : behind !== 0 ? "behind" : "pushed";
   }
 
+  async keepPrFacts(items) {
+    return tryOrAsync(() => recordPrFacts(this.inboxDb ??= new Kdb(), items));
+  }
+
   async readShown(context, want, list) {
     const asked = await tryOrAsync(async () => ({ view: await this.gh(["pr", "view", ...(want ? [want] : []), "--json", FIELDS]) }));
-    if (!asked) { this.missing = null; this.error = { title: "The GitHub CLI is not installed.", detail: "Install gh and run `gh auth login`." }; this.pr = null; return; }
+    if (!asked) {
+      if (this.remembered) { this.dropRemembered(); return; }
+      this.missing = null; this.error = { title: "The GitHub CLI is not installed.", detail: "Install gh and run `gh auth login`." }; this.pr = null; return;
+    }
     // A click picked another one while this read was out: drop it, the finally reads again.
     if (key() !== context || this.selected !== want) return;
     const missing = ghMissing(asked.view);
-    if (missing) { this.missing = missing; this.pr = null; this.none = false; this.error = null; this.openPrs = []; this.branchUrl = null; return; }
+    if (missing) {
+      if (this.remembered) { this.dropRemembered(); return; }
+      this.missing = missing; this.pr = null; this.none = false; this.error = null; this.openPrs = []; this.branchUrl = null; return;
+    }
     this.missing = null;
     const open = await list;
     if (open?.code === 0 && key() === context) {
       const sorted = tryOr(() => JSON.parse(open.stdout).toSorted((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)));
       if (sorted !== null) this.openPrs = sorted;
     }
+    await this.keepPrFacts([
+      ...(asked.view.code === 0 ? [JSON.parse(asked.view.stdout)] : []),
+      ...(this.openPrs ?? []).map((pr) => ({ ...pr, state: "OPEN" })),
+    ]);
     // `gh pr view` also finds the branch's merged or closed one; that counts as none.
     const done = (v) => tryOr(() => ["MERGED", "CLOSED"].includes(JSON.parse(v.stdout).state), false);
     const branchHasNone = !want && (asked.view.code !== 0 ? NO_PR.test(asked.view.stderr || asked.view.stdout) : done(asked.view));
@@ -291,12 +326,16 @@ export class PullRequest {
       : asked.view;
     if (branchHasNone && (key() !== context || this.selected !== want)) return;
     if (view.code !== 0) {
+      if (this.remembered) { this.dropRemembered(); return; }
       const why = (view.stderr || view.stdout).trim();
       if (NO_PR.test(why)) { this.none = true; this.pr = null; this.error = null; }
       else { this.error = { title: "GitHub could not be read.", detail: why.split("\n")[0] }; this.pr = null; }
       return;
     }
     const pr = JSON.parse(view.stdout);
+    if (view !== asked.view) await this.keepPrFacts([pr]);
+    if (this.remembered && !prMemory({ url: pr.url }, () => (pr.state === "OPEN" ? "open" : "closed"))) { this.dropRemembered(); return; }
+    this.remembered = false;
     if (this.pr?.url !== pr.url) { this.diffs = null; this.openFile = null; this.expanded = { ...this.expanded, body: false }; }
     this.pr = pr; this.none = false; this.error = null; this.fallback = fallback;
     if (!want) this.branchUrl = fallback ? null : pr.url;
@@ -335,6 +374,7 @@ export class PullRequest {
         const r = await this.gh(["pr", "list", "--state", "closed", "--limit", String(DONE_LIMIT), "--json", DONE]);
         if (r.code === 0 && key() === context) {
           const when = (p) => Date.parse(p.mergedAt || p.closedAt || p.updatedAt) || 0;
+          await this.keepPrFacts(JSON.parse(r.stdout));
           this.closedPrs = JSON.parse(r.stdout).toSorted((a, b) => when(b) - when(a));
         }
       } catch { }
@@ -515,9 +555,10 @@ export class PullRequest {
     const shown = all.filter((x) => !q || [x.name, x.login, x.description].some((v) => String(v ?? "").toLowerCase().includes(q)));
     const empty = { labels: "This repository has no labels.", assignees: "Nobody has access to this repository.", reviewers: "Nobody else has access to this repository." }[kind];
     const noMatch = kind === "labels" ? "No label matches that." : "Nobody with access matches that.";
+    const { block, line } = ghost(c);
     const list = v_flex().gap(1)
-      .when(!this.candidates && !this.pickerError, (el) => el.child(breathe(v_flex())
-        .children([90, 120, 70, 104].map((w, i) => h_flex().id(`${id}-ghost-${i}`).px(8).py(7).gap(G.sm).child(div().size(8).rounded_full().bg(c.border)).child(div().w(w).h(9).rounded(3).bg(c.border))))))
+      .when(!this.candidates && !this.pickerError, (el) => el.child(breathe(v_flex().id("kanso-skeleton"))
+        .children([90, 120, 70, 104].map((w, i) => h_flex().id(`${id}-ghost-${i}`).px(8).py(7).gap(G.sm).child(block(8, 8, 8)).child(line(w, 9))))))
       .when(Boolean(this.pickerError), (el) => el.child(div().p(8).text_size(11.5).text_color(c.dim).child(`${kind === "labels" ? "The labels" : "The people with access"} could not be read. ${this.pickerError}`)))
       .when(Boolean(this.candidates) && shown.length === 0, (el) => el.child(div().p(8).text_size(11.5).text_color(c.dim).child(q ? noMatch : empty)))
       .children(shown.map((x, i) => {
@@ -603,7 +644,7 @@ export class PullRequest {
 
   listPage(c) {
     const body = this.tab === "closed"
-      ? this.closedPrs === null ? div().text_size(12).text_color(c.dim).child(this.closedLoading ? "Reading the closed ones…" : "GitHub could not be read.")
+      ? this.closedPrs === null ? (this.closedLoading ? this.closedBones(c) : div().text_size(12).text_color(c.dim).child("GitHub could not be read."))
         : !this.closedPrs.length ? div().text_size(12).text_color(c.dim).child("Nothing closed yet.")
           : this.openPage(c, this.closedPrs)
       : !this.openPrs.length ? div().text_size(12).text_color(c.dim).child("Nothing open.")
@@ -697,9 +738,34 @@ export class PullRequest {
     cx.timer.after(1500, (cx) => { if (this.copiedAt === at) { this.copied = null; cx.notify(); } });
   }
 
+  closedBones(c) {
+    const { block, line } = ghost(c);
+    return breathe(v_flex().id("kanso-skeleton").w_full().gap(G.lg))
+      .children([0, 1, 2].map((i) => v_flex().w_full().px(G.md).py(10).gap(4)
+        .child(line([220, 180, 200][i], 14))
+        .child(line([140, 120, 160][i], 11))
+        .child(h_flex().gap(G.sm).items_center().child(block(6, 6, 6)).child(line(72, 12)))));
+  }
+
+  diffBones(c) {
+    const { line } = ghost(c);
+    return breathe(v_flex().id("kanso-skeleton").w_full().py(6).gap(2))
+      .children([160, 200, 120, 180, 90].map((w) => h_flex().h(20).flex_none().items_center().px(10).child(line(w, 11))));
+  }
+
+  bones(c, narrow = true) {
+    const { header } = ghost(c);
+    const pad = narrow ? G.lg : 32;
+    return v_flex().size_full().min_h(0).bg(c.canvas).text_color(c.text)
+      .child(h_flex().flex_none().w_full().justify_center().px(pad).py(narrow ? G.lg : 28)
+        .child(v_flex().w_full().max_w(1080).gap(narrow ? 32 : 44)
+          .child(header(narrow ? 110 : 140, narrow ? 17 : 20))
+          .child(this.skeleton(c, narrow))));
+  }
+
   skeleton(c, narrow) {
     const { block, row } = ghost(c);
-    return breathe(v_flex().w_full().gap(narrow ? 36 : 48))
+    return breathe(v_flex().id("kanso-skeleton").w_full().gap(narrow ? 36 : 48))
       .child(v_flex().gap(G.md).child(block(140, 12)).child(block(narrow ? 240 : 420, narrow ? 22 : 28, 4)).child(block(180, 22, 4)).child(block(150, 11))
         .child(h_flex().gap(narrow ? G.xl : 48).pt(G.md).children([30, 46, 40, 30].map((w) => block(w, narrow ? 18 : 22, 4)))))
       .child(v_flex().gap(G.sm).children([0, 1, 2].map((i) => h_flex().gap(G.md).child(block(70, 10)).child(block([90, 120, 80][i], 10)))))
@@ -865,7 +931,7 @@ export class PullRequest {
   }
 
   diffView(c, path) {
-    if (this.diffLoading && !this.diffs) return div().py(6).text_size(11).text_color(c.dim).child("Reading the diff…");
+    if (this.diffLoading && !this.diffs) return this.diffBones(c);
     const lines = this.diffs?.[path];
     if (!lines) return div().py(6).text_size(11).text_color(c.dim).child(this.diffs ? "No text diff for this file." : "");
     return v_flex().w_full().mb(G.sm).rounded(6).border_1().border_color(c.border).overflow_hidden().font_family(monoFont()).text_size(11)

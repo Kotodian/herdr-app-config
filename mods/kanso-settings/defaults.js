@@ -40,7 +40,7 @@ export const DEFAULT_KEYS = {
     "cmd-shift--": "kanso-strip.fewer",
     "cmd-shift-=": "kanso-strip.more",
     "cmd-shift-0": "kanso-strip.fit",
-    "cmd-j": "kanso-strip.next-needs-you",
+    "cmd-j": "kanso-spaces.needs-you.next",
     "cmd-alt-s": "kanso-strip.send",
     "cmd-alt-t": "kanso-strip.arrange",
     "ctrl-1": "kanso-spaces.space-1",
@@ -75,5 +75,8 @@ export const DEFAULT_KEYS = {
   "mod:kanso-guard": {
     "cmd-r": "kanso-guard.refresh",
     "escape": "kanso-guard.back"
+  },
+  "terminal": {
+    "cmd-f": "kanso-strip.find"
   }
 };
