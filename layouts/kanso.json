@@ -38,7 +38,7 @@
             }
           },
           "size": {
-            "px": 192
+            "px": 156
           }
         }
       ],
@@ -90,17 +90,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-p91a40cc55434423384a584936c0ef705",
+                  "id": "strip-pfa2d5c455d38f2aa255767ae1e643556",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-p91a40cc55434423384a584936c0ef705",
+                      "id": "head-pfa2d5c455d38f2aa255767ae1e643556",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "p91a40cc55434423384a584936c0ef705",
-                          "terminal": "t1b",
+                          "pane": "pfa2d5c455d38f2aa255767ae1e643556",
+                          "terminal": "t18",
                           "strip": true
                         }
                       },
@@ -109,19 +109,19 @@
                       }
                     },
                     {
-                      "id": "term-p91a40cc55434423384a584936c0ef705",
+                      "id": "term-pfa2d5c455d38f2aa255767ae1e643556",
                       "type": "block",
                       "content": {
-                        "terminal": "t1b"
+                        "terminal": "t18"
                       }
                     },
                     {
-                      "id": "strip-ruler-p91a40cc55434423384a584936c0ef705",
+                      "id": "strip-ruler-pfa2d5c455d38f2aa255767ae1e643556",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "p91a40cc55434423384a584936c0ef705"
+                          "ruler": "pfa2d5c455d38f2aa255767ae1e643556"
                         }
                       },
                       "size": {
