@@ -29,6 +29,17 @@
           "min": 90
         },
         {
+          "id": "projects",
+          "type": "block",
+          "content": {
+            "mod": "hcoord"
+          },
+          "size": {
+            "weight": 1
+          },
+          "min": 140
+        },
+        {
           "id": "sidebar-footer",
           "type": "block",
           "content": {
@@ -90,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-pc42ae4e2f1223725d9a495238f000020",
+                  "id": "strip-p0fcde5fc2a84e414d02214c59934c5ed",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-pc42ae4e2f1223725d9a495238f000020",
+                      "id": "head-p0fcde5fc2a84e414d02214c59934c5ed",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "pc42ae4e2f1223725d9a495238f000020",
-                          "terminal": "t1j",
+                          "pane": "p0fcde5fc2a84e414d02214c59934c5ed",
+                          "terminal": "t1n",
                           "strip": true
                         }
                       },
@@ -109,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-pc42ae4e2f1223725d9a495238f000020",
+                      "id": "term-p0fcde5fc2a84e414d02214c59934c5ed",
                       "type": "block",
                       "content": {
-                        "terminal": "t1j"
+                        "terminal": "t1n"
                       }
                     },
                     {
-                      "id": "strip-ruler-pc42ae4e2f1223725d9a495238f000020",
+                      "id": "strip-ruler-p0fcde5fc2a84e414d02214c59934c5ed",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "pc42ae4e2f1223725d9a495238f000020"
+                          "ruler": "p0fcde5fc2a84e414d02214c59934c5ed"
                         }
                       },
                       "size": {
@@ -148,18 +159,20 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "komari",
+                      "id": "agenttrail",
                       "type": "block",
                       "content": {
-                        "mod": "local-komari",
+                        "mod": "agenttrail",
                         "props": {
-                          "role": "panel",
-                          "at": 1794378098141
+                          "command": [
+                            "/opt/homebrew/opt/node@24/bin/node",
+                            "__HERDR_SYNC_HOME__/.local/lib/node_modules/agenttrail/bin/agenttrail.mjs"
+                          ]
                         }
                       }
                     }
                   ],
-                  "active": "komari",
+                  "active": "agenttrail",
                   "size": {
                     "px": 440
                   },
@@ -230,6 +243,16 @@
               }
             },
             {
+              "id": "agenttrail-entry",
+              "type": "block",
+              "content": {
+                "mod": "local-agenttrail-entry"
+              },
+              "size": {
+                "px": 70
+              }
+            },
+            {
               "id": "cloudflare-entry",
               "type": "block",
               "content": {
@@ -295,16 +318,6 @@
       "padding": 6,
       "gap": 4,
       "resizable": false
-    },
-    {
-      "id": "bd1041b0ac246ed4f32f19ccf81904b51",
-      "type": "block",
-      "content": {
-        "mod": "agenttrail"
-      },
-      "size": {
-        "px": 340
-      }
     }
   ],
   "background": "chrome",
