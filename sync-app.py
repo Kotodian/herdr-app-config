@@ -110,11 +110,29 @@ def validate():
     return m,files
 
 def hashes(files):return {k:digest(v) for k,v in files.items()}
+def remember_bases(files):
+    """Keep the exact exported text needed for a later three-way merge."""
+    folder=STATE.parent/'merge-bases'
+    for name,data in files.items():
+        if PurePosixPath(name).suffix not in TEXT and PurePosixPath(name).name not in ('LICENSE','NOTICE'):continue
+        path=folder/digest(data)
+        if path.exists():continue
+        folder.mkdir(parents=True,exist_ok=True)
+        path.write_bytes(data)
+
+def load_base(name,sha):
+    if not sha or not re.fullmatch(r'[0-9a-f]{64}',sha):return None
+    path=STATE.parent/'merge-bases'/sha
+    if not path.exists():return None
+    data=path.read_bytes()
+    return data if digest(data)==sha else None
+
 def save_hash_state(files):
     STATE.parent.mkdir(parents=True,exist_ok=True)
     tmp=STATE.with_suffix('.json.tmp');tmp.write_text(json.dumps({'files':files},indent=2)+'\n');tmp.replace(STATE)
 
 def save_state(files):
+    remember_bases(files)
     save_hash_state(hashes(files))
 
 def published_baseline(baseline,local,published):
@@ -126,7 +144,7 @@ def published_baseline(baseline,local,published):
         else:result.pop(name,None)
     return result
 
-def apply(app,overwrite=False,execute=False):
+def apply(app,overwrite=False,execute=False,expected_local=None):
     m,files=validate();baseline=read_json(STATE,{}).get('files',{})
     changes=[];conflicts=[]
     for name,data in files.items():
@@ -136,7 +154,8 @@ def apply(app,overwrite=False,execute=False):
         current=None if local is None else digest(local);remote=digest(data);old=baseline.get(name)
         if current==remote:continue
         if old is not None and current!=old and remote==old:continue # preserve local-only edits
-        if current is not None and current!=old and current!=remote and not overwrite:conflicts.append(name)
+        expected=expected_local is not None and expected_local.get(name)==current
+        if current is not None and current!=old and current!=remote and not overwrite and not expected:conflicts.append(name)
         else:changes.append((name,data))
     if conflicts:raise RuntimeError('Local configuration differs; nothing changed. Review these files or use --overwrite (with backup): '+', '.join(conflicts[:12]))
     print(f'{len(changes)} files to install/update; other files and sessions stay in place')
@@ -188,22 +207,105 @@ def doctor(app):
 
 LABEL='com.kotodian.herdr-app-sync'
 
-def merge_files(baseline,local,remote):
-    """Merge independent file edits; never guess at a same-file conflict/deletion."""
+class ConfigurationConflict(RuntimeError):
+    def __init__(self,details):
+        self.details=details
+        super().__init__('Configuration conflict; nothing applied: '+', '.join(d['name'] for d in details[:12]))
+
+class JsonConflict(ValueError):pass
+MISSING=object()
+
+def keyed_nodes(value):
+    return isinstance(value,list) and all(isinstance(v,dict) and isinstance(v.get('id'),str) for v in value) and len({v['id'] for v in value})==len(value)
+
+def merge_node_order(base,left,right,kept):
+    common=set(base)&set(left)&set(right)&set(kept)
+    b=[v for v in base if v in common];l=[v for v in left if v in common];r=[v for v in right if v in common]
+    if l!=b and r!=b and l!=r:raise JsonConflict('both sides reordered the same nodes')
+    primary=right if r!=b else left
+    other=left if r!=b else right
+    result=[v for v in primary if v in kept]
+    for i,value in enumerate(other):
+        if value not in kept or value in result:continue
+        after=next((v for v in other[i+1:] if v in result),None)
+        if after is not None:result.insert(result.index(after),value)
+        else:result.append(value)
+    return result
+
+def merge_json(base,left,right,path=(),kanso=False):
+    if left==right:return left
+    if left==base:return right
+    if right==base:return left
+    if isinstance(left,dict) and isinstance(right,dict) and (isinstance(base,dict) or base is MISSING):
+        before={} if base is MISSING else base
+        result={}
+        for key in dict.fromkeys([*left,*right,*before]):
+            # A different computer's selected panel is never an incoming preference.
+            if kanso and left.get('id')=='panel-body' and key in ('children','active','hidden'):
+                value=left.get(key,MISSING)
+            else:value=merge_json(before.get(key,MISSING),left.get(key,MISSING),right.get(key,MISSING),path+(key,),kanso)
+            if value is not MISSING:result[key]=value
+        return result
+    if keyed_nodes(base) and keyed_nodes(left) and keyed_nodes(right):
+        if kanso and len(path)>1 and path[-2:]==('work-body','children'):
+            live=lambda node:node['id']=='main' or node['id'].startswith('strip-')
+            stable=lambda nodes:[node for node in nodes if not live(node)]
+            merged=merge_json(stable(base),stable(left),stable(right),path,kanso=False)
+            runtime=[node for node in left if live(node)]
+            at=next((i for i,n in enumerate(left) if live(n)),0)
+            return merged[:at]+runtime+merged[at:]
+        b={v['id']:v for v in base};l={v['id']:v for v in left};r={v['id']:v for v in right};result={}
+        for key in dict.fromkeys([*l,*r,*b]):
+            value=merge_json(b.get(key,MISSING),l.get(key,MISSING),r.get(key,MISSING),path+(key,),kanso)
+            if value is not MISSING:result[key]=value
+        return [result[key] for key in merge_node_order(list(b),list(l),list(r),result)]
+    raise JsonConflict('both sides changed '+'.'.join(path or ('root',)))
+
+def merge_content(name,base,left,right):
+    if base is None or left is None or right is None:return None,'missing merge base or a removal'
+    if name.endswith('.json'):
+        try:
+            result=merge_json(json.loads(base),json.loads(left),json.loads(right),kanso=name=='layouts/kanso.json')
+            return (json.dumps(result,ensure_ascii=False,indent=2)+'\n').encode(),None
+        except (ValueError,TypeError) as error:return None,str(error)
+    if PurePosixPath(name).suffix in TEXT:
+        with tempfile.TemporaryDirectory(prefix='herdr-config-merge-') as directory:
+            paths=[Path(directory)/n for n in ('local','base','remote')]
+            for path,data in zip(paths,(left,base,right)):path.write_bytes(data)
+            result=subprocess.run(['git','merge-file','-p',*map(str,paths)],capture_output=True,timeout=15)
+            if result.returncode==0:return result.stdout,None
+        return None,'overlapping text changes'
+    return None,'binary changes require review'
+
+def save_conflicts(details):
+    for item in details:
+        key=digest((item['name']+''.join(digest(item[k]) if item[k] is not None else '-' for k in ('base','local','remote'))).encode())
+        folder=STATE.parent/'conflicts'/key
+        folder.mkdir(parents=True,exist_ok=True)
+        (folder/'info.json').write_text(json.dumps({'path':item['name'],'reason':item['reason']},ensure_ascii=False,indent=2)+'\n')
+        for key in ('base','local','remote'):
+            if item[key] is not None:(folder/key).write_bytes(item[key])
+
+def merge_files(baseline,local,remote,resolved=None):
+    """Merge disjoint edits against exact baselines; retain both sides of ambiguous edits."""
     merged={};conflicts=[]
     for name in sorted(set(baseline)|set(local)|set(remote)):
         left=local.get(name);right=remote.get(name);old=baseline.get(name)
         lh=None if left is None else digest(left);rh=None if right is None else digest(right)
         if lh==rh:
             if left is not None:merged[name]=left
-        elif old is not None and (left is None or right is None):
-            conflicts.append(name+' (removal needs review)')
         elif lh==old:
             if right is not None:merged[name]=right
         elif rh==old:
             if left is not None:merged[name]=left
-        else:conflicts.append(name)
-    if conflicts:raise RuntimeError('Configuration conflict; nothing applied: '+', '.join(conflicts[:12]))
+        else:
+            base=load_base(name,old)
+            data,reason=merge_content(name,base,left,right)
+            if data is not None:
+                merged[name]=data
+                if resolved is not None:resolved.append(name)
+            else:conflicts.append({'name':name,'base':base,'local':left,'remote':right,'reason':reason})
+    if conflicts:raise ConfigurationConflict(conflicts)
     return merged
 
 def validate_changes(merged,local,app):
@@ -243,7 +345,8 @@ def auto_sync(app):
             if (ROOT/'.git/MERGE_HEAD').exists():git('merge','--abort')
             raise RuntimeError('Git histories conflict; local commits retained for review') from None
         _,remote=validate();local,_=collect(app);baseline=read_json(STATE,{}).get('files',{})
-        merged=merge_files(baseline,local,remote)
+        resolved=[]
+        merged=merge_files(baseline,local,remote,resolved)
         validate_changes(merged,{name:data for name,data in local.items() if remote.get(name)==data},app)
         # Edits made while network/checks were running stay with the editor; retry later.
         if hashes(collect(app)[0])!=hashes(local):
@@ -261,18 +364,20 @@ def auto_sync(app):
         git('push','origin','HEAD:main')
         # Kanso can save a new terminal/panel layout while the push is in flight.
         # Record the bytes that actually reached Git before checking the live files again.
+        remember_bases({name:data for name,data in merged.items() if local.get(name)==data})
         save_hash_state(published_baseline(baseline,local,merged))
         if hashes(collect(app)[0])!=hashes(local):
             record_status('pending',commit=git('rev-parse','HEAD'),uploaded_files=outgoing,applied_files=0,
                           error=None,pending_reason='Upload succeeded; newer local edits will sync next cycle')
             print('Upload succeeded; newer local edits retained for the next cycle',flush=True)
             return
-        if incoming:apply(app,False,True)
+        if incoming:apply(app,False,True,expected_local=hashes(local))
         else:save_state(merged)
         commit=git('rev-parse','HEAD')
-        record_status('ok',commit=commit,uploaded_files=outgoing,applied_files=incoming)
+        record_status('ok',commit=commit,uploaded_files=outgoing,applied_files=incoming,auto_merged=resolved)
         print(f'Auto sync OK: {outgoing} uploaded, {incoming} applied; {commit[:12]}',flush=True)
     except Exception as e:
+        if isinstance(e,ConfigurationConflict):save_conflicts(e.details)
         record_status('error',error=str(e));raise
 
 def ensure_repo(app):
