@@ -65,7 +65,7 @@
       "sha256": "f2ef824c461e5d16dad82593baa871d0549090e482430beb7531a0ac927c4f91"
     },
     "integrations/herdr-project-coordinator/plugin/MEMORY.md": {
-      "sha256": "e10ce0b10cde2271ab83c0e61e5a8349591fec929ed92daafbcfe19b5da7412d"
+      "sha256": "6da9bbfc65419504e6651dbd9daed861ea850b8db3a3cf6d4911c25ef4db1ad8"
     },
     "integrations/herdr-project-coordinator/plugin/skills/coordinator/SKILL.md": {
       "sha256": "5b670af79938e28ef4fb32178c6ba7ea0505a4b1fbfc65f726f6cbe4162f0072"
@@ -134,7 +134,7 @@
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
     },
     "layouts/kanso.json": {
-      "sha256": "74f413b2fc4f92245713d1ee25dfd9825c02ceba20b6bf5d21226ce5b0fad320"
+      "sha256": "3e053a8d838b1aa0b02b4d6e5d600c79d928b4806de64441145578bb7f55b0ea"
     },
     "mods/agenttrail/agent-claude.svg": {
       "sha256": "1d8de3564ab1604c3d51954cf5b10e18d71c24d55f45d92980951f1d11e48de0"
