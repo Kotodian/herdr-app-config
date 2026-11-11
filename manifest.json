@@ -1,6 +1,7 @@
 {
   "schema": 1,
   "mods": [
+    "agenttrail",
     "gitview",
     "gitview-agents",
     "gitview-ask",
@@ -10,6 +11,7 @@
     "gitview-sidebar",
     "gitview-tab",
     "gitview-tracing",
+    "hcoord",
     "kanso-arrange",
     "kanso-chrome",
     "kanso-containers",
@@ -29,6 +31,7 @@
     "kanso-strip",
     "kanso-tabs",
     "kanso-toast",
+    "local-agenttrail-entry",
     "local-cloudflare",
     "local-cloudflare-entry",
     "local-git-tools",
@@ -56,7 +59,55 @@
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
     },
     "layouts/kanso.json": {
-      "sha256": "4d9a2b95154b8f38a4594eaa3776667b6db42b2e0c619861b3a7e5afe344f88c"
+      "sha256": "d3b9e7dfe168b01be979c9dd15fea0b95c38f36296f02f9077b97dd424f225ae"
+    },
+    "mods/agenttrail/agent-claude.svg": {
+      "sha256": "1d8de3564ab1604c3d51954cf5b10e18d71c24d55f45d92980951f1d11e48de0"
+    },
+    "mods/agenttrail/agent-codex.svg": {
+      "sha256": "1ea2df6aaf75efa6563685e3e754f117bf12f77c97628d8cb1281650f9aa8e5e"
+    },
+    "mods/agenttrail/arc-live.svg": {
+      "sha256": "21886f100eb42d078c52f0000b2cc47a78cd9b9892065fe1f0633766cac5210d"
+    },
+    "mods/agenttrail/arc-status.svg": {
+      "sha256": "98f0bbc30a79a13edd00d894ca15034c18834addec39046ca9082e1edaff1e40"
+    },
+    "mods/agenttrail/check.svg": {
+      "sha256": "6bbefec9235054723774d3d5622750a87f2f3f60f3cf714eb686b8880af475c5"
+    },
+    "mods/agenttrail/chevron.svg": {
+      "sha256": "4bf5eedfb04871fd038cd6d9fae6b0ae2c1df6379fc2de72dea56c1d8f6fdeab"
+    },
+    "mods/agenttrail/collapse.svg": {
+      "sha256": "ecf0325633fec956c7ac0b8e0d8fc0f7410f151575abfe6d953f9301d9b9f280"
+    },
+    "mods/agenttrail/expand.svg": {
+      "sha256": "283186c98aa71c17f9841cc1ab9105d1a73545186b8c5d1bcabbe1584dcf1449"
+    },
+    "mods/agenttrail/feed.js": {
+      "sha256": "cf2175ebcafa26ff61303e585e284c694c685c93978914863430ae9f3cd5b450"
+    },
+    "mods/agenttrail/fit.svg": {
+      "sha256": "d464c6f5a4f01a0a5f8ff9fb66fb1a402c3ba2d5220368362336f9f5d750ac53"
+    },
+    "mods/agenttrail/graph.js": {
+      "sha256": "465bec8ac55e59e687cafd7bd011e0f83fd115cc816f1f593c3c49e802f8d622"
+    },
+    "mods/agenttrail/live.svg": {
+      "sha256": "251d85d5e810a0b25107a95b2ab0f11683d938fb0c41b17b5ae0bb3507e5ef0c"
+    },
+    "mods/agenttrail/main.js": {
+      "sha256": "ad0935fbd0693da62442bc933a63902035495fe2906f55bc1f831330f477e939"
+    },
+    "mods/agenttrail/mark-dark.svg": {
+      "sha256": "061c0c5a88e223b6c5630ea5482a8f8f111ab5d9fdfd35ce8c2be0743e8bd0f3"
+    },
+    "mods/agenttrail/mark-light.svg": {
+      "sha256": "45e92d082b69ba9365b0f8cd39714807904b2a69f398c6eaba84ef6e39868d04"
+    },
+    "mods/agenttrail/mod.json": {
+      "sha256": "f883c583cbc0d16a697089cbeb232a92a16d67ca09e3f466c953bfd7913acab2"
     },
     "mods/gitview-agents/engine.js": {
       "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
@@ -348,6 +399,15 @@
     },
     "mods/gitview/telemetry.js": {
       "sha256": "4ee61657736a912a057b7313e066d5fa5683a5071e09bb982358aba4ffafd4a6"
+    },
+    "mods/hcoord/hcoord-path.js": {
+      "sha256": "a0d037390220e756f5206d6cbb9a802f682de3596671f7a571eef5bb70f9c74c"
+    },
+    "mods/hcoord/main.js": {
+      "sha256": "321882ec20ae22ee1051a99e7bd699150da6ac36994afaecc79aca41659126aa"
+    },
+    "mods/hcoord/mod.json": {
+      "sha256": "1c8bd07f4cce754d31357d1ad39c27dd76a997c1fb177d3b0319302fc268ecff"
     },
     "mods/kanso-arrange/listkeys.js": {
       "sha256": "c2491c2944e52319d2832d6a36c41307da652f03599b8ba8fa80397130932197"
@@ -1431,6 +1491,15 @@
     },
     "mods/kanso-toast/stack.js": {
       "sha256": "a10c663d81fac2d35017622940d3b665a9ab4e132b18fafd762fad07fb6c4592"
+    },
+    "mods/local-agenttrail-entry/layout.js": {
+      "sha256": "76c16f5fdad67de73a8b7a89d3f3b71b8c8e814c2d71edcb7e0f56905927ab59"
+    },
+    "mods/local-agenttrail-entry/main.js": {
+      "sha256": "fda1bf3bcdde4d0f0ccbe3c97916992cdbba3ecf96b20d065012f12cbdc9e1a3"
+    },
+    "mods/local-agenttrail-entry/mod.json": {
+      "sha256": "752e668aa1f70c16fd0aec27f14d26c612e373b5830eb61125155e22a586d6c1"
     },
     "mods/local-cloudflare-entry/layout.js": {
       "sha256": "c6aaeec7473227d9375668db56171662730a83a8a1a2c50f9899e4bac52e240d"

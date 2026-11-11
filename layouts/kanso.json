@@ -295,6 +295,16 @@
       "padding": 6,
       "gap": 4,
       "resizable": false
+    },
+    {
+      "id": "bd1041b0ac246ed4f32f19ccf81904b51",
+      "type": "block",
+      "content": {
+        "mod": "agenttrail"
+      },
+      "size": {
+        "px": 340
+      }
     }
   ],
   "background": "chrome",
