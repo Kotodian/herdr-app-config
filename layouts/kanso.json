@@ -159,14 +159,17 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "gitview",
+                      "id": "magpie",
                       "type": "block",
                       "content": {
-                        "mod": "gitview"
+                        "mod": "local-magpie",
+                        "props": {
+                          "role": "panel"
+                        }
                       }
                     }
                   ],
-                  "active": "gitview",
+                  "active": "magpie",
                   "size": {
                     "px": 440
                   },
