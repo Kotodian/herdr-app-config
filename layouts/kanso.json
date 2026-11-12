@@ -159,20 +159,17 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "agenttrail",
+                      "id": "pr",
                       "type": "block",
                       "content": {
-                        "mod": "agenttrail",
+                        "mod": "kanso-panel",
                         "props": {
-                          "command": [
-                            "/opt/homebrew/opt/node@24/bin/node",
-                            "__HERDR_SYNC_HOME__/.local/lib/node_modules/agenttrail/bin/agenttrail.mjs"
-                          ]
+                          "panel": "pr"
                         }
                       }
                     }
                   ],
-                  "active": "agenttrail",
+                  "active": "pr",
                   "size": {
                     "px": 440
                   },
