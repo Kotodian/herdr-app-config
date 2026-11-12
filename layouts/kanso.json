@@ -159,17 +159,20 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "magpie",
+                      "id": "agenttrail",
                       "type": "block",
                       "content": {
-                        "mod": "local-magpie",
+                        "mod": "agenttrail",
                         "props": {
-                          "role": "panel"
+                          "command": [
+                            "/opt/homebrew/opt/node@24/bin/node",
+                            "__HERDR_SYNC_HOME__/.local/lib/node_modules/agenttrail/bin/agenttrail.mjs"
+                          ]
                         }
                       }
                     }
                   ],
-                  "active": "magpie",
+                  "active": "agenttrail",
                   "size": {
                     "px": 440
                   },
