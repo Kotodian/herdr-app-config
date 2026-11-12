@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-p3879b07dbdaf3f514aa37aeb88d8fbc8",
+                  "id": "strip-p6a955afcac3c87587d505f867ab401de",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-p3879b07dbdaf3f514aa37aeb88d8fbc8",
+                      "id": "head-p6a955afcac3c87587d505f867ab401de",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "p3879b07dbdaf3f514aa37aeb88d8fbc8",
-                          "terminal": "t2z",
+                          "pane": "p6a955afcac3c87587d505f867ab401de",
+                          "terminal": "t34",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-p3879b07dbdaf3f514aa37aeb88d8fbc8",
+                      "id": "term-p6a955afcac3c87587d505f867ab401de",
                       "type": "block",
                       "content": {
-                        "terminal": "t2z"
+                        "terminal": "t34"
                       }
                     },
                     {
-                      "id": "strip-ruler-p3879b07dbdaf3f514aa37aeb88d8fbc8",
+                      "id": "strip-ruler-p6a955afcac3c87587d505f867ab401de",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "p3879b07dbdaf3f514aa37aeb88d8fbc8"
+                          "ruler": "p6a955afcac3c87587d505f867ab401de"
                         }
                       },
                       "size": {
