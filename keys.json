@@ -143,7 +143,8 @@
     "ctrl-shift-,": "kanso-tabs.settings",
     "cmd-shift-/": "mod.open:kanso-help",
     "cmd-b": "kanso-spaces.sidebar",
-    "ctrl-shift-b": "kanso-spaces.sidebar"
+    "ctrl-shift-b": "kanso-spaces.sidebar",
+    "cmd-shift-s": "kanso-tabs.sim"
   },
   "mod:kanso-spend": {
     "cmd-r": "kanso-spend.refresh",

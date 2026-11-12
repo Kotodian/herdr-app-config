@@ -14,22 +14,23 @@ import { agentRow, agentFold, agentLabel, AGENT_PAD, FLUSH, NESTED, renameTermin
 import { ThreadLocator, findThreads, pidsOf, aliveIn, aliveDue, ALIVE_MS, ALIVE_BEHIND_MS } from "./threads.js";
 import { Panel, sameSeen } from "./panel.js";
 import { Store, shownOf } from "./store.js";
-import { spaceFor, inPlace } from "./kdb.js";
+import { Kdb, spaceFor, inPlace, seenRow, restDue, machinesToAsk, asOfText, kansoDir } from "./kdb.js";
 import { agentSnapshot, agentTargets, observedAgents, targetOf, parseTarget, returnSignature, RETURN_LABEL, AWAY_PIECE, awayShown, destinationOf, livePlaces } from "./since-left-model.js";
 import { SinceLeft } from "./since-left.js";
-import { SleepWork, settleOnLoad, commandsOf, runCmds, releaseHide, awayLeft, isAway } from "./sleepwork.js";
+import { SleepWork, settleOnLoad, commandsOf, runCmds, releaseHide, awayLeft, isAway, homePlace } from "./sleepwork.js";
 import { REGISTRY, WORKTREES, keyOfSpace, keyOfProject, closedProjects, shownNames, startingProjects, folderName, addWorktree, worktreesOf, missingFolders, trimmed, sameProjects } from "./projects.js";
 import { stateMark } from "./marks.js";
 import { sleepingNow, asleepGroups, withAway, nameOf, seenNow, conversationOfThread, readNow, shownThread, terminalNames, agentKey, SHOWN_LABEL, PROJECT_LABEL, ID_LABEL } from "./roster.js";
 import { pollable, activePlaces } from "./background.js";
 import { listKey, moveTo } from "./listkeys.js";
 import { commitLayout, setRail, foldSidebar, railWidth, OPEN_MIN } from "./layout.js";
-import { tryOrAsync } from "./pure.js";
-import { skeleton, breathe, H, G, T, R, ICON, tokens, iconButton } from "./ui.js";
+import { afterMount } from "./pure.js";
+import { commandLoop, MachineRead } from "./sidebar.js";
+import { skeleton, breathe, H, G, T, R, ICON, tokens, iconButton, Armed } from "./ui.js";
 import { machineRecord, canRestore, addArgs, rmArgs, loginLine, hcError, needsLogin, heldNames, connectedNames, machinePhase, powerId, machineTitle, machineOf, visibleSpaces, visibleAgents, pollKeys, machineState, machineHot, machineTip, machineVisible, machineInk, listedMachines } from "./machines.js";
 import { syncIcon, peerOn, withPeer } from "./sync.js";
 import { readSync, saveSync } from "./sync-row.js";
-import { createAwake } from "./awake.js";
+import { createAwake, keepAwake } from "./awake.js";
 import { NEEDS_YOU, EMPTY_NOTICE_MS, waitingSignature, sleepingSignature, sameQueue, waitingQueue, nextWaiting, queueState } from "./needs-you.js";
 import { queueControl, queueList } from "./needs-you-view.js";
 import { spaces, machines, panes, agents, terminals, run, openOverlay, closeOverlay, props, exec, hc, theme, shared, setShared, watchFolder, window, nextCommand, focused, home, appHome, pickFolder, knownAgents, notify } from "herdr";
@@ -74,6 +75,8 @@ const base = (path) => paths.basename(path);
 const FALLBACK = 60000;
 // A `ps` answers in milliseconds; one still out after this is taken for hung (psRun).
 const PS_GIVE_UP_MS = 10000;
+// Under the 30 s machine look, so a hung list is free before the next one.
+const MACHINE_READ_MS = 20_000;
 const SIDEBAR_W = 256;
 // Dragged narrower, rows keep one line under ONE_LINE_W, and under SNAP_W the sidebar folds to the rail as Hide sidebar does.
 const ONE_LINE_W = 240;
@@ -151,7 +154,7 @@ export default class Spaces extends View {
     // Opened as a row's right-click menu (props().menu): nothing else to run.
     if (props()?.menu || props()?.railMenu || props()?.spaceMenu || props()?.newAgent || props()?.worktree || props()?.newConversation || props()?.newProject) {
       // Nothing is chosen for you: no row lit until the keyboard moves.
-      this.confirmClose = false; this.menuAt = -1; this.handle = cx.focus_handle();
+      this.armed = new Armed(); this.menuAt = -1; this.handle = cx.focus_handle();
       // A scroll handle is state: made here, never during render (Herdr refuses it there).
       if (props()?.newConversation || props()?.railMenu) this.convScroll = VirtualListScrollHandle.new();
       this.openPopup(cx); return;
@@ -189,13 +192,12 @@ export default class Spaces extends View {
     this.panelReady = false;
     this.sinceLeft = new SinceLeft(this.leftNavStore().kdb);
     this.prSeenAt = shared("kanso.pr.seen")?.at ?? 0;
-    // Sleeps are this sidebar's work (sleepwork.js): taken up now (what a restart cut short goes on), on the dialog's
-    // kick and with the 30 s look; the heartbeat keeps a long step's row this window's.
+    // Sleeps are this sidebar's work (sleepwork.js): taken up on the next timer turn (what a restart cut short goes on),
+    // on the dialog's kick and with the 30 s look; the heartbeat keeps a long step's row this window's.
     this.sleepWork = new SleepWork(this.leftNavStore().kdb, (row) => {
       if (row?.state === "stuck") notify({ title: `${row.name} could not sleep`, body: `${row.why}. Retry or undo it from Asleep.`, level: "error" });
       this.loadAsleep().catch(() => {});
     }, null, () => awayShown(shared("kanso.hidden")));
-    this.pollSleepWork(cx);
     cx.timer.every(5000, () => { if (this.sleepWork.held.size) this.sleepWork.beat().catch(() => {}); });
     this.applyPrefs();
     cx.spawn(async (cx) => {
@@ -218,7 +220,8 @@ export default class Spaces extends View {
     this.foldH = {};
     this.migrate();
     this.awake = createAwake({ now: () => Date.now(), run: (call) => exec(call.command, call.args, { on: call.on, timeout: call.timeout }) });
-    this.refreshMachines(cx);
+    this.machineRead = new MachineRead();
+    afterMount(cx, (cx) => { this.pollSleepWork(cx); this.refreshMachines(cx); });
     cx.spawn(async (cx) => {
       const rev = this.parkRev ?? 0;
       try {
@@ -248,15 +251,14 @@ export default class Spaces extends View {
     cx.timer.every(500, (cx) => this.checkNew(cx));
     cx.timer.every(ALIVE_MS, (cx) => this.checkTasks(cx));
     // A sleep or wake that stopped half way shows again once old; another window's changes arrive.
-    cx.timer.every(30000, (cx) => { this.loadAsleep(false).catch(() => {}); this.pollSleepWork(cx); cx.notify(); });
+    cx.timer.every(30000, (cx) => { this.loadAsleep(false).catch(() => {}); this.pollSleepWork(cx); });
     // keys.json: ⌃1-9 and ⌃⌥P/S/T arrive here as commands.
-    cx.spawn(async (cx) => {
-      for (;;) {
-        const next = await tryOrAsync(async () => { const c = await nextCommand(); cx.notify(); return { c }; });
-        if (!next) break; // a replaced build (hot reload, update) stops here, before acting
-        this.command(String(next.c).replace(/^kanso-spaces\./, ""), cx);
-      }
-    });
+    cx.spawn((cx) => commandLoop(
+      () => nextCommand(),
+      () => cx.notify(),
+      (command) => this.command(String(command).replace(/^kanso-spaces\./, ""), cx),
+      cx.timer,
+    ));
   }
 
   leftNavStore() {
@@ -456,36 +458,147 @@ export default class Spaces extends View {
     if (!this.sleepWork) return;
     const now = Date.now(), stamp = shared("kanso.asleep.at") ?? 0, kick = shared("kanso.sleep.kick") ?? 0;
     if (stamp === this.workStamp && kick === this.workKick && (!fallback || now - this.workPolledAt < 120000)) return;
+    const kicked = kick !== this.workKick && kick != null && kick !== 0;
     this.workStamp = stamp;
     this.workKick = kick;
     this.workPolledAt = now;
+    this.sleepCx = cx;
     this.sleepWork.start(cx);
+    this.startRemoteWork(cx);
+    // The kick is an order. Waiting for the 30 s look left a shell asleep only when that timer fired.
+    if (kicked) this.loadAsleep().catch(() => {});
+  }
+
+  remoteNames(sp = spaces()) {
+    return machinesToAsk(machines(), sp);
+  }
+
+  inFront() {
+    return typeof window === "function" && window()?.active === true;
+  }
+
+  remoteDue(sp, now, kick) {
+    const names = this.remoteNames(sp);
+    if (!names.length) return false;
+    const ordered = kick !== this.remoteKick && kick != null && kick !== 0;
+    const active = this.inFront();
+    return names.some((name) => machineState(this.phaseOf(name)) || restDue({ readAt: this.remoteAt?.get(name) ?? null, ordered, now, active, showing: true }));
+  }
+
+  async storeOn(machine) {
+    this.remoteStores ??= new Map();
+    const had = this.remoteStores.get(machine);
+    if (had) return had;
+    const place = await homePlace(machine);
+    const dir = kansoDir(place.home, place.platform);
+    const store = new Store(new Kdb(dir, machine));
+    this.remoteStores.set(machine, store);
+    return store;
+  }
+
+  remoteWork(machine, store) {
+    this.remoteWorkers ??= new Map();
+    const had = this.remoteWorkers.get(machine);
+    if (had) return had;
+    const worker = new SleepWork(store.kdb, (row) => {
+      if (row?.state === "stuck") notify({ title: `${row.name} could not sleep`, body: `${row.why}. Retry or undo it from Asleep.`, level: "error" });
+      if (row?.state === "asleep") this.markRemoteAsleep(machine, row);
+      this.loadAsleep().catch(() => {});
+    }, null, () => awayShown(shared("kanso.hidden")));
+    this.remoteWorkers.set(machine, worker);
+    return worker;
+  }
+
+  startRemoteWork(cx) {
+    for (const name of [...(this.pendingRemote ?? [])]) {
+      const store = this.remoteStores?.get(name);
+      if (!store || !cx) continue;
+      this.pendingRemote.delete(name);
+      this.remoteWork(name, store).start(cx);
+    }
+  }
+
+  async remoteRows(name, now, ordered, active) {
+    const quiet = machineState(this.phaseOf(name)) || null;
+    const due = restDue({ readAt: this.remoteAt?.get(name) ?? null, ordered, now, active, showing: true });
+    const kept = this.remoteKept?.get(name) ?? [];
+    const aged = (reason) => {
+      const at = this.remoteAt?.get(name) ?? null;
+      return kept.map((row) => ({ ...row, quiet: reason, asOf: at ? asOfText(at, now) : null }));
+    };
+    if (quiet) return aged(quiet);
+    if (!due) return kept;
+    try {
+      const store = await this.storeOn(name);
+      const rows = await store.asleep(true, null, now);
+      const published = rows.map((row) => ({ ...seenRow(shownOf(row, now), name), machine: name }));
+      (this.remoteKept ??= new Map()).set(name, published);
+      (this.remoteAt ??= new Map()).set(name, now);
+      if (ordered || rows.some((row) => row.state === "sleeping" || row.state === "undoing")) {
+        this.pendingRemote ??= new Set();
+        this.pendingRemote.add(name);
+      }
+      return published;
+    } catch (error) { return aged(String(error?.message ?? error)); }
+  }
+
+  markRemoteAsleep(machine, row) {
+    const next = (list) => (list ?? []).map((item) => (item.id === row.id ? { ...item, state: "asleep", pending: false, busy: false, stuck: null, why: row.why ?? null } : item));
+    const had = (this.remoteShown ?? []).some((item) => item.id === row.id);
+    if (this.remoteKept?.has(machine)) this.remoteKept.set(machine, next(this.remoteKept.get(machine)));
+    this.remoteShown = next(this.remoteShown);
+    if (had) this.publishAsleep(Date.now());
+  }
+
+  async readRemote(sp, now, kick) {
+    const names = this.remoteNames(sp);
+    const ordered = kick !== this.remoteKick && kick != null && kick !== 0;
+    const active = this.inFront();
+    this.remoteShown = (await names.reduce(async (acc, name) => [...(await acc), ...(await this.remoteRows(name, now, ordered, active))], Promise.resolve([])));
+    this.remoteKick = kick;
+    this.startRemoteWork(this.sleepCx);
+  }
+
+  publishAsleep(started) {
+    const list = [...(this.localShown ?? []), ...(this.remoteShown ?? [])];
+    if ((shared("kanso.asleep.at") ?? 0) > started) return;
+    if (JSON.stringify(list) === JSON.stringify(shared("kanso.asleep") ?? [])) return;
+    this.asleepStamp = started;
+    setShared("kanso.asleep.at", started);
+    setShared("kanso.asleep", list);
   }
 
   async loadAsleep(force = true) {
     const started = Date.now(), stamp = shared("kanso.asleep.at") ?? 0, kick = shared("kanso.sleep.kick") ?? 0;
-    if (!force && stamp === this.asleepStamp && kick === this.asleepKick && started - this.asleepLoaded < 120000) return;
+    const sp = spaces();
+    const remoteDue = this.remoteDue(sp, started, kick);
+    if (!force && stamp === this.asleepStamp && kick === this.asleepKick && started - this.asleepLoaded < 120000 && !remoteDue) return;
+    const localDue = force || stamp !== this.asleepStamp || kick !== this.asleepKick || started - this.asleepLoaded >= 120000;
+    const local = localDue ? await this.readLocal(sp, started, stamp, kick) : "skip";
+    if (local === "drop" && !remoteDue) return;
+    if (remoteDue) await this.readRemote(sp, started, kick);
+    if (local === "shown" || remoteDue) this.publishAsleep(started);
+  }
+
+  async readLocal(sp, started, stamp, kick) {
     this.asleepReads += 1;
     const seq = this.asleepReads;
     // A sleep from before space ids adopts the one space it now fits.
-    const st = this.leftNavStore(), sp = spaces();
+    const st = this.leftNavStore();
     const rows = await st.asleep(true, sp, started).catch(() => null);
     if (rows) {
       const found = rows.filter((a) => !a.spaceId).map((a) => ({ sleep: a.id, space: spaceFor({ spaceName: a.space, project: a.from }, sp, home())?.id })).filter((x) => x.space);
       if (found.length) await st.kdb.adoptSpaces(found).catch(() => {});
       await this.loadProjects(st.kdb, rows).catch(() => {});
+      this.settleHidden(rows);
     }
-    if (rows) this.settleHidden(rows);
-    if (!rows || seq < this.asleepApplied || (shared("kanso.asleep.at") ?? 0) > started) return;
+    if (!(rows && seq >= this.asleepApplied && (shared("kanso.asleep.at") ?? 0) <= started)) return "drop";
     this.asleepApplied = seq;
     this.asleepLoaded = started;
     this.asleepStamp = stamp;
     this.asleepKick = kick;
-    const list = rows.map((a) => shownOf(a, started));
-    if (JSON.stringify(list) === JSON.stringify(shared("kanso.asleep") ?? [])) return;
-    this.asleepStamp = started;
-    setShared("kanso.asleep.at", started);
-    setShared("kanso.asleep", list);
+    this.localShown = rows.map((a) => shownOf(a, started));
+    return "shown";
   }
 
   // A hide from before this load: still sleeping stays hidden, an undo or a missed write comes back, a tab left open is shown once.
@@ -511,6 +624,7 @@ export default class Spaces extends View {
     if (space) { const i = Number(space[1]); if (i >= 1 && i <= spaces().length) run("space.select", { index: i }); }
     else if (view) { this.setView(view[1], cx); cx.notify(); }
     else if (c === "needs-you.next") this.nextNeeds(cx);
+    else if (c.startsWith("retry-machine:") && c.length > "retry-machine:".length) this.retryMachine(c.slice("retry-machine:".length), cx);
     else if (c === "sidebar") this.toggleRail();
     else if (c === "needs-you.list") this.toggleNeeds(cx);
     else if (c === "list") this.enterList(cx);
@@ -1025,9 +1139,15 @@ export default class Spaces extends View {
       this.ready[m.name] = ready;
       return ready && was === false ? [...keys].filter((k) => onOf.get(k) === m.name) : [];
     });
-    const stale = active ? [...keys].filter((k) => {
+    const railOpen = shared("sidebar.collapsed") !== true;
+    const opened = railOpen && this.railWasClosed === true;
+    this.railWasClosed = !railOpen;
+    const forward = Boolean(active) && this.gitBehind === true;
+    this.gitBehind = !active;
+    // Collapsed or behind: no fallback read. Opening the rail, or coming forward, reads at once.
+    const stale = active && railOpen ? [...keys].filter((k) => {
       const asks = this.git[k] || this.unsure.has(k);
-      return asks && !this.folded.has(onOf.get(k)) && now - (this.checked[k] ?? 0) > FALLBACK;
+      return asks && !this.folded.has(onOf.get(k)) && (opened || forward || now - (this.checked[k] ?? 0) > FALLBACK);
     }) : [];
     return new Set(pollKeys([...fresh, ...moved, ...ended, ...back, ...stale], this.offNames()));
   }
@@ -1074,16 +1194,12 @@ export default class Spaces extends View {
     }
   }
 
-  // One look at a time: a herdr-core that hangs must not stack them up.
+  // One look at a time. A read that never settles is given up, and the next look runs.
   refreshMachines(cx, repeat = false) {
-    if (this.machinesBusy || repeat && ![...(this.machines ?? []), ...(this.parked ?? []), ...machines()].some((row) => row.name)) return;
-    this.machinesBusy = true;
-    cx.spawn(async (cx) => {
-      try { await this.readMachines(); } catch { /* the last list stands */ }
-      finally { this.machinesBusy = false; }
-      this.holdAwake(cx);
-      cx.notify();
-    });
+    this.machineRead ??= new MachineRead();
+    if (repeat && !this.machineRead.busy && ![...(this.machines ?? []), ...(this.parked ?? []), ...machines()].some((row) => row.name)) return;
+    const job = this.machineRead.start(cx.timer, MACHINE_READ_MS, () => this.readMachines());
+    if (job) cx.spawn(async (cx) => { await job; this.holdAwake(cx); cx.notify(); });
   }
 
   // The list is read every two minutes behind; the hold still renews on time.
@@ -1093,8 +1209,7 @@ export default class Spaces extends View {
     const token = (this.awakeToken ?? 0) + 1;
     this.awakeToken = token;
     cx.spawn(async (cx) => {
-      await this.awake.sync(rows);
-      const wait = this.awake.nextWait();
+      const wait = await keepAwake(this.awake, rows, cx.timer);
       if (wait == null || this.awakeToken !== token) return;
       cx.timer.after(wait, (cx) => { if (this.awakeToken === token) this.holdAwake(cx); });
     });
@@ -1322,8 +1437,16 @@ export default class Spaces extends View {
       try {
         if (how === "undo") releaseHide(id, shared, setShared);
         if (isAway(id)) { await this.loadAsleep(); return; }
-        const ok = await this.leftNavStore()[how](id);
-        if (ok) { setShared("kanso.sleep.kick", Date.now()); this.sleepWork?.start(cx); }
+        const row = (shared("kanso.asleep") ?? []).find((a) => a.id === id) ?? null;
+        if (row?.quiet) return;
+        const machine = row?.machine ?? null;
+        const store = machine ? await this.storeOn(machine) : this.leftNavStore();
+        const ok = await store[how](id);
+        if (ok) {
+          setShared("kanso.sleep.kick", Date.now());
+          if (machine) { this.pendingRemote ??= new Set(); this.pendingRemote.add(machine); this.remoteWork(machine, store).start(cx); }
+          else this.sleepWork?.start(cx);
+        }
         await this.loadAsleep();
       } catch { /* the row stays as it is */ }
     };
@@ -1435,7 +1558,7 @@ export default class Spaces extends View {
   seen(sp, ctx) { return seenNow(sp, ctx, this.threads, this.panel?.agents ?? new Map(), (a) => this.nameOf(a), this.since ?? {}); }
 
   zzActions(a) {
-    return a.asleep.busy ? [] : [{ id: "wake", icon: "sun", tip: "Wake", act: () => wakeRow(a.asleep.id) }];
+    return a.asleep.busy || a.asleep.quiet ? [] : [{ id: "wake", icon: "sun", tip: "Wake", act: () => wakeRow(a.asleep.id) }];
   }
 
   // Each item() adds itself to menuActs as it draws: the keyboard walks the items in screen order.
@@ -1519,6 +1642,7 @@ export default class Spaces extends View {
     const place = this.menuPlace(m);
     const project = place?.project ? registry().find((p) => p.id === place.project) ?? null : null;
     const asleep = (shared("kanso.asleep") ?? []).filter((a) => (a.state == null || a.state === "asleep") && inPlace(a, { from: key, space: w?.id ?? null }, spaces(), home()));
+    const ready = asleep.filter((a) => !a.quiet);
     if (!w && !asleep.length && !project) return v_flex().id("spaces-menu").p(10).bg(t.popover).text_size(12.5).text_color(t.dim).child("Nothing here sleeps any more.");
     const item = this.items(t);
     const active = w?.tabs?.find((x) => x.active);
@@ -1531,8 +1655,9 @@ export default class Spaces extends View {
     return this.menuFrame(t)
       .when(asleep.length > 0, (el) => el
         .child(this.menuTitle(t, "Asleep"))
-        .children(asleep.map((a, i) => item(`wake-${i}`, `Wake ${a.name}`, () => wakeRow(a.id), { icon: "sun", hint: since(a.saved) })))
-        .when(asleep.length > 1, (el) => el.child(item("wake-all", `Wake all ${asleep.length}`, () => arrange({ wakeAll: { from: key, space: w?.id ?? null } }), { icon: "undo" }))))
+        .children(ready.map((a, i) => item(`wake-${i}`, `Wake ${a.name}`, () => wakeRow(a.id), { icon: "sun", hint: since(a.saved) })))
+        .children(asleep.filter((a) => a.quiet).map((a, i) => div().id(`asleep-quiet-${i}`).h(MENU_ROW).px(8).flex().items_center().truncate().text_size(12.5).text_color(t.dim).child(a.asOf ? `${a.name} · ${a.quiet} · ${a.asOf}` : `${a.name} · ${a.quiet}`)))
+        .when(ready.length > 1 && ready.length === asleep.length, (el) => el.child(item("wake-all", `Wake all ${asleep.length}`, () => arrange({ wakeAll: { from: key, space: w?.id ?? null } }), { icon: "undo" }))))
       .when(Boolean(place) && !project?.missing, (el) => el
         .child(item("new-agent", "New agent\u2026", () => this.newAgentMenu(place), { icon: "plus" }))
         .child(item("new-worktree", "New agent in a worktree\u2026", () => this.worktreeDialog(place), { icon: "worktree" })))
@@ -1551,9 +1676,9 @@ export default class Spaces extends View {
           .finally(() => this.thenClose(null));
       }, { icon: "file", keep: true })))
       // Any project you see can go: one you added (its row too), or an open space you never kept.
-      .when(Boolean(project) || Boolean(w), (el) => el.child(this.confirmClose
-        ? item("remove-project", w ? `Click again: remove it and close its ${tabs} tab${tabs === 1 ? "" : "s"}` : "Click again to remove it", () => this.removeProject(project, w), { icon: "close", ink: t.blocked, keep: true })
-        : item("remove-project", "Remove project", () => { this.confirmClose = true; }, { icon: "close", ink: t.muted, keep: true })));
+      .when(Boolean(project) || Boolean(w), (el) => el.child(item("remove-project", this.armed.is("remove")
+        ? (w ? `Press again: remove it and close its ${tabs} tab${tabs === 1 ? "" : "s"}` : "Press again to remove it")
+        : "Remove project", (cx) => { this.armed.press("remove", cx, () => this.removeProject(project, w)); }, { icon: "close", ink: this.armed.is("remove") ? t.blocked : t.muted, keep: true })));
   }
 
   // Every + ends here: which agent of the ones installed (or a shell), none chosen for you; the one used last
@@ -1662,7 +1787,10 @@ export default class Spaces extends View {
 
   more(e, ctx, project = null) {
     const a = e.a, show = this.showActivity !== false && !a.sub;
-    if (a.asleep) return { lines: e.lines, label: a.name, time: a.asleep.busy ? "\u2026" : since(a.asleep.saved), project, steady: show, oneLine: this.narrow };
+    if (a.asleep) {
+      const quiet = a.asleep.quiet || null;
+      return { lines: e.lines, label: a.name, time: quiet ? (a.asleep.asOf ?? "") : a.asleep.busy ? "\u2026" : since(a.asleep.saved), activity: quiet, project, steady: show && !quiet, oneLine: this.narrow };
+    }
     return {
       label: this.nameOf(a),
       lines: e.lines,
@@ -1786,9 +1914,13 @@ export default class Spaces extends View {
     if (!list.length) { this.readingThreads = false; return; }
     this.threadLocator ??= new ThreadLocator();
     cx.spawn(async (cx) => {
-      try { this.threads = await findThreads(list, this.threads ?? {}, terminals(), this.threadLocator); } catch { this.threads ??= {}; }
+      try {
+        const before = this.threads ?? {};
+        const next = await findThreads(list, before, terminals(), this.threadLocator);
+        this.threads = next;
+        if (Object.keys(before).length !== Object.keys(next).length || Object.keys(next).some((id) => next[id] !== before[id])) cx.notify();
+      } catch { this.threads ??= {}; }
       finally { this.readingThreads = false; }
-      cx.notify();
     });
   }
 
@@ -1889,7 +2021,7 @@ export default class Spaces extends View {
       copy: () => m && this.machineButton(`machine-login:${key}`, `machine-login-${m}`, "copy", line, (cx) => cx.write_to_clipboard?.(line), t),
       power: () => m && this.machineButton(`machine-power:${key}`, powerId(m), "power", tip[phase] ?? "Turn on", (cx) => this.setPower(m, this.phaseOf(m) === "off", cx), t),
       retry: () => m && this.machineButton(`machine-retry:${key}`, `machine-retry-${m}`, "refresh", "Retry", (cx) => this.retryMachine(m, cx), t),
-      plus: () => this.machineButton(`machine-add:${key}`, `machine-add-${key}`, "plus", "New space", () => run("space.new", { machine: m ?? "" }), t),
+      plus: () => this.machineButton(`machine-add:${key}`, `machine-add-${key}`, "plus", "New project", () => run("space.new", { machine: m ?? "" }), t),
       sync: () => this.syncButton(m, t),
     };
     return machineVisible(phase, hot, Boolean(m), peerOn(this.sync.config, m)).map((name) => button[name]()).filter(Boolean);
@@ -1967,7 +2099,7 @@ export default class Spaces extends View {
     const empty = h_flex().id(`machine-new-${m ?? "local"}`).h(28).flex_none().px(8).gap(7).items_center().rounded(R.control)
       .text_size(12).text_color(t.dim).hover((s) => s.bg(t.hover).text_color(t.foreground))
       .on_click(() => run("space.new", { machine: m ?? "" }))
-      .child(svg("mods/kanso-chrome/icons/plus.svg").size(14)).tooltip("New space");
+      .child(svg("mods/kanso-chrome/icons/plus.svg").size(14)).tooltip("New project");
     const asleep = this.closedOn(m, ctx).length > 0;
     return [headItem, ...(mine.length ? mine.flatMap(draw) : asleep ? [] : [loading(m) ? loadingRow(m) : item(empty, 28)]), ...closed(m)];
   }
@@ -2373,12 +2505,12 @@ export default class Spaces extends View {
       ].filter(Boolean);
       const more = {
         label: this.nameOf(a),
-        time: snoozed ? new Date(snoozedUntil(a.labels)).toTimeString().slice(0, 5) : when ? duration(Math.max(0, ctx.now - when)) : null,
+        time: snoozed ? new Date(snoozedUntil(a.labels)).toTimeString().slice(0, 5) : a.asleep?.quiet ? (a.asleep.asOf || null) : when ? duration(Math.max(0, ctx.now - when)) : null,
         badge: up ? "Woke" : null,
         strong: unread || up,
         project: nested ? null : project(a.space),
         // What the agent says it is on, or said last; else the last thing you wrote.
-        activity: a.asleep ? (a.asleep.stuck ? `Stuck: ${a.asleep.stuck}` : a.asleep.busy ? "On its way" : `Asleep since ${since(a.asleep.saved)}`) : this.threads[a.address]?.unavailable ?? said(a) ?? (th?.prompt ? `You: ${th.prompt}` : null),
+        activity: a.asleep ? (a.asleep.quiet || (a.asleep.stuck ? `Stuck: ${a.asleep.stuck}` : a.asleep.busy ? "On its way" : `Asleep since ${since(a.asleep.saved)}`)) : this.threads[a.address]?.unavailable ?? said(a) ?? (th?.prompt ? `You: ${th.prompt}` : null),
         roomy: true,
         oneLine: this.narrow,
         ...this.extras(a, ctx),
@@ -2477,7 +2609,7 @@ export default class Spaces extends View {
       .child(item("pin", pinned ? "Unpin" : "Pin to the top", () => this.pinThread({ address: m.address, pin: pinned ? 1 : null }), { icon: "pin" }))
       .when(settled, (el) => el.child(item("unsettle", "Bring back", () => label(m.address, SETTLED_LABEL), { icon: "undo" })))
       .when(!settled && free, (el) => el.child(item("settle", "Settle", () => label(m.address, SETTLED_LABEL, `${now}:${k?.turn ?? 0}`), { icon: "check" })))
-      .when(snoozed, (el) => el.child(item("wake", "Wake now", () => label(m.address, SNOOZE_LABEL), { icon: "clock" })))
+      .when(snoozed, (el) => el.child(item("wake", "Wake", () => label(m.address, SNOOZE_LABEL), { icon: "clock" })))
       .when(!snoozed, (el) => el.child(div().h(26).pl(32).flex().items_center().text_size(11.5).text_color(t.dim).child("Snooze"))
         .children(snoozePresets(now).map((x) => item(`snooze-${x.id}`, x.label, () => label(m.address, SNOOZE_LABEL, x.until), { hint: x.when }))))
       .when(Boolean(p?.tab) && Boolean(sp) && Boolean(a), (el) => el.child(item("sleep-agent", "Sleep this agent", () => sleepAgent(sp.id, p.tab, p.pane), { icon: "moon" })))
@@ -2495,17 +2627,17 @@ export default class Spaces extends View {
       .when(Boolean(p?.branch), (el) => el.child(item("copy-branch", "Copy branch", copy(p.branch), { icon: "branch" })))
       .when(Boolean(session), (el) => el.child(item("copy-id", "Copy conversation id", copy(session), { icon: "copy" })))
       .child(rule())
-      .child(this.confirmClose
-        ? item("close", "Click again to close it", () => run("terminal.kill", { terminal: m.address }), { icon: "close", ink: t.blocked })
-        : item("close", a ? "Close agent" : "Close terminal", (cx) => { this.confirmClose = true; }, { icon: "close", ink: t.blocked, keep: true }));
+      .child(item("close", this.armed.is("close") ? "Press again to close it" : (a ? "Close agent" : "Close terminal"), (cx) => {
+        this.armed.press("close", cx, () => run("terminal.kill", { terminal: m.address }));
+      }, { icon: "close", ink: t.blocked, keep: !this.armed.is("close") }));
   }
 
   zzMenuView(t, m) {
     const z = m.asleep;
     const item = this.items(t);
     return this.menuFrame(t)
-      .child(div().h(26).px(8).flex().items_center().text_size(11.5).text_color(t.dim).truncate().child(`${m.name}, asleep since ${since(z.saved)}`))
-      .when(!z.busy, (el) => el.child(item("wake", z.n > 1 ? `Wake it and ${z.n - 1} more of ${z.tab}` : "Wake", () => wakeRow(z.id), { icon: "sun" })))
+      .child(div().h(26).px(8).flex().items_center().text_size(11.5).text_color(t.dim).truncate().child(z.quiet ? `${m.name} · ${z.quiet}${z.asOf ? ` · ${z.asOf}` : ""}` : `${m.name}, asleep since ${since(z.saved)}`))
+      .when(!z.busy && !z.quiet, (el) => el.child(item("wake", z.n > 1 ? `Wake it and ${z.n - 1} more of ${z.tab}` : "Wake", () => wakeRow(z.id), { icon: "sun" })))
       .when(Boolean(z.resume), (el) => el.child(item("copy-id", "Copy conversation id", (cx) => cx.write_to_clipboard?.(z.resume), { icon: "copy" })))
       .child(item("all", "Everything asleep\u2026", () => arrange({}), { icon: "moon" }));
   }

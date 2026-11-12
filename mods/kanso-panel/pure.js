@@ -3,6 +3,8 @@
 
 export const range = (n, from = 0) => Array.from({ length: Math.max(0, n) }, (_, i) => from + i);
 
+export const extOf = (path) => (/\.([^./\\]+)$/.exec(String(path)) ?? [])[1]?.toLowerCase() ?? "";
+
 export const tryOr = (fn, fallback = null) => {
   try { return fn(); } catch { return fallback; }
 };
@@ -14,6 +16,15 @@ export const parseOr = (text, fallback = null) => tryOr(() => JSON.parse(text), 
 
 // A panel's first command waits one timer turn: Herdr can lose one started in a remounted view's init turn.
 export const afterMount = (cx, start) => cx.timer.after(0, start);
+
+// Herdr can leave a promise unsettled. The timer resolves this instead, so the caller moves on.
+export const LATE = Object.freeze({ late: true, code: 1, stdout: "", stderr: "timed out" });
+
+export function bounded(promise, timer, ms = 30_000) {
+  if (!timer?.after) return promise;
+  const deadline = new Promise((resolve) => { timer.after(ms, () => resolve(LATE)); });
+  return Promise.race([promise, deadline]);
+}
 
 export async function retry(times, fn, { done = Boolean, between = async () => {} } = {}, k = 0) {
   const v = await fn(k);

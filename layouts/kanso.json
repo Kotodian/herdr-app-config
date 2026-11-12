@@ -49,7 +49,7 @@
             }
           },
           "size": {
-            "px": 192
+            "px": 156
           }
         }
       ],
@@ -159,17 +159,18 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "pr",
+                      "id": "komari",
                       "type": "block",
                       "content": {
-                        "mod": "kanso-panel",
+                        "mod": "local-komari",
                         "props": {
-                          "panel": "pr"
+                          "role": "panel",
+                          "at": 1794457262769
                         }
                       }
                     }
                   ],
-                  "active": "pr",
+                  "active": "komari",
                   "size": {
                     "px": 440
                   },
