@@ -159,18 +159,17 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "komari",
+                      "id": "magpie",
                       "type": "block",
                       "content": {
-                        "mod": "local-komari",
+                        "mod": "local-magpie",
                         "props": {
-                          "role": "panel",
-                          "at": 1794457262769
+                          "role": "panel"
                         }
                       }
                     }
                   ],
-                  "active": "komari",
+                  "active": "magpie",
                   "size": {
                     "px": 440
                   },
