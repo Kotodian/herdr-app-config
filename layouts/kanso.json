@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-p257d7763fd3da5a2a837276497a380f8",
+                  "id": "strip-p3e527322da3a0df8d189d95baddda1dd",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-p257d7763fd3da5a2a837276497a380f8",
+                      "id": "head-p3e527322da3a0df8d189d95baddda1dd",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "p257d7763fd3da5a2a837276497a380f8",
-                          "terminal": "t3j",
+                          "pane": "p3e527322da3a0df8d189d95baddda1dd",
+                          "terminal": "t2",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-p257d7763fd3da5a2a837276497a380f8",
+                      "id": "term-p3e527322da3a0df8d189d95baddda1dd",
                       "type": "block",
                       "content": {
-                        "terminal": "t3j"
+                        "terminal": "t2"
                       }
                     },
                     {
-                      "id": "strip-ruler-p257d7763fd3da5a2a837276497a380f8",
+                      "id": "strip-ruler-p3e527322da3a0df8d189d95baddda1dd",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "p257d7763fd3da5a2a837276497a380f8"
+                          "ruler": "p3e527322da3a0df8d189d95baddda1dd"
                         }
                       },
                       "size": {
@@ -159,18 +159,17 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "magpie",
+                      "id": "look",
                       "type": "block",
                       "content": {
-                        "mod": "local-magpie",
+                        "mod": "kanso-panel",
                         "props": {
-                          "role": "panel",
-                          "at": 1794468597631
+                          "panel": "look"
                         }
                       }
                     }
                   ],
-                  "active": "magpie",
+                  "active": "look",
                   "size": {
                     "px": 440
                   },
