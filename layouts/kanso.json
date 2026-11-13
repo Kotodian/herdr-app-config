@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-pb54df1ea8fb3494d940c2ecc7073538e",
+                  "id": "strip-pa1da7d0155f85322e79aa36abf07a3b7",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-pb54df1ea8fb3494d940c2ecc7073538e",
+                      "id": "head-pa1da7d0155f85322e79aa36abf07a3b7",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "pb54df1ea8fb3494d940c2ecc7073538e",
-                          "terminal": "t3",
+                          "pane": "pa1da7d0155f85322e79aa36abf07a3b7",
+                          "terminal": "t37",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-pb54df1ea8fb3494d940c2ecc7073538e",
+                      "id": "term-pa1da7d0155f85322e79aa36abf07a3b7",
                       "type": "block",
                       "content": {
-                        "terminal": "t3"
+                        "terminal": "t37"
                       }
                     },
                     {
-                      "id": "strip-ruler-pb54df1ea8fb3494d940c2ecc7073538e",
+                      "id": "strip-ruler-pa1da7d0155f85322e79aa36abf07a3b7",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "pb54df1ea8fb3494d940c2ecc7073538e"
+                          "ruler": "pa1da7d0155f85322e79aa36abf07a3b7"
                         }
                       },
                       "size": {
@@ -157,7 +157,19 @@
                 {
                   "id": "panel-body",
                   "type": "stack",
-                  "children": [],
+                  "children": [
+                    {
+                      "id": "magpie",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-magpie",
+                        "props": {
+                          "role": "panel",
+                          "at": 1794468597631
+                        }
+                      }
+                    }
+                  ],
                   "size": {
                     "px": 440
                   },
@@ -165,7 +177,7 @@
                   "max": 900,
                   "background": "background",
                   "radius": 8,
-                  "hidden": true
+                  "active": "magpie"
                 }
               ],
               "background": "chrome",
