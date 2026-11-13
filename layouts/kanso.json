@@ -85,33 +85,74 @@
               "type": "row",
               "children": [
                 {
-                  "id": "main",
+                  "id": "strip-ruler-h",
                   "type": "block",
                   "content": {
-                    "tab": "active",
-                    "pane": {
-                      "header": {
-                        "content": {
-                          "mod": "kanso-strip"
-                        },
-                        "reveal": "always",
-                        "height": 34,
-                        "position": "top"
-                      },
-                      "background": "background",
-                      "border": {
-                        "width": 0,
-                        "color": "border"
-                      },
-                      "focus": {
-                        "width": 0,
-                        "color": "border"
-                      },
-                      "radius": 8,
-                      "gap": 6
+                    "mod": "kanso-strip",
+                    "props": {
+                      "ruler": "h"
                     }
                   },
+                  "size": {
+                    "px": 1
+                  },
+                  "min": 1,
+                  "max": 1,
                   "background": "chrome"
+                },
+                {
+                  "id": "strip-p1448bf90814572434beba4abb7567f83",
+                  "type": "column",
+                  "children": [
+                    {
+                      "id": "head-p1448bf90814572434beba4abb7567f83",
+                      "type": "block",
+                      "content": {
+                        "mod": "kanso-strip",
+                        "props": {
+                          "pane": "p1448bf90814572434beba4abb7567f83",
+                          "terminal": "t5",
+                          "strip": true
+                        }
+                      },
+                      "size": {
+                        "px": 34
+                      }
+                    },
+                    {
+                      "id": "term-p1448bf90814572434beba4abb7567f83",
+                      "type": "block",
+                      "content": {
+                        "terminal": "t5"
+                      }
+                    },
+                    {
+                      "id": "strip-ruler-p1448bf90814572434beba4abb7567f83",
+                      "type": "block",
+                      "content": {
+                        "mod": "kanso-strip",
+                        "props": {
+                          "ruler": "p1448bf90814572434beba4abb7567f83"
+                        }
+                      },
+                      "size": {
+                        "px": 8
+                      },
+                      "min": 8,
+                      "max": 8,
+                      "background": "chrome"
+                    }
+                  ],
+                  "size": {
+                    "weight": 1000
+                  },
+                  "min": 140,
+                  "background": "background",
+                  "border": {
+                    "width": 1,
+                    "color": "#1b1b1900"
+                  },
+                  "radius": 8
                 },
                 {
                   "id": "panel-body",
