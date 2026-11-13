@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-pb54df1ea8fb3494d940c2ecc7073538e",
+                  "id": "strip-p6e77d77f7df3db77bf8c7fe9fae76c4e",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-pb54df1ea8fb3494d940c2ecc7073538e",
+                      "id": "head-p6e77d77f7df3db77bf8c7fe9fae76c4e",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "pb54df1ea8fb3494d940c2ecc7073538e",
-                          "terminal": "t3",
+                          "pane": "p6e77d77f7df3db77bf8c7fe9fae76c4e",
+                          "terminal": "t4",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-pb54df1ea8fb3494d940c2ecc7073538e",
+                      "id": "term-p6e77d77f7df3db77bf8c7fe9fae76c4e",
                       "type": "block",
                       "content": {
-                        "terminal": "t3"
+                        "terminal": "t4"
                       }
                     },
                     {
-                      "id": "strip-ruler-pb54df1ea8fb3494d940c2ecc7073538e",
+                      "id": "strip-ruler-p6e77d77f7df3db77bf8c7fe9fae76c4e",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "pb54df1ea8fb3494d940c2ecc7073538e"
+                          "ruler": "p6e77d77f7df3db77bf8c7fe9fae76c4e"
                         }
                       },
                       "size": {
@@ -163,9 +163,9 @@
                   },
                   "min": 280,
                   "max": 900,
+                  "hidden": true,
                   "background": "background",
-                  "radius": 8,
-                  "hidden": true
+                  "radius": 8
                 }
               ],
               "background": "chrome",
