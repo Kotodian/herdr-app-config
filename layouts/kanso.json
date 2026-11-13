@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-workbox/p257d7763fd3da5a2a837276497a380f8",
+                  "id": "strip-p257d7763fd3da5a2a837276497a380f8",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-workbox/p257d7763fd3da5a2a837276497a380f8",
+                      "id": "head-p257d7763fd3da5a2a837276497a380f8",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "workbox/p257d7763fd3da5a2a837276497a380f8",
-                          "terminal": "workbox/t3j",
+                          "pane": "p257d7763fd3da5a2a837276497a380f8",
+                          "terminal": "t3j",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-workbox/p257d7763fd3da5a2a837276497a380f8",
+                      "id": "term-p257d7763fd3da5a2a837276497a380f8",
                       "type": "block",
                       "content": {
-                        "terminal": "workbox/t3j"
+                        "terminal": "t3j"
                       }
                     },
                     {
-                      "id": "strip-ruler-workbox/p257d7763fd3da5a2a837276497a380f8",
+                      "id": "strip-ruler-p257d7763fd3da5a2a837276497a380f8",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "workbox/p257d7763fd3da5a2a837276497a380f8"
+                          "ruler": "p257d7763fd3da5a2a837276497a380f8"
                         }
                       },
                       "size": {
@@ -159,17 +159,18 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "look",
+                      "id": "magpie",
                       "type": "block",
                       "content": {
-                        "mod": "kanso-panel",
+                        "mod": "local-magpie",
                         "props": {
-                          "panel": "look"
+                          "role": "panel",
+                          "at": 1794468597631
                         }
                       }
                     }
                   ],
-                  "active": "look",
+                  "active": "magpie",
                   "size": {
                     "px": 440
                   },
