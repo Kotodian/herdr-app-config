@@ -101,37 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-edge-left",
-                  "type": "block",
-                  "content": {
-                    "mod": "kanso-strip",
-                    "props": {
-                      "edge": "p3bef205ea7ebcea4366553b98d604faf",
-                      "side": "left",
-                      "count": 1,
-                      "panes": [
-                        "p3bef205ea7ebcea4366553b98d604faf"
-                      ]
-                    }
-                  },
-                  "size": {
-                    "px": 28
-                  },
-                  "min": 28,
-                  "max": 28
-                },
-                {
-                  "id": "strip-p741c5c65039a7e0befa7f0546bcfc18a",
+                  "id": "strip-workbox/p3bef205ea7ebcea4366553b98d604faf",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-p741c5c65039a7e0befa7f0546bcfc18a",
+                      "id": "head-workbox/p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "p741c5c65039a7e0befa7f0546bcfc18a",
-                          "terminal": "t3t",
+                          "pane": "workbox/p3bef205ea7ebcea4366553b98d604faf",
+                          "terminal": "workbox/t3q",
                           "strip": true
                         }
                       },
@@ -140,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-p741c5c65039a7e0befa7f0546bcfc18a",
+                      "id": "term-workbox/p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
-                        "terminal": "t3t"
+                        "terminal": "workbox/t3q"
                       }
                     },
                     {
-                      "id": "strip-ruler-p741c5c65039a7e0befa7f0546bcfc18a",
+                      "id": "strip-ruler-workbox/p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "p741c5c65039a7e0befa7f0546bcfc18a"
+                          "ruler": "workbox/p3bef205ea7ebcea4366553b98d604faf"
                         }
                       },
                       "size": {
@@ -175,21 +155,29 @@
                   "radius": 8
                 },
                 {
+                  "id": "strip-edge-right",
+                  "type": "block",
+                  "content": {
+                    "mod": "kanso-strip",
+                    "props": {
+                      "edge": "workbox/p741c5c65039a7e0befa7f0546bcfc18a",
+                      "side": "right",
+                      "count": 1,
+                      "panes": [
+                        "workbox/p741c5c65039a7e0befa7f0546bcfc18a"
+                      ]
+                    }
+                  },
+                  "size": {
+                    "px": 28
+                  },
+                  "min": 28,
+                  "max": 28
+                },
+                {
                   "id": "panel-body",
                   "type": "stack",
-                  "children": [
-                    {
-                      "id": "komari",
-                      "type": "block",
-                      "content": {
-                        "mod": "local-komari",
-                        "props": {
-                          "role": "panel",
-                          "at": 1794572402596
-                        }
-                      }
-                    }
-                  ],
+                  "children": [],
                   "size": {
                     "px": 440
                   },
@@ -197,7 +185,7 @@
                   "max": 900,
                   "background": "background",
                   "radius": 8,
-                  "active": "komari"
+                  "hidden": true
                 }
               ],
               "background": "chrome",
