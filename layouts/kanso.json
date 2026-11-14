@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-p4209be56c0f671e1e3a5b73dbad4e9d6",
+                  "id": "strip-p3bef205ea7ebcea4366553b98d604faf",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-p4209be56c0f671e1e3a5b73dbad4e9d6",
+                      "id": "head-p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "p4209be56c0f671e1e3a5b73dbad4e9d6",
-                          "terminal": "t1m",
+                          "pane": "p3bef205ea7ebcea4366553b98d604faf",
+                          "terminal": "t3q",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-p4209be56c0f671e1e3a5b73dbad4e9d6",
+                      "id": "term-p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
-                        "terminal": "t1m"
+                        "terminal": "t3q"
                       }
                     },
                     {
-                      "id": "strip-ruler-p4209be56c0f671e1e3a5b73dbad4e9d6",
+                      "id": "strip-ruler-p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "p4209be56c0f671e1e3a5b73dbad4e9d6"
+                          "ruler": "p3bef205ea7ebcea4366553b98d604faf"
                         }
                       },
                       "size": {
@@ -157,7 +157,19 @@
                 {
                   "id": "panel-body",
                   "type": "stack",
-                  "children": [],
+                  "children": [
+                    {
+                      "id": "komari",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-komari",
+                        "props": {
+                          "role": "panel",
+                          "at": 1794572402596
+                        }
+                      }
+                    }
+                  ],
                   "size": {
                     "px": 440
                   },
@@ -165,7 +177,7 @@
                   "max": 900,
                   "background": "background",
                   "radius": 8,
-                  "hidden": true
+                  "active": "komari"
                 }
               ],
               "background": "chrome",
