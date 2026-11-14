@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-workbox/p3bef205ea7ebcea4366553b98d604faf",
+                  "id": "strip-p3bef205ea7ebcea4366553b98d604faf",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-workbox/p3bef205ea7ebcea4366553b98d604faf",
+                      "id": "head-p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "workbox/p3bef205ea7ebcea4366553b98d604faf",
-                          "terminal": "workbox/t3q",
+                          "pane": "p3bef205ea7ebcea4366553b98d604faf",
+                          "terminal": "t3q",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-workbox/p3bef205ea7ebcea4366553b98d604faf",
+                      "id": "term-p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
-                        "terminal": "workbox/t3q"
+                        "terminal": "t3q"
                       }
                     },
                     {
-                      "id": "strip-ruler-workbox/p3bef205ea7ebcea4366553b98d604faf",
+                      "id": "strip-ruler-p3bef205ea7ebcea4366553b98d604faf",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "workbox/p3bef205ea7ebcea4366553b98d604faf"
+                          "ruler": "p3bef205ea7ebcea4366553b98d604faf"
                         }
                       },
                       "size": {
@@ -144,7 +144,7 @@
                     }
                   ],
                   "size": {
-                    "weight": 500
+                    "weight": 1000
                   },
                   "min": 140,
                   "background": "background",
@@ -157,7 +157,19 @@
                 {
                   "id": "panel-body",
                   "type": "stack",
-                  "children": [],
+                  "children": [
+                    {
+                      "id": "komari",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-komari",
+                        "props": {
+                          "role": "panel",
+                          "at": 1794572402596
+                        }
+                      }
+                    }
+                  ],
                   "size": {
                     "px": 440
                   },
@@ -165,7 +177,7 @@
                   "max": 900,
                   "background": "background",
                   "radius": 8,
-                  "hidden": true
+                  "active": "komari"
                 }
               ],
               "background": "chrome",
