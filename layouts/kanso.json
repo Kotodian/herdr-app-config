@@ -163,9 +163,9 @@
                   },
                   "min": 280,
                   "max": 900,
-                  "hidden": true,
                   "background": "background",
-                  "radius": 8
+                  "radius": 8,
+                  "hidden": true
                 }
               ],
               "background": "chrome",
