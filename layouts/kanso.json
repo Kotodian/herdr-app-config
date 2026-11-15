@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-workbox/pf2e56e72ec4066e45f82ceb61ddc95fd",
+                  "id": "strip-pf2e56e72ec4066e45f82ceb61ddc95fd",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-workbox/pf2e56e72ec4066e45f82ceb61ddc95fd",
+                      "id": "head-pf2e56e72ec4066e45f82ceb61ddc95fd",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "workbox/pf2e56e72ec4066e45f82ceb61ddc95fd",
-                          "terminal": "workbox/t3v",
+                          "pane": "pf2e56e72ec4066e45f82ceb61ddc95fd",
+                          "terminal": "t3v",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-workbox/pf2e56e72ec4066e45f82ceb61ddc95fd",
+                      "id": "term-pf2e56e72ec4066e45f82ceb61ddc95fd",
                       "type": "block",
                       "content": {
-                        "terminal": "workbox/t3v"
+                        "terminal": "t3v"
                       }
                     },
                     {
-                      "id": "strip-ruler-workbox/pf2e56e72ec4066e45f82ceb61ddc95fd",
+                      "id": "strip-ruler-pf2e56e72ec4066e45f82ceb61ddc95fd",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "workbox/pf2e56e72ec4066e45f82ceb61ddc95fd"
+                          "ruler": "pf2e56e72ec4066e45f82ceb61ddc95fd"
                         }
                       },
                       "size": {
@@ -163,9 +163,9 @@
                   },
                   "min": 280,
                   "max": 900,
+                  "hidden": true,
                   "background": "background",
-                  "radius": 8,
-                  "hidden": true
+                  "radius": 8
                 }
               ],
               "background": "chrome",
