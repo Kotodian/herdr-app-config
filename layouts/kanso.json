@@ -101,17 +101,17 @@
                   "background": "chrome"
                 },
                 {
-                  "id": "strip-workbox/p52da8f4b29fdd6cc7ad6f333af57c8a5",
+                  "id": "strip-pf2e56e72ec4066e45f82ceb61ddc95fd",
                   "type": "column",
                   "children": [
                     {
-                      "id": "head-workbox/p52da8f4b29fdd6cc7ad6f333af57c8a5",
+                      "id": "head-pf2e56e72ec4066e45f82ceb61ddc95fd",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "pane": "workbox/p52da8f4b29fdd6cc7ad6f333af57c8a5",
-                          "terminal": "workbox/t40",
+                          "pane": "pf2e56e72ec4066e45f82ceb61ddc95fd",
+                          "terminal": "t3v",
                           "strip": true
                         }
                       },
@@ -120,19 +120,19 @@
                       }
                     },
                     {
-                      "id": "term-workbox/p52da8f4b29fdd6cc7ad6f333af57c8a5",
+                      "id": "term-pf2e56e72ec4066e45f82ceb61ddc95fd",
                       "type": "block",
                       "content": {
-                        "terminal": "workbox/t40"
+                        "terminal": "t3v"
                       }
                     },
                     {
-                      "id": "strip-ruler-workbox/p52da8f4b29fdd6cc7ad6f333af57c8a5",
+                      "id": "strip-ruler-pf2e56e72ec4066e45f82ceb61ddc95fd",
                       "type": "block",
                       "content": {
                         "mod": "kanso-strip",
                         "props": {
-                          "ruler": "workbox/p52da8f4b29fdd6cc7ad6f333af57c8a5"
+                          "ruler": "pf2e56e72ec4066e45f82ceb61ddc95fd"
                         }
                       },
                       "size": {
