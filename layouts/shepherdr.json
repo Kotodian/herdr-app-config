@@ -191,8 +191,13 @@
                                       "content": {
                                         "mod": "task-browser"
                                       },
-                                      "size": {
-                                        "weight": 1
+                                      "hidden": true
+                                    },
+                                    {
+                                      "id": "tasks-thread-browser-view",
+                                      "type": "block",
+                                      "content": {
+                                        "terminal": "t5q"
                                       }
                                     }
                                   ],
