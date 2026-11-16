@@ -178,6 +178,27 @@ export default {
     {
       "type": "heading",
       "level": 2,
+      "text": "设计第 3 / 9 / 10 / 12 节对应范围"
+    },
+    {
+      "type": "text",
+      "md": "**第 3 节：沿用配置入口**\n\nbindings/c/src/native_typed.rs 与 C 头文件新增 Routes 扩展；TS ProtocolConfig、addon、Swift ProxyExit.routes、Kotlin Exit.Routes/JNI 转换完整数组。HTTP/TCP payload 独立，CA/离线能力校验交给 Rust configuration_policy。\n\n现有配置、启动和连接入口保留，旧 ABI 前缀不变；本轮只有编译、类型和 ABI 静态证据，JSON 到核心的运行用例未执行。"
+    },
+    {
+      "type": "text",
+      "md": "**第 9 节：所有者 restart**\n\nC 原生 actor 与 native_ffi.rs 完成校验、关闭、替换、启动；mode_snapshot 区分查询失败与确认停止，epoch 保护并发 stop。TS protocol-worker.cjs 排队生命周期；Swift/Kotlin 沿用锁。\n\n失败显式返回；新会话重新取得连接句柄，旧流不重放。已准备边界测试源码，成功/失败/取消/拥塞语义尚未运行证明。"
+    },
+    {
+      "type": "text",
+      "md": "**第 10 节：跨语言边界**\n\n控制 schema、C typed API、TS、Swift、Kotlin 只传候选配置与所有者操作；摘要增加 routes。内部 Planner、池、Probe 与 route 泛型不进入协议，沿用可信原生/主进程边界。\n\n没有新增宿主接管或 CA 安装行为；内部路由、池隔离、探测和出口能力属于 Rust 核心，不由本绑定任务验收。"
+    },
+    {
+      "type": "text",
+      "md": "**第 12 节：实施落点与验收**\n\n本任务只负责 bindings/c、ts、swift、kotlin、绑定文档及 tests/bindings 的未来回归源码。\n\nrouting/outbound/health/probe 的 src 目录整理由 SPS-5 负责，本任务未实现或证明该项。第 12 节行为矩阵未运行；静态检查和缺陷评审通过不代表整份设计已验收。"
+    },
+    {
+      "type": "heading",
+      "level": 2,
       "text": "兼容性与失败边界"
     },
     {
@@ -215,6 +236,7 @@ export default {
         "未运行 native-tun 分支的测试；默认 cargo check --tests 不编译该分支的故障用例。",
         "未做完整动态链接、语言包产物构建或打包安装检查，也未检查所有 feature 组合。",
         "未验证 iOS/Android 实机或模拟器、Windows；静态编译不代表这些设备可用。",
+        "未验收整份路由设计；第 12 节核心目录规范由 SPS-5 单独处理，核心探测、选路、健康、池和行为矩阵不在本绑定交付的证明范围。",
         "未访问 Steam 或真实节点，未修改系统接管/CA 信任设置，未部署或发布。"
       ]
     }
