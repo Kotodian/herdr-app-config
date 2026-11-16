@@ -201,6 +201,13 @@
                                   "content": {
                                     "mod": "task-artifacts"
                                   }
+                                },
+                                {
+                                  "id": "tasks-thread-term",
+                                  "type": "block",
+                                  "content": {
+                                    "agent": "focused"
+                                  }
                                 }
                               ],
                               "active": "tasks-thread-chat"
