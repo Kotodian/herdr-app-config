@@ -190,14 +190,6 @@
                                       "type": "block",
                                       "content": {
                                         "mod": "task-browser"
-                                      },
-                                      "hidden": true
-                                    },
-                                    {
-                                      "id": "tasks-thread-browser-view",
-                                      "type": "block",
-                                      "content": {
-                                        "terminal": "t5q"
                                       }
                                     }
                                   ],
