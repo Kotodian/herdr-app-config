@@ -1,0 +1,279 @@
+   Compiling getrandom v0.4.3
+   Compiling jobserver v0.1.35
+   Compiling crypto-common v0.2.2
+   Compiling cc v1.11.1
+   Compiling cpufeatures v0.3.1
+   Compiling digest v0.11.3
+   Compiling cmake v0.1.58
+   Compiling cipher v0.5.2
+   Compiling aws-lc-sys v0.45.0
+   Compiling ring v0.17.14
+   Compiling keccak v0.2.2
+   Compiling shake v0.1.0
+   Compiling chacha20 v0.10.2
+   Compiling universal-hash v0.6.1
+   Compiling syn v1.0.109
+   Compiling zstd-sys v2.1.2+zstd.1.5.7
+   Compiling crossbeam-utils v0.8.23
+   Compiling blake3 v1.8.5 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling tokio-util v0.7.20
+   Compiling regex-automata v0.4.18
+   Compiling prometheus-client-derive-text-encode v0.3.0
+   Compiling aes v0.9.4
+   Compiling rand v0.10.3
+   Compiling aead v0.6.1
+   Compiling arrayvec v0.7.8
+   Compiling zstd-safe v8.2.0
+   Compiling h2 v0.4.20 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling prometheus-client v0.18.1
+   Compiling digest v0.10.7
+   Compiling quinn-udp v0.5.16
+   Compiling regex v1.13.1
+   Compiling flate2 v1.1.11
+   Compiling polyval v0.7.3
+   Compiling poly1305 v0.9.1
+   Compiling ctr v0.10.1
+   Compiling prometools v0.2.3
+   Compiling compression-codecs v0.4.47
+   Compiling sha1 v0.10.7
+   Compiling chacha20poly1305 v0.11.0
+   Compiling ghash v0.6.0
+   Compiling x509-parser v0.18.1
+   Compiling xray-routing v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling x25519-dalek v2.0.1
+   Compiling prometheus v0.14.0
+   Compiling crossbeam-epoch v0.9.21
+   Compiling crossbeam-queue v0.3.14
+   Compiling h3 v0.0.8 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling sha3 v0.11.0
+   Compiling md-5 v0.11.0
+   Compiling hmac v0.13.0
+   Compiling sha2 v0.11.1
+   Compiling signature v3.0.0
+   Compiling uuid v1.29.0
+   Compiling ml-dsa v0.1.2
+   Compiling aws-lc-rs v1.18.1
+   Compiling rustls v0.23.40 (https://github.com/aimalygin/shaped-rustls?rev=3a131beaef0183b0cb61e5a9070a703b6be39ed3#3a131bea)
+   Compiling hkdf v0.13.0
+   Compiling crossbeam v0.8.5
+   Compiling foundations v5.12.0
+   Compiling rustls-webpki v0.103.16
+   Compiling xray-proxy v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling zstd v0.14.3
+   Compiling aes-gcm v0.11.1
+   Compiling tungstenite v0.29.0
+   Compiling async-compression v0.4.42
+   Compiling sha1 v0.11.0
+   Compiling blake2 v0.11.0
+   Compiling quinn-proto v0.11.16 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling quinn v0.11.9 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling tokio-rustls v0.26.6
+   Compiling hickory-proto v0.25.2
+   Compiling h3-quinn v0.0.10 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling xray-transport v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling hyper v1.12.0
+   Compiling tokio-tungstenite v0.29.0
+   Compiling buffer-pool v0.2.1
+   Compiling xray-vless-encryption v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling backon v1.6.0
+   Compiling rcgen v0.14.10
+   Compiling hyper-util v0.1.21
+   Compiling tempfile v3.27.0
+   Compiling steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-1-rust)
+warning: field `endpoint` is never read
+  --> src/backend.rs:47:16
+   |
+36 | pub(crate) struct Backend {
+   |                   ------- field in this struct
+...
+47 |     pub(crate) endpoint: Option<SocketAddr>,
+   |                ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `http1_only` is never used
+   --> src/config.rs:469:19
+    |
+468 | impl RuntimeConfig {
+    | ------------------ method in this implementation
+469 |     pub(crate) fn http1_only(&self, host: &str) -> bool {
+    |                   ^^^^^^^^^^
+
+warning: methods `handshake`, `idle`, and `write` are never used
+   --> src/config.rs:509:19
+    |
+508 | impl WebSocketTimeouts {
+    | ---------------------- methods in this implementation
+509 |     pub(crate) fn handshake(self) -> Duration {
+    |                   ^^^^^^^^^
+...
+516 |     pub(crate) fn idle(self) -> Duration {
+    |                   ^^^^
+...
+523 |     pub(crate) fn write(self) -> Duration {
+    |                   ^^^^^
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+
+warning: method `target_headers` is never used
+  --> src/outbound.rs:10:8
+   |
+ 8 | pub(crate) trait ReverseBackend {
+   |                  -------------- method in this trait
+ 9 |     fn allows_download(&self) -> bool;
+10 |     fn target_headers(&self) -> bool;
+   |        ^^^^^^^^^^^^^^
+
+warning: method `target_headers` is never used
+  --> src/outbound.rs:31:12
+   |
+27 | impl<B: ReverseBackend> ReverseProxy<B> {
+   | --------------------------------------- method in this implementation
+...
+31 |     pub fn target_headers(&self) -> bool {
+   |            ^^^^^^^^^^^^^^
+
+warning: method `access_success` is never used
+   --> src/routing.rs:636:12
+    |
+322 | impl Registry {
+    | ------------- method in this implementation
+...
+636 |     pub fn access_success(&self, index: usize) {
+    |            ^^^^^^^^^^^^^^
+
+warning: unused imports: `DiagnosticRecorder`, `Kind`, and `ObservationContext`
+ --> src/inspection_tests.rs:2:13
+  |
+2 | use crate::{DiagnosticRecorder, Kind, ObservationContext};
+  |             ^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bytes::Bytes`
+ --> src/inspection_tests.rs:3:5
+  |
+3 | use bytes::Bytes;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `sync::Arc`
+ --> src/inspection_tests.rs:4:34
+  |
+4 | use std::{collections::BTreeMap, sync::Arc};
+  |                                  ^^^^^^^^^
+
+warning: method `websocket_trust` is never used
+   --> src/backend.rs:157:19
+    |
+155 | impl Backend {
+    | ------------ method in this implementation
+156 |     #[cfg(all(test, feature = "websocket"))]
+157 |     pub(crate) fn websocket_trust(&mut self, config: Arc<rustls::ClientConfig>) {
+    |                   ^^^^^^^^^^^^^^^
+
+warning: associated function `from_socket` is never used
+  --> src/websocket.rs:60:19
+   |
+59 | impl ByteStream {
+   | --------------- associated function in this implementation
+60 |     pub(crate) fn from_socket(socket: WebSocketStream<ManagedStream>) -> Self {
+   |                   ^^^^^^^^^^^
+
+warning: `steam-proxy` (lib) generated 7 warnings
+warning: unused import: `time::Duration`
+ --> tests/routes.rs:3:62
+  |
+3 | use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Duration};
+  |                                                              ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `HttpDialer` is never constructed
+   --> tests/routes.rs:135:8
+    |
+135 | struct HttpDialer {
+    |        ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `PendingDialer` is never constructed
+   --> tests/routes.rs:262:8
+    |
+262 | struct PendingDialer(Arc<std::sync::atomic::AtomicUsize>);
+    |        ^^^^^^^^^^^^^
+
+warning: struct `PendingGuard` is never constructed
+   --> tests/routes.rs:264:8
+    |
+264 | struct PendingGuard(Arc<std::sync::atomic::AtomicUsize>);
+    |        ^^^^^^^^^^^^
+
+warning: `steam-proxy` (test "routes") generated 4 warnings (run `cargo fix --test "routes" -p steam-proxy` to apply 1 suggestion)
+warning: `steam-proxy` (lib test) generated 11 warnings (6 duplicates) (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 42.65s
+     Running unittests src/lib.rs (target/debug/build/steam-proxy/9da73dbb29a593d4/out/steam_proxy-9da73dbb29a593d4)
+
+running 35 tests
+test buffer::tests::same_generic_buffer_supports_distinct_storage_types ... ok
+test config::tests::http1_ingress_matches_dns_suffix_boundaries ... ok
+test buffer::tests::allocation_returns_only_after_the_final_bytes_reader ... ok
+test backend::vless_tests::wire_preserves_domain_for_remote_dns_and_original_target_port ... ok
+test backend::tests::websocket_upgrade_errors_retain_status_without_response_text ... ok
+test inspection::tests::inspection_defaults_off_and_respects_build_feature ... ok
+test relay::tests::cancellation_interrupts_pending_connect ... ok
+test observation::resource_tests::resource_bytes_include_partial_transfers_but_exclude_probes ... ok
+test probe::tests::tcp_probe_only_opens_access_socket_and_closes_without_writing ... ok
+test buffer::tests::canceling_a_borrower_returns_its_buffer ... ok
+test probe::tests::cancel_drains_running_and_queued_probes ... ok
+test outbound::tests::direct_addresses_only_learn_from_business_and_history_is_per_generation ... ok
+test config::tests::single_domain_reverse_and_default_cm_ports ... FAILED
+test config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes ... FAILED
+test routing::tests::failure_count_then_twenty_percent_window_then_capability_filter ... ok
+test routing::tests::health_ewma_recovery_backoff_expiry_and_generation ... ok
+test routing::tests::fixed_tiers_exhaust_same_tier_and_hash_is_stable ... ok
+test stream::managed::tests::closing_wakes_a_pending_reader_held_by_the_host ... ok
+test stream::managed::tests::partial_vectored_writes_survive_adapters_and_count_only_accepted_bytes ... ok
+test routing::tests::attempt_loop_shares_deadline_across_candidates_and_stops_after_commit ... ok
+test backend::vless_tests::url_uses_embedded_credentials_and_only_dials_proxy_hostname ... ok
+test import::tests::edgeone_function_and_origin_profiles_remain_independently_selectable ... ok
+test tunnel_url::tests::invalid_tunnel_urls_fail_without_echoing_private_input ... ok
+test tunnel_url::tests::websocket_retains_custom_port_and_path ... ok
+test tunnel_url::tests::ss_plain_and_base64_userinfo_roundtrip_without_changing_the_key ... ok
+test sniff::tests::tls_records_are_parsed_and_replayed_without_losing_early_data ... ok
+test vless_url::tests::share_url_preserves_encoded_transport_and_private_settings ... ok
+test relay::tests::upstream_eof_never_reconnects_or_replays_tls ... ok
+test vless_url::tests::invalid_links_never_echo_credentials_or_url ... ok
+test sniff::tests::http_prefix_and_unread_body_are_replayed_in_order ... ok
+test probe::tests::scheduler_summarizes_all_timeouts_and_bounds_concurrency_and_total_budget ... ok
+test sniff::tests::prefix_limit_accepts_a_complete_head_and_rejects_an_unfinished_one ... ok
+test backend::tests::websocket_uses_verified_relay_tls_and_preserves_original_stream ... ok
+test retry::tests::cancel_interrupts_backoff_and_deadline_bounds_pending_attempt ... ok
+test retry::tests::bounded_retries_record_backoff_and_stop_on_policy_errors ... ok
+
+failures:
+
+---- config::tests::single_domain_reverse_and_default_cm_ports stdout ----
+
+thread 'config::tests::single_domain_reverse_and_default_cm_ports' (11225668) panicked at src/config.rs:941:52:
+called `Result::unwrap()` on an `Err` value: Config("HTTP requires the reverse-proxy feature")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes stdout ----
+
+thread 'config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes' (11225667) panicked at src/config.rs:912:43:
+called `Result::unwrap()` on an `Err` value: Config("HTTP requires the reverse-proxy feature")
+
+
+failures:
+    config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes
+    config::tests::single_domain_reverse_and_default_cm_ports
+
+test result: FAILED. 33 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.42s
+
+error: test failed, to rerun pass `--lib`

@@ -1,0 +1,4249 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 3eeb3d2..b769e78 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -93,6 +93,7 @@ xray-vless-encryption = { git = "https://github.com/aimalygin/xray-rust", rev =
+ tokio-tungstenite = { version = "0.29", default-features = false, features = ["handshake"], optional = true }
+ 
+ [dev-dependencies]
++tokio = { version = "1", features = ["test-util"] }
+ tempfile = "3"
+ clap = { version = "4.5", features = ["derive"] }
+ hyper = { version = "1", features = ["client", "server", "http1", "http2"] }
+diff --git a/README.md b/README.md
+index a115b8b..cd98616 100644
+--- a/README.md
++++ b/README.md
+@@ -156,6 +156,95 @@ sdk.close().await?;
+ 
+ 发布构建使用 `cargo build --release --locked`。
+ 
++Rust 也支持候选集合；入口仍使用 `Profile`、`Factory::create`、`start` 和
++`serve_connection`：
++
++```rust
++use steam_proxy::{
++    modes, Dependencies, Factory, ForwardConfig, Payload, Profile, RemoteBackend, Routes, Whitelist,
++};
++
++let config = Profile::new("steam", Routes {
++    payload: Payload::Http,
++    reverse: vec![
++        modes::RemoteReverse {
++            backend: RemoteBackend::Relay,
++            server_name: "relay.example.net".into(),
++        },
++        modes::RemoteReverse {
++            backend: RemoteBackend::EdgeOneOrigin,
++            server_name: "edge.example.net".into(),
++        },
++    ],
++    direct: true,
++    tunnel: vec![ForwardConfig::parse(node_url)?],
++}, Whitelist::steam());
++let dependencies = Dependencies::new().with_server_certificate_provider(signer);
++let mut sdk = Factory::new(dependencies).create(config.clone())?;
++sdk.start(Default::default()).await?;
++// 宿主先停止向旧句柄交付连接，再独占调用：
++sdk.restart(config, Default::default()).await?;
++// 重启成功后重新取得 clone，旧 clone 仍属于已关闭的实例。
++let handler = sdk.clone();
++```
++
++`payload: Http` 表示 SDK 接收可解析的 HTTP，并为接管的 TLS 连接终止本地 TLS，
++因此 `configuration_policy()` 要求本地 CA。`payload: Tcp` 保留客户端原始字节，
++不要求本地 CA；普通 HTTP 反代会在该入口下被过滤。EdgeOne WebSocket 仅支持 TCP。
++HTTP 经隧道出口时，SDK 在隧道内为映射后的真实目标建立独立的上游 TLS/HTTP 连接。
++直连同样使用白名单的目标域名映射，目的 IP 不作为 TLS 身份。
++
++候选固定按 Relay → CDN → 直连 → 隧道尝试。同层先比较连续接入失败数，再比较
++`dial_elapsed` 的 EWMA（新样本占 20%），最快 20% 范围按目标与会话稳定分配。
++已知下载域名、`/depot/`、`/client/` 和下载文件后缀在发送前分类；
++Cloudflare Worker 与普通 EdgeOne HTTP CDN 不承载这类已识别下载。
++HTTP 请求可能开始发送后不跨候选重放，包括 GET、429、403、404 和服务器错误。
++同一个下游 H2 连接内的请求分别选路；上游池按出口、实例 generation、TLS 身份、
++authority、端口、ALPN 和 connector 隔离。
++当前 Pingora 版本的池复用要求真实 socket 描述符，因此 HTTP 直连和 HTTP 隧道在
++首次业务连接时创建实例私有的回环 socket 桥接，TLS 仍以映射后的原站域名验证。
++这会增加一对本机 socket 和一次字节转发；启动探测不创建桥接，关闭会回收监听器、
++转发任务与连接。运行环境需要允许绑定本机回环端口。
++
++启动只探测配置中的反代或隧道接入 TCP 端口，不发送 HTTP、Steam 目标或业务头。
++总预算为 15 秒，单点最多 3 秒，并发最多 3；全部候选得到终态后才接收业务。
++仅直连配置本地准备后即可启动，不会主动连接原站。旧 `verify_endpoints` 和
++`verification` 字段仍可反序列化，但不再触发业务验证。
++后台探测约每 15 秒进行一次，带 ±20% 抖动，连续三次接入失败后隔离；
++不可用候选按 15/30/60/120 秒退避，连续两次成功恢复，接入证据超过 60 秒不再使用。
++TCP 探测不会清除证书、凭据隔离或目标冷却。
++没有新增网络变化控制 API；generation 以实例重建为边界，宿主在网络切换后可使用
++`restart` 重建。关闭会取消探测并收敛任务、连接和池。
++
++`restart` 先离线校验新配置，失败时旧实例继续运行；旧实例关闭失败时保留旧句柄。
++关闭成功后替换为新的实例再启动，新启动失败会返回错误并保留新实例的清理状态，
++不会回滚成切换成功。
++
++`Profile<Routes>::into_dynamic()` 的新 JSON 形状如下；旧的三种 `kind` 和历史
++`cloudflare-worker` 输入继续兼容：
++
++```json
++{
++  "profile_id": "steam",
++  "mode": {
++    "kind": "routes",
++    "payload": "http",
++    "reverse": [
++      {"backend": "relay", "server_name": "relay.example.net"},
++      {"backend": "edgeone-origin", "server_name": "edge.example.net"}
++    ],
++    "direct": true,
++    "tunnel": []
++  }
++}
++```
++
++Rust 动态枚举新增 `ModeConfig::Routes(Routes)`；`Kind` 继续使用已有的状态分类，
++集合配置报告 `remote-reverse`，不能用该状态值推导入口载荷或 CA 要求。
++其他 Rust 使用方若穷举匹配 `ModeConfig`，需要处理新分支。
++C 的旧强类型模式结构和其他语言包装层尚未新增候选集合构造器，需由对应绑定适配；
++本节的集合与 restart 示例仅承诺 Rust API。
++
+ ### Go
+ 
+ 纯 Go 实现位于 `bindings/go`，module 为 `github.com/gamesir123/steam-proxy`，不需要 Rust 库或 cgo。在调用方项目目录克隆仓库并使用本地替换：
+diff --git a/src/backend.rs b/src/backend.rs
+index f57a779..53ed4c0 100644
+--- a/src/backend.rs
++++ b/src/backend.rs
+@@ -34,6 +34,10 @@ use crate::{
+ use crate::ForwardConfig;
+ 
+ pub(crate) struct Backend {
++    pub(crate) routes: Option<Arc<crate::routing::Registry>>,
++    pub(crate) direct: crate::outbound::DirectOutbound<dyn TcpDialer>,
++    #[cfg(feature = "reverse-proxy")]
++    pub(crate) bridge: tokio::sync::OnceCell<crate::outbound::SocketBridge>,
+     #[cfg(feature = "reverse-proxy")]
+     pub(crate) http_cache: crate::cache::HttpCache,
+     pub(crate) config: Config,
+@@ -149,6 +153,11 @@ fn vless_header(uuid: uuid::Uuid, host: &str, port: u16) -> Result<Zeroizing<Vec
+ }
+ 
+ impl Backend {
++    #[cfg(all(test, feature = "websocket"))]
++    pub(crate) fn websocket_trust(&mut self, config: Arc<rustls::ClientConfig>) {
++        self.websocket_tls = TlsConnector::from(config);
++    }
++
+     pub async fn create(
+         config: &Config,
+         dialer: Arc<dyn TcpDialer>,
+@@ -159,6 +168,10 @@ impl Backend {
+     ) -> Result<Self> {
+         #[allow(unused_mut)]
+         let mut backend = Self {
++            routes: None,
++            direct: crate::outbound::DirectOutbound::new(dialer.clone(), rand::random()),
++            #[cfg(feature = "reverse-proxy")]
++            bridge: tokio::sync::OnceCell::new(),
+             #[cfg(feature = "reverse-proxy")]
+             http_cache: crate::cache::HttpCache::default(),
+             config: config.clone(),
+@@ -321,6 +334,24 @@ impl Backend {
+         port: u16,
+         context: &ObservationContext,
+     ) -> Result<BoxStream> {
++        if let Some(routes) = &self.routes {
++            let mut attempt = crate::routing::Attempt::new(self.config.connect_timeout());
++            let traffic = crate::routing::Traffic {
++                host,
++                payload: crate::Payload::Tcp,
++                download: crate::routing::download(host, ""),
++            };
++            return crate::routing::AttemptLoop {
++                executor: crate::routing::StreamExecutor {
++                    host,
++                    port,
++                    observation: context,
++                },
++                outcomes: crate::routing::BeforeCommit,
++            }
++            .run(routes, &traffic, &mut attempt, &self.cancel)
++            .await;
++        }
+         context
+             .measure(Stage::ProxyHandshake, async {
+                 tokio::time::timeout(
+@@ -348,6 +379,34 @@ impl Backend {
+         if !self.config.runtime.accepts_proxy_port(port) {
+             return Err(Error::DomainDenied);
+         }
++        if matches!(self.config.mode, ModeConfig::Routes(_)) {
++            let origin = self.config.whitelist.origin(host)?;
++            let stream = self.direct.connect(origin, port, _context).await?;
++            return Ok(Box::new(self.sockets.track(stream)?));
++        }
++        self.connect_transport(host, port, _context).await
++    }
++
++    #[cfg(feature = "reverse-proxy")]
++    pub(crate) async fn connect_http_tunnel(
++        &self,
++        host: &str,
++        port: u16,
++        context: &ObservationContext,
++    ) -> Result<BoxStream> {
++        let target = self.config.whitelist.origin(host)?;
++        if !self.config.runtime.accepts_proxy_port(port) {
++            return Err(Error::DomainDenied);
++        }
++        self.connect_transport(target, port, context).await
++    }
++
++    async fn connect_transport(
++        &self,
++        host: &str,
++        port: u16,
++        _context: &ObservationContext,
++    ) -> Result<BoxStream> {
+         #[cfg(feature = "websocket")]
+         if let Some(url) = &self.websocket {
+             let stream = match &self.config.mode {
+@@ -698,6 +757,7 @@ mod tests {
+ }
+ 
+ pub(crate) fn check_features(config: &Config) -> Result<()> {
++    config.check_route_features()?;
+     match &config.mode {
+         _ if config.payload() == crate::Payload::Http && !cfg!(feature = "reverse-proxy") => Err(
+             Error::Config("reverse proxy requires the reverse-proxy feature"),
+diff --git a/src/config.rs b/src/config.rs
+index 1078df8..0150718 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -37,7 +37,8 @@ pub enum RemoteBackend {
+ }
+ 
+ /// What the local ingress hands to the backend.
+-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case")]
+ pub enum Payload {
+     /// Terminate local TLS and forward parsed HTTP requests.
+     Http,
+@@ -202,6 +203,7 @@ impl<M: ModeSpec> Profile<M> {
+ 
+ #[derive(Clone)]
+ pub enum ModeConfig {
++    Routes(Routes),
+     LocalReverse {
+         tls_server_name: String,
+         endpoints: Vec<String>,
+@@ -215,6 +217,24 @@ pub enum ModeConfig {
+     },
+ }
+ 
++#[derive(Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct Routes {
++    pub payload: Payload,
++    #[serde(default)]
++    pub reverse: Vec<crate::modes::RemoteReverse>,
++    #[serde(default)]
++    pub direct: bool,
++    #[serde(default)]
++    pub tunnel: Vec<ForwardConfig>,
++}
++
++impl From<Routes> for ModeConfig {
++    fn from(routes: Routes) -> Self {
++        Self::Routes(routes)
++    }
++}
++
+ impl ModeConfig {
+     /// Configure a remote reverse backend using its DNS name.
+     pub fn remote_reverse(backend: RemoteBackend, domain: impl Into<String>) -> Self {
+@@ -227,6 +247,7 @@ impl ModeConfig {
+ 
+     pub(crate) fn connection_endpoints(&self) -> Cow<'_, [String]> {
+         match self {
++            Self::Routes(_) => Cow::Borrowed(&[]),
+             Self::LocalReverse { endpoints, .. } => Cow::Borrowed(endpoints),
+             Self::RemoteReverse { server_name, .. } => {
+                 Cow::Owned(vec![format!("{server_name}:443")])
+@@ -244,6 +265,10 @@ impl Serialize for ModeConfig {
+         #[derive(Serialize)]
+         #[serde(tag = "kind", rename_all = "kebab-case")]
+         enum Wire<'a> {
++            Routes {
++                #[serde(flatten)]
++                routes: &'a Routes,
++            },
+             LocalReverse {
+                 tls_server_name: &'a str,
+                 endpoints: &'a [String],
+@@ -257,6 +282,7 @@ impl Serialize for ModeConfig {
+             },
+         }
+         match self {
++            Self::Routes(routes) => Wire::Routes { routes },
+             Self::LocalReverse {
+                 tls_server_name,
+                 endpoints,
+@@ -286,6 +312,15 @@ impl<'de> Deserialize<'de> for ModeConfig {
+         #[derive(Deserialize)]
+         #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
+         enum Wire {
++            Routes {
++                payload: Payload,
++                #[serde(default)]
++                reverse: Vec<crate::modes::RemoteReverse>,
++                #[serde(default)]
++                direct: bool,
++                #[serde(default)]
++                tunnel: Vec<ForwardConfig>,
++            },
+             LocalReverse {
+                 tls_server_name: String,
+                 #[serde(default)]
+@@ -304,6 +339,17 @@ impl<'de> Deserialize<'de> for ModeConfig {
+             },
+         }
+         Ok(match Wire::deserialize(deserializer)? {
++            Wire::Routes {
++                payload,
++                reverse,
++                direct,
++                tunnel,
++            } => Self::Routes(Routes {
++                payload,
++                reverse,
++                direct,
++                tunnel,
++            }),
+             Wire::LocalReverse {
+                 tls_server_name,
+                 endpoints,
+@@ -380,7 +426,7 @@ pub struct RuntimeConfig {
+     pub state_dir: Option<PathBuf>,
+     #[serde(default = "default_timeout")]
+     pub connect_timeout_ms: u64,
+-    /// Only explicitly registered probes may be requested during activation.
++    /// Compatibility input; activation never sends business verification requests.
+     #[serde(default)]
+     pub verify_endpoints: bool,
+     #[serde(default)]
+@@ -588,6 +634,7 @@ impl Config {
+ 
+     pub fn payload(&self) -> Payload {
+         match self.mode {
++            ModeConfig::Routes(ref routes) => routes.payload,
+             ModeConfig::ForwardProxy { .. } => Payload::Tcp,
+             ModeConfig::RemoteReverse { backend, .. } => backend.payload(),
+             ModeConfig::LocalReverse { .. } => Payload::Http,
+@@ -601,6 +648,7 @@ impl Config {
+ 
+     pub fn endpoint_strategy(&self) -> EndpointStrategy {
+         match self.mode {
++            ModeConfig::Routes(_) => EndpointStrategy::Configured,
+             ModeConfig::ForwardProxy { .. } => EndpointStrategy::Configured,
+             ModeConfig::RemoteReverse { backend, .. } => backend.endpoint_strategy(),
+             _ => EndpointStrategy::VerifiedSelection,
+@@ -620,6 +668,7 @@ impl Config {
+ 
+     pub fn kind(&self) -> Kind {
+         match self.mode {
++            ModeConfig::Routes(_) => Kind::RemoteReverse,
+             ModeConfig::LocalReverse { .. } => Kind::LocalReverse,
+             ModeConfig::RemoteReverse { .. } => Kind::RemoteReverse,
+             ModeConfig::ForwardProxy { .. } => Kind::ForwardProxy,
+@@ -657,12 +706,7 @@ impl Config {
+                 "TUN/Fake-IP capture requires an explicit feature",
+             ));
+         }
+-        if self.runtime.discovery_endpoints.len() > 16
+-            || self.runtime.verification.len() > 16
+-            || (self.endpoint_strategy() == EndpointStrategy::VerifiedSelection
+-                && self.runtime.verify_endpoints
+-                && self.runtime.verification.is_empty())
+-        {
++        if self.runtime.discovery_endpoints.len() > 16 || self.runtime.verification.len() > 16 {
+             return Err(Error::Config(
+                 "register discovery endpoints and verification probes explicitly",
+             ));
+@@ -729,6 +773,30 @@ impl Config {
+             return Err(Error::Config("profile or timeout"));
+         }
+         match &self.mode {
++            ModeConfig::Routes(routes) => {
++                if routes.reverse.len() + routes.tunnel.len() + usize::from(routes.direct) > 128
++                    || (routes.reverse.is_empty() && routes.tunnel.is_empty() && !routes.direct)
++                {
++                    return Err(Error::Config(
++                        "routes require between one and 128 candidates",
++                    ));
++                }
++                for reverse in &routes.reverse {
++                    if !valid_domain(&reverse.server_name) {
++                        return Err(Error::Config("remote reverse domain"));
++                    }
++                }
++                if !routes.direct
++                    && routes.tunnel.is_empty()
++                    && !routes
++                        .reverse
++                        .iter()
++                        .any(|route| route.backend.payload() == routes.payload)
++                {
++                    return Err(Error::Config("routes have no compatible outbound"));
++                }
++                self.check_route_features()?;
++            }
+             ModeConfig::LocalReverse {
+                 tls_server_name,
+                 endpoints,
+@@ -762,6 +830,65 @@ impl Config {
+     pub fn connect_timeout(&self) -> Duration {
+         Duration::from_millis(self.runtime.connect_timeout_ms)
+     }
++
++    pub(crate) fn check_route_features(&self) -> Result<()> {
++        if self.payload() == Payload::Http && !cfg!(feature = "reverse-proxy") {
++            return Err(Error::Config("HTTP requires the reverse-proxy feature"));
++        }
++        let check_tunnel = |protocol: &ForwardConfig| match protocol {
++            ForwardConfig::VlessUrl { .. } if !cfg!(feature = "vless-xhttp") => Err(Error::Config(
++                "VLESS/XHTTP requires the vless-xhttp feature",
++            )),
++            ForwardConfig::SsUrl { .. } if !cfg!(feature = "shadowsocks") => {
++                Err(Error::Config("SS requires the shadowsocks feature"))
++            }
++            ForwardConfig::WebSocketUrl { .. } if !cfg!(feature = "websocket") => {
++                Err(Error::Config("WebSocket requires the websocket feature"))
++            }
++            #[cfg(feature = "vless-xhttp")]
++            ForwardConfig::VlessUrl { url } => {
++                if let Some(encryption) = &url.encryption {
++                    let _: xray_vless_encryption::Encryption =
++                        encryption.parse().map_err(|_| Error::Credential)?;
++                }
++                Ok(())
++            }
++            #[cfg(feature = "shadowsocks")]
++            ForwardConfig::SsUrl { url } => {
++                xray_proxy::shadowsocks2022::Method::new(&url.cipher, &url.password)
++                    .map_err(|_| Error::Credential)?;
++                Ok(())
++            }
++            _ => Ok(()),
++        };
++        match &self.mode {
++            ModeConfig::Routes(routes) => {
++                for route in &routes.reverse {
++                    if route.backend.payload() == Payload::Http && !cfg!(feature = "reverse-proxy")
++                    {
++                        return Err(Error::Config("HTTP requires the reverse-proxy feature"));
++                    }
++                    if route.backend == RemoteBackend::EdgeOneWebSocket
++                        && !cfg!(feature = "websocket")
++                    {
++                        return Err(Error::Config("WebSocket requires the websocket feature"));
++                    }
++                }
++                for tunnel in &routes.tunnel {
++                    check_tunnel(tunnel)?;
++                }
++                Ok(())
++            }
++            ModeConfig::ForwardProxy { protocol } => check_tunnel(protocol),
++            ModeConfig::RemoteReverse {
++                backend: RemoteBackend::EdgeOneWebSocket,
++                ..
++            } if !cfg!(feature = "websocket") => {
++                Err(Error::Config("WebSocket requires the websocket feature"))
++            }
++            _ => Ok(()),
++        }
++    }
+ }
+ 
+ pub(crate) fn parse_endpoint(endpoint: &str) -> Result<(String, u16)> {
+diff --git a/src/http_proxy.rs b/src/http_proxy.rs
+index da0b421..c0dcaa0 100644
+--- a/src/http_proxy.rs
++++ b/src/http_proxy.rs
+@@ -13,7 +13,7 @@ use http_body_util::{BodyExt, StreamBody};
+ #[cfg(feature = "http-cache")]
+ use pingora_cache::key::CacheHashKey;
+ use pingora_core::{
+-    apps::{HttpServerApp, HttpServerOptions, ServerApp},
++    apps::{HttpServerApp, HttpServerOptions, ReusedHttpStream, ServerApp},
+     connectors::L4Connect,
+     protocols::{
+         Digest,
+@@ -55,10 +55,82 @@ const H2_DOWNSTREAM_STREAM_WINDOW: u32 = 128 * 1024;
+ const H2_CONNECTION_WINDOW: u32 = 2 * 1024 * 1024;
+ const DOWNSTREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(90);
+ pub(crate) struct ReverseProxy {
+-    app: Arc<HttpProxy<Proxy>>,
++    app: Arc<BoundedProxy>,
+     requests: TaskTracker,
+ }
+ 
++#[derive(Clone)]
++enum Acquisition {
++    Waiting,
++    Connecting(tokio::time::Instant, Option<AcquisitionTarget>),
++    Ready,
++}
++
++#[derive(Clone)]
++struct AcquisitionTarget {
++    registry: Weak<crate::routing::Registry>,
++    index: usize,
++    host: String,
++}
++
++tokio::task_local! {
++    static ACQUISITION: tokio::sync::watch::Sender<Acquisition>;
++}
++
++struct BoundedProxy {
++    inner: Arc<HttpProxy<Proxy>>,
++}
++
++#[async_trait]
++impl HttpServerApp for BoundedProxy {
++    async fn process_new_http(
++        self: &Arc<Self>,
++        session: ServerSession,
++        shutdown: &pingora_core::server::ShutdownWatch,
++    ) -> Option<ReusedHttpStream> {
++        let (sender, mut state) = tokio::sync::watch::channel(Acquisition::Waiting);
++        ACQUISITION.scope(sender, async {
++            let processing = self.inner.process_new_http(session, shutdown);
++            tokio::pin!(processing);
++            loop {
++                let phase = state.borrow_and_update().clone();
++                match phase {
++                    Acquisition::Ready => return processing.await,
++                    Acquisition::Waiting => tokio::select! {
++                        result = &mut processing => return result,
++                        _ = state.changed() => {}
++                    },
++                    Acquisition::Connecting(deadline, target) => tokio::select! {
++                        biased;
++                        _ = tokio::time::sleep_until(deadline) => {
++                            if let Some(target) = target
++                                && let Some(registry) = target.registry.upgrade()
++                            {
++                                registry.failure(target.index, &target.host, &timeout(Stage::HttpHeaders));
++                            }
++                            return None;
++                        },
++                        result = &mut processing => return result,
++                        _ = state.changed() => {}
++                    },
++                }
++            }
++        }).await
++    }
++
++    fn server_options(&self) -> Option<&HttpServerOptions> {
++        self.inner.server_options.as_ref()
++    }
++
++    fn h2_options(&self) -> Option<pingora_core::protocols::http::v2::server::H2Options> {
++        self.inner.h2_options.clone()
++    }
++
++    async fn http_cleanup(&self) {
++        self.inner.http_cleanup().await;
++    }
++}
++
+ pub(crate) fn engine(backend: &Arc<Backend>) -> Arc<ReverseProxy> {
+     backend
+         .http
+@@ -92,7 +164,7 @@ fn build_with_idle_timeout(app: Proxy, idle_timeout: Duration) -> Arc<ReversePro
+     // No Server, process signals, listener, daemon or global configuration.
+     let conf = Arc::new(ServerConf {
+         threads: 1,
+-        max_retries: 4,
++        max_retries: 130,
+         upstream_keepalive_pool_size: 64,
+         ..ServerConf::default()
+     });
+@@ -111,7 +183,9 @@ fn build_with_idle_timeout(app: Proxy, idle_timeout: Duration) -> Arc<ReversePro
+         .initial_connection_window_size(H2_CONNECTION_WINDOW);
+     proxy.h2_options = Some(h2);
+     Arc::new(ReverseProxy {
+-        app: Arc::new(proxy),
++        app: Arc::new(BoundedProxy {
++            inner: Arc::new(proxy),
++        }),
+         requests,
+     })
+ }
+@@ -153,6 +227,16 @@ pub(crate) async fn shutdown(backend: &Backend) {
+         proxy.requests.close();
+         proxy.requests.wait().await;
+     }
++    if let Some(bridge) = backend.bridge.get() {
++        bridge.close().await;
++    }
++    if let Some(routes) = &backend.routes {
++        for route in &routes.routes {
++            if let Some(bridge) = route.backend.bridge.get() {
++                bridge.close().await;
++            }
++        }
++    }
+ }
+ 
+ pub(crate) struct Proxy {
+@@ -178,6 +262,9 @@ struct ResolvedPeer {
+ 
+ #[derive(Default)]
+ pub(crate) struct RequestContext {
++    selected: Option<(usize, Arc<Backend>)>,
++    attempt: Option<crate::routing::Attempt>,
++    download: bool,
+     #[cfg(feature = "response-inspection")]
+     inspection: Option<crate::inspection::decode::Inspection>,
+     #[cfg(feature = "response-inspection")]
+@@ -201,6 +288,7 @@ pub(crate) struct RequestContext {
+     reused: bool,
+     transport_began: Option<std::time::Instant>,
+     transport_elapsed: Option<Duration>,
++    target_transport_ready: Arc<std::sync::atomic::AtomicBool>,
+     connection_lease: Option<tokio::sync::OwnedMutexGuard<()>>,
+     _token: Option<tokio_util::task::task_tracker::TaskTrackerToken>,
+ }
+@@ -297,7 +385,17 @@ impl ProxyHttp for Proxy {
+                 })));
+             }
+         }
+-        ctx.deadline = Some(tokio::time::Instant::now() + backend.config.connect_timeout() * 2);
++        ctx.attempt = Some(crate::routing::Attempt::new(
++            backend.config.connect_timeout(),
++        ));
++        ctx.deadline = ctx.attempt.as_ref().map(|attempt| attempt.deadline);
++        let _ = ACQUISITION.try_with(|state| {
++            state.send_replace(Acquisition::Connecting(
++                ctx.deadline.expect("request filter"),
++                None,
++            ));
++        });
++        ctx.download = crate::routing::download(&ctx.host, session.req_header().uri.path());
+         let ws = backend.config.runtime.websocket;
+         // Server-push WebSockets need not send client frames. Upstream read
+         // inactivity enforces idle expiry without timing out a quiet client.
+@@ -421,19 +519,60 @@ impl ProxyHttp for Proxy {
+     ) -> pingora_error::Result<Box<HttpPeer>> {
+         // Retries must never retain a lease from an unsuccessful acquisition.
+         ctx.connection_lease.take();
+-        let backend = self.backend()?;
++        let root = self.backend()?;
++        ctx.target_transport_ready
++            .store(false, std::sync::atomic::Ordering::Release);
++        let backend = if let Some(routes) = &root.routes {
++            let traffic = crate::routing::Traffic {
++                host: &ctx.host,
++                payload: crate::Payload::Http,
++                download: ctx.download,
++            };
++            let selected = routes
++                .select(&traffic, ctx.attempt.as_mut().expect("request filter"))
++                .map_err(proxy_error)?;
++            ctx.selected = Some(selected.clone());
++            let _ = ACQUISITION.try_with(|state| {
++                state.send_replace(Acquisition::Connecting(
++                    ctx.deadline.expect("request filter"),
++                    Some(AcquisitionTarget {
++                        registry: Arc::downgrade(routes),
++                        index: selected.0,
++                        host: ctx.host.clone(),
++                    }),
++                ));
++            });
++            selected.1
++        } else {
++            root.clone()
++        };
+         let observation = ctx.observation.as_ref().expect("request filter");
+         let deadline = ctx.deadline.expect("request filter");
+         let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+         if remaining.is_zero() {
+             return Err(proxy_error(timeout(Stage::HttpHeaders)));
+         }
+-        let (sni, target, endpoints) = http_route(&backend, &ctx.host).map_err(proxy_error)?;
++        let (sni, target, mut endpoints) = http_route(&backend, &ctx.host).map_err(proxy_error)?;
++        let tunnel = matches!(backend.config.mode, ModeConfig::ForwardProxy { .. });
++        let direct = matches!(backend.config.mode, ModeConfig::Routes(_));
++        if direct {
++            endpoints = vec![format!("{sni}:{}", ctx.port)];
++        }
+         ctx.authority = target;
++        if (direct || tunnel) && !matches!(ctx.port, 80 | 443) {
++            ctx.authority = format!("{}:{}", ctx.authority, ctx.port);
++        }
+         let resolved =
+             tokio::time::timeout(remaining.min(backend.config.connect_timeout()), async {
+                 // Keep DNS out of the pooled request path and coalesce the
+                 // first concurrent lookup. Cache belongs to this session only.
++                if tunnel {
++                    let bridge = backend
++                        .bridge
++                        .get_or_try_init(crate::outbound::SocketBridge::new)
++                        .await?;
++                    return Ok(vec![bridge.address]);
++                }
+                 let mut cache = self.peers.lock().await;
+                 if let Some(peer) = cache.get(&endpoints)
+                     && peer.expires > tokio::time::Instant::now()
+@@ -468,20 +607,44 @@ impl ProxyHttp for Proxy {
+         let addresses = tokio::select! {
+             biased;
+             _ = backend.cancel.cancelled() => return Err(proxy_error(Error::Canceled)),
+-            result = resolved => result.map_err(|_| proxy_error(timeout(Stage::Resolve)))?.map_err(proxy_error)?,
++            result = resolved => match result.unwrap_or_else(|_| Err(timeout(Stage::Resolve))) {
++                Ok(addresses) => addresses,
++                Err(error) => {
++                    if let (Some(routes), Some((index, _))) = (&root.routes, &ctx.selected) {
++                        routes.failure(*index, &ctx.host, &error);
++                    }
++                    let mut failure = proxy_error(error);
++                    failure.set_retry(root.routes.is_some() && !ctx.attempt.as_ref().is_some_and(|attempt| attempt.committed));
++                    return Err(failure);
++                }
++            },
+         };
+-        let address = addresses[0];
+-        let mut peer = HttpPeer::new(address, true, sni);
++        let address = if direct {
++            backend
++                .bridge
++                .get_or_try_init(crate::outbound::SocketBridge::new)
++                .await
++                .map_err(proxy_error)?
++                .address
++        } else {
++            addresses[0]
++        };
++        let mut peer = HttpPeer::new(address, !(direct || tunnel) || ctx.port != 80, sni.clone());
+         #[cfg(test)]
+         {
+             peer.options.ca = self.ca.clone();
+         }
+-        if backend.config.kind() == crate::Kind::LocalReverse || ctx.websocket {
++        {
+             use std::hash::{Hash, Hasher};
+             let mut hash = std::collections::hash_map::DefaultHasher::new();
+-            if backend.config.kind() == crate::Kind::LocalReverse {
+-                ctx.host.hash(&mut hash);
+-            }
++            (Arc::as_ptr(&backend) as usize).hash(&mut hash);
++            root.routes
++                .as_ref()
++                .map(|routes| routes.generation)
++                .hash(&mut hash);
++            ctx.authority.hash(&mut hash);
++            sni.hash(&mut hash);
++            ctx.port.hash(&mut hash);
+             ctx.websocket.hash(&mut hash);
+             peer.group_key = hash.finish();
+         }
+@@ -515,8 +678,11 @@ impl ProxyHttp for Proxy {
+             backend: Arc::downgrade(&backend),
+             observation: observation.clone(),
+             addresses,
+-            tunnel_host: (backend.config.payload() == crate::Payload::Tcp)
+-                .then(|| ctx.host.clone()),
++            tunnel_host: tunnel.then(|| ctx.host.clone()),
++            target_port: ctx.port,
++            target_domain: sni,
++            deadline,
++            target_transport_ready: ctx.target_transport_ready.clone(),
+         }));
+         // Pingora may briefly remove a reusable H2 connection while allocating
+         // a stream. Coordinate pool acquisition/handshake, not response bodies.
+@@ -543,6 +709,27 @@ impl ProxyHttp for Proxy {
+         };
+         queued.finish(&lease.as_ref().map(|_| ()).map_err(Clone::clone));
+         ctx.connection_lease = Some(lease.map_err(proxy_error)?);
++        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
++        if remaining.is_zero() {
++            return Err(proxy_error(timeout(Stage::Connect)));
++        }
++        if let (Some(routes), Some((index, _))) = (&root.routes, &ctx.selected)
++            && !routes.usable(
++                *index,
++                &crate::routing::Traffic {
++                    host: &ctx.host,
++                    payload: crate::Payload::Http,
++                    download: ctx.download,
++                },
++            )
++        {
++            ctx.connection_lease.take();
++            let mut error = proxy_error(Error::NoEndpoint);
++            error.set_retry(true);
++            return Err(error);
++        }
++        peer.options.connection_timeout = Some(remaining);
++        peer.options.total_connection_timeout = Some(remaining);
+         ctx.transport_began = Some(std::time::Instant::now());
+         ctx.connect = Some(observation.start(Stage::ProxyHandshake));
+         Ok(Box::new(peer))
+@@ -554,6 +741,12 @@ impl ProxyHttp for Proxy {
+         request: &mut RequestHeader,
+         ctx: &mut Self::CTX,
+     ) -> pingora_error::Result<()> {
++        if ctx
++            .deadline
++            .is_some_and(|deadline| tokio::time::Instant::now() >= deadline)
++        {
++            return Err(proxy_error(timeout(Stage::HttpHeaders)));
++        }
+         #[cfg(feature = "http-cache")]
+         if ctx.cache_key.is_some() {
+             if let Some(range) = _session.req_header().headers.get(header::RANGE) {
+@@ -598,8 +791,16 @@ impl ProxyHttp for Proxy {
+             path.parse().map_err(|_| proxy_error(Error::Http))?
+         };
+         request.set_uri(uri);
+-        let backend = self.backend()?;
+-        if backend.config.kind() == crate::Kind::RemoteReverse
++        if let Some(attempt) = &mut ctx.attempt {
++            attempt.committed = true;
++        }
++        let backend = ctx
++            .selected
++            .as_ref()
++            .map(|(_, backend)| backend.clone())
++            .unwrap_or(self.backend()?);
++        if matches!(&backend.config.mode, ModeConfig::RemoteReverse { backend, .. }
++            if crate::outbound::ReverseProxy { backend: *backend }.target_headers())
+             && backend.config.requires_local_ca()
+             && backend
+                 .config
+@@ -656,6 +857,14 @@ impl ProxyHttp for Proxy {
+         ctx: &mut Self::CTX,
+     ) -> pingora_error::Result<()> {
+         ctx.connection_lease.take();
++        let _ = ACQUISITION.try_with(|state| {
++            state.send_replace(Acquisition::Ready);
++        });
++        if !reused {
++            if let (Some(routes), Some((index, _))) = (&self.backend()?.routes, &ctx.selected) {
++                routes.access_success(*index);
++            }
++        }
+         // Connection timing is separate from HTTP response-header latency.
+         if let Some(operation) = ctx.connect.take() {
+             operation.finish(&Ok(()));
+@@ -852,10 +1061,29 @@ impl ProxyHttp for Proxy {
+         _session: &mut ProxySession,
+         _peer: &HttpPeer,
+         ctx: &mut Self::CTX,
+-        error: Box<ProxyError>,
++        mut error: Box<ProxyError>,
+     ) -> Box<ProxyError> {
+         ctx.connection_lease.take();
+         let failure = http_error(Stage::Connect, "upstream-connect", error.as_ref());
++        if let Ok(root) = self.backend() {
++            if let (Some(routes), Some((index, _))) = (&root.routes, &ctx.selected) {
++                routes.failure_at(
++                    *index,
++                    &ctx.host,
++                    &failure,
++                    ctx.target_transport_ready
++                        .load(std::sync::atomic::Ordering::Acquire),
++                );
++                error.set_retry(
++                    !matches!(failure, Error::Canceled)
++                        && ctx.attempt.as_ref().is_some_and(|attempt| {
++                            !attempt.committed && tokio::time::Instant::now() < attempt.deadline
++                        }),
++                );
++            } else {
++                error.set_retry(false);
++            }
++        }
+         if let Some(operation) = ctx.headers.take() {
+             operation.finish::<()>(&Err(failure.clone()));
+         }
+@@ -865,6 +1093,29 @@ impl ProxyHttp for Proxy {
+         error
+     }
+ 
++    fn error_while_proxy(
++        &self,
++        _peer: &HttpPeer,
++        _session: &mut ProxySession,
++        mut error: Box<ProxyError>,
++        ctx: &mut Self::CTX,
++        _client_reused: bool,
++    ) -> Box<ProxyError> {
++        if error.esource() == &pingora_error::ErrorSource::Upstream {
++            if let Ok(root) = self.backend() {
++                if let (Some(routes), Some((index, _))) = (&root.routes, &ctx.selected) {
++                    routes.failure(
++                        *index,
++                        &ctx.host,
++                        &http_error(Stage::HttpBody, "upstream", error.as_ref()),
++                    );
++                }
++            }
++        }
++        error.set_retry(false);
++        error
++    }
++
+     async fn fail_to_proxy(
+         &self,
+         session: &mut ProxySession,
+@@ -987,15 +1238,18 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
+         return Ok((alias.into(), alias.into(), vec![format!("{alias}:443")]));
+     }
+     match &backend.config.mode {
++        ModeConfig::Routes(_) => Ok((
++            origin.clone(),
++            origin.clone(),
++            vec![format!("{origin}:443")],
++        )),
+         ModeConfig::RemoteReverse { server_name, .. }
+             if backend.config.payload() == crate::Payload::Http =>
+         {
+-            let endpoints =
+-                if backend.config.endpoint_strategy() == crate::EndpointStrategy::Configured {
+-                    backend.config.mode.connection_endpoints().into_owned()
+-                } else {
+-                    vec![backend.endpoint.ok_or(Error::NoEndpoint)?.to_string()]
+-                };
++            let endpoints = backend
++                .endpoint
++                .map(|endpoint| vec![endpoint.to_string()])
++                .unwrap_or_else(|| backend.config.mode.connection_endpoints().into_owned());
+             Ok((server_name.clone(), server_name.clone(), endpoints))
+         }
+         ModeConfig::LocalReverse {
+@@ -1011,7 +1265,17 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
+                 Ok((
+                     tls_server_name.clone(),
+                     origin,
+-                    vec![backend.endpoint.ok_or(Error::NoEndpoint)?.to_string()],
++                    backend
++                        .endpoint
++                        .map(|endpoint| vec![endpoint.to_string()])
++                        .unwrap_or_else(|| {
++                            let configured = backend.config.mode.connection_endpoints();
++                            if configured.is_empty() {
++                                backend.config.runtime.discovery_endpoints.clone()
++                            } else {
++                                configured.into_owned()
++                            }
++                        }),
+                 ))
+             }
+         }
+@@ -1022,7 +1286,7 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
+         )),
+         ModeConfig::ForwardProxy { protocol } => {
+             let (server, port) = protocol.endpoint();
+-            Ok((host.into(), host.into(), vec![format!("{server}:{port}")]))
++            Ok((origin.clone(), origin, vec![format!("{server}:{port}")]))
+         }
+     }
+ }
+@@ -1032,6 +1296,10 @@ struct UpstreamConnector {
+     observation: ObservationContext,
+     addresses: Vec<std::net::SocketAddr>,
+     tunnel_host: Option<String>,
++    target_port: u16,
++    target_domain: String,
++    deadline: tokio::time::Instant,
++    target_transport_ready: Arc<std::sync::atomic::AtomicBool>,
+ }
+ impl std::fmt::Debug for UpstreamConnector {
+     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+@@ -1046,18 +1314,50 @@ impl L4Connect for UpstreamConnector {
+             .upgrade()
+             .ok_or_else(|| proxy_error(Error::Canceled))?;
+         if let Some(host) = &self.tunnel_host {
+-            let stream = backend
+-                .connect_observed(host, 443, &self.observation)
+-                .await
+-                .map_err(proxy_error)?;
+-            let stream = backend.sockets.track(stream).map_err(proxy_error)?;
+-            return Ok(
+-                VirtualSocketStream::new(Box::new(ProxyIo::new(stream, false, None))).into(),
+-            );
++            let stream = tokio::time::timeout_at(
++                self.deadline,
++                backend.connect_http_tunnel(host, self.target_port, &self.observation),
++            )
++            .await
++            .map_err(|_| proxy_error(timeout(Stage::ProxyHandshake)))?
++            .map_err(proxy_error)?;
++            self.target_transport_ready
++                .store(true, std::sync::atomic::Ordering::Release);
++            let bridge = backend
++                .bridge
++                .get()
++                .ok_or_else(|| proxy_error(Error::Lifecycle))?;
++            return tokio::select! {
++                biased;
++                _ = backend.cancel.cancelled() => Err(proxy_error(Error::Canceled)),
++                result = tokio::time::timeout_at(self.deadline, bridge.connect(
++                    stream, backend.sockets.clone(), backend.cancel.clone(),
++                )) => result.map_err(|_| proxy_error(timeout(Stage::Connect)))?.map_err(proxy_error),
++            };
+         }
+         let _address = address
+             .as_inet()
+             .ok_or_else(|| proxy_error(Error::Config("IP peer required")))?;
++        if matches!(backend.config.mode, ModeConfig::Routes(_)) {
++            let stream = tokio::select! {
++                biased;
++                _ = backend.cancel.cancelled() => return Err(proxy_error(Error::Canceled)),
++                result = tokio::time::timeout_at(self.deadline, backend.direct.connect_addresses(
++                    &self.target_domain, self.addresses.clone(), &self.observation,
++                )) => result.map_err(|_| proxy_error(timeout(Stage::Connect)))?.map_err(proxy_error)?,
++            };
++            let bridge = backend
++                .bridge
++                .get()
++                .ok_or_else(|| proxy_error(Error::Lifecycle))?;
++            return tokio::select! {
++                biased;
++                _ = backend.cancel.cancelled() => Err(proxy_error(Error::Canceled)),
++                result = tokio::time::timeout_at(self.deadline, bridge.connect(
++                    stream, backend.sockets.clone(), backend.cancel.clone(),
++                )) => result.map_err(|_| proxy_error(timeout(Stage::Connect)))?.map_err(proxy_error),
++            };
++        }
+         let mut attempt = 0;
+         let stream = tokio::select! {
+             biased;
+@@ -1072,7 +1372,7 @@ impl L4Connect for UpstreamConnector {
+                         backend.dialer.connect_observed(&target, address.port(), &self.observation).await
+                     }
+                 },
+-                backend.config.connect_timeout(), &backend.cancel, &self.observation,
++                self.deadline.saturating_duration_since(tokio::time::Instant::now()), &backend.cancel, &self.observation,
+             ) => result.map_err(proxy_error)?,
+         };
+         if stream.as_ref().type_id() == std::any::TypeId::of::<tokio::net::TcpStream>() {
+@@ -1234,6 +1534,22 @@ async fn send_observed(
+         return Err(Error::Canceled);
+     }
+     let host = request_host(&request, &config.runtime.extra_tls_ports)?;
++    let port = request
++        .uri()
++        .port_u16()
++        .or_else(|| {
++            request
++                .headers()
++                .get(header::HOST)
++                .and_then(|value| value.to_str().ok())
++                .and_then(|value| value.parse::<http::uri::Authority>().ok())
++                .and_then(|authority| authority.port_u16())
++        })
++        .unwrap_or(if request.uri().scheme_str() == Some("http") {
++            80
++        } else {
++            443
++        });
+     config.whitelist.origin(&host)?;
+     http_route(backend, &host)?;
+     let version = request.version();
+@@ -1260,7 +1576,7 @@ async fn send_observed(
+         false,
+         Some(ConnectionInfo {
+             host,
+-            port: None,
++            port: Some(port),
+             observation: observation.clone(),
+             handshake_expired: CancellationToken::new(),
+         }),
+@@ -1451,84 +1767,6 @@ fn websocket_upgrade(request: &RequestHeader) -> bool {
+         })
+ }
+ 
+-pub(crate) async fn verify(
+-    config: &Config,
+-    backend: &Arc<Backend>,
+-    sockets: &Arc<Connections>,
+-    tasks: &TaskTracker,
+-    cancel: &CancellationToken,
+-) -> Result<()> {
+-    for (index, probe) in config.runtime.verification.iter().enumerate() {
+-        let observation = backend.observation.probe(index as u16 + 1);
+-        let span = observation.start(Stage::Verification);
+-        let result = async {
+-            config.whitelist.origin(&probe.host)?;
+-            let method = match probe.method {
+-                crate::ProbeMethod::Get => http::Method::GET,
+-                crate::ProbeMethod::Head => http::Method::HEAD,
+-            };
+-            let request = Request::builder().method(method.clone()).uri(&probe.path)
+-                .header(header::HOST, &probe.host).header(header::ACCEPT_ENCODING, "identity")
+-                .body(body(Bytes::new())).map_err(|_| Error::Http)?;
+-            let mut response = send_observed(config, backend, request, sockets, tasks, cancel, &observation).await?;
+-            if response.status().as_u16() != probe.status {
+-                return Err(Error::Operation(Failure::new(Stage::Verification, FailureCode::HttpStatus)
+-                    .values(probe.status as u64, response.status().as_u16() as u64)));
+-            }
+-            if method == http::Method::GET {
+-                let reading = async {
+-                    let mut prefix = Vec::new();
+-                    let mut total = 0_usize;
+-                    while let Some(frame) = response.body_mut().frame().await {
+-                        let frame = frame.map_err(|_| Error::Operation(Failure::new(Stage::HttpBody, FailureCode::HttpProtocol)))?;
+-                        if let Some(data) = frame.data_ref() {
+-                            let sampling = probe.body_mode == crate::ProbeBodyMode::Sample;
+-                            let data = if sampling {
+-                                &data[..data.len().min(probe.max_bytes - total)]
+-                            } else {
+-                                &data[..]
+-                            };
+-                            if prefix.len() < probe.prefix.len() {
+-                                prefix.extend_from_slice(&data[..data.len().min(probe.prefix.len() - prefix.len())]);
+-                            }
+-                            total = total.saturating_add(data.len());
+-                            if total > probe.max_bytes {
+-                                return Err(Error::Operation(Failure::new(Stage::HttpBody, FailureCode::BodyTooLarge)
+-                                    .values(probe.max_bytes as u64, total as u64)));
+-                            }
+-                            // A sample intentionally stops before EOF. Dropping the
+-                            // response closes this probe's unused HTTP body.
+-                            if sampling && total == probe.max_bytes {
+-                                break;
+-                            }
+-                        }
+-                    }
+-                    if total < probe.min_bytes {
+-                        return Err(Error::Operation(Failure::new(Stage::HttpBody, FailureCode::BodyTooSmall)
+-                            .values(probe.min_bytes as u64, total as u64)));
+-                    }
+-                    if !prefix.starts_with(&probe.prefix) {
+-                        return Err(Error::Operation(Failure::new(Stage::Verification, FailureCode::BodyPrefix)));
+-                    }
+-                    Ok(())
+-                };
+-                observation.measure(Stage::HttpBody, async {
+-                    tokio::select! {
+-                        biased;
+-                        _ = cancel.cancelled() => Err(Error::Canceled),
+-                        result = tokio::time::timeout(config.connect_timeout(), reading) =>
+-                            result.unwrap_or_else(|_| Err(Error::Operation(Failure::new(Stage::HttpBody, FailureCode::Timeout)))),
+-                    }
+-                }).await?;
+-            }
+-            Ok(())
+-        }.await;
+-        span.finish(&result);
+-        result?;
+-    }
+-    Ok(())
+-}
+-
+ #[cfg(test)]
+ #[path = "http_proxy_tests.rs"]
+ mod tests;
+diff --git a/src/http_proxy_tests.rs b/src/http_proxy_tests.rs
+index f4e4d21..674d1e8 100644
+--- a/src/http_proxy_tests.rs
++++ b/src/http_proxy_tests.rs
+@@ -24,6 +24,40 @@ struct Dialer {
+     failures: usize,
+     mapped: Option<SocketAddr>,
+ }
++
++struct RouteDialer {
++    address: SocketAddr,
++    calls: Arc<Mutex<Vec<String>>>,
++    first_ready: Arc<std::sync::atomic::AtomicBool>,
++}
++
++#[async_trait]
++impl TcpDialer for RouteDialer {
++    async fn resolve(&self, host: &str, _: u16) -> Result<Vec<SocketAddr>> {
++        let octet = match host {
++            "one.edge.test" => 1,
++            "two.edge.test" => 2,
++            RELAY => 3,
++            _ => panic!("unexpected target"),
++        };
++        Ok(vec![SocketAddr::from(([192, 0, 2, octet], 443))])
++    }
++    async fn connect(&self, host: &str, _: u16) -> Result<BoxStream> {
++        self.calls.lock().push(host.into());
++        if matches!(host, "one.edge.test" | "two.edge.test" | RELAY) {
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            return Ok(Box::new(stream));
++        }
++        match host {
++            "192.0.2.1" if !self.first_ready.load(Ordering::SeqCst) => Err(Error::Transport),
++            "192.0.2.1" | "192.0.2.2" => {
++                Ok(Box::new(TcpStream::connect(self.address).await.unwrap()))
++            }
++            _ => panic!("faster CDN must not overtake a usable relay"),
++        }
++    }
++}
+ #[async_trait]
+ impl TcpDialer for Dialer {
+     async fn resolve(&self, host: &str, port: u16) -> Result<Vec<SocketAddr>> {
+@@ -115,6 +149,8 @@ struct Received {
+ 
+ #[derive(Clone, Copy)]
+ enum ResponseMode {
++    H2CapacityStop,
++    Routes,
+     Complete,
+     Mapped,
+     MappedWebSocket,
+@@ -134,6 +170,8 @@ enum ResponseMode {
+ }
+ 
+ struct Fixture {
++    route_first_ready: Arc<std::sync::atomic::AtomicBool>,
++    route_calls: Arc<Mutex<Vec<String>>>,
+     backend: Arc<Backend>,
+     config: Config,
+     stop: CancellationToken,
+@@ -230,12 +268,46 @@ impl Fixture {
+                         let requests = requests.clone();
+                         children.spawn(async move {
+                             let Ok(tls) = acceptor.accept(socket).await else { return };
+-                            if matches!(mode, ResponseMode::Mapped | ResponseMode::MappedWebSocket) {
++                            if matches!(mode, ResponseMode::Mapped | ResponseMode::MappedWebSocket | ResponseMode::Routes) {
+                                 assert!(matches!(tls.get_ref().1.server_name(), Some("one.edge.test" | "two.edge.test")));
+                             } else {
+                                 assert_eq!(tls.get_ref().1.server_name(), Some(RELAY));
+                             }
+                             let h2 = tls.get_ref().1.alpn_protocol() == Some(b"h2");
++                            if matches!(mode, ResponseMode::H2CapacityStop) {
++                                let mut tls = tls;
++                                let mut preface = [0; 24];
++                                tls.read_exact(&mut preface).await.unwrap();
++                                tls.write_all(&[0, 0, 0, 4, 0, 0, 0, 0, 0]).await.unwrap();
++                                loop {
++                                    let mut frame = [0; 9];
++                                    if tls.read_exact(&mut frame).await.is_err() {
++                                        break;
++                                    }
++                                    let length = (usize::from(frame[0]) << 16)
++                                        | (usize::from(frame[1]) << 8) | usize::from(frame[2]);
++                                    let mut payload = vec![0; length];
++                                    tls.read_exact(&mut payload).await.unwrap();
++                                    if frame[3] == 4 && frame[4] & 1 == 0 {
++                                        tls.write_all(&[0, 0, 0, 4, 1, 0, 0, 0, 0]).await.unwrap();
++                                    }
++                                    if frame[3] == 1 {
++                                        requests.fetch_add(1, Ordering::SeqCst);
++                                        let response = [0, 0, 1, 1, 5, frame[5], frame[6], frame[7], frame[8], 0x88];
++                                        tls.write_all(&response).await.unwrap();
++                                        tls.write_all(&[0, 0, 6, 4, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0]).await.unwrap();
++                                        loop {
++                                            tokio::time::sleep(Duration::from_millis(20)).await;
++                                            if tls.write_all(&[0, 0, 8, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]).await.is_err() {
++                                                return;
++                                            }
++                                            tls.flush().await.unwrap();
++                                        }
++                                    }
++                                    tls.flush().await.unwrap();
++                                }
++                                return;
++                            }
+                             if let ResponseMode::Refuse(count) = mode {
+                                 let mut connection = h2::server::handshake(tls).await.unwrap();
+                                 while let Some(Ok((_request, mut respond))) = connection.accept().await {
+@@ -377,7 +449,32 @@ impl Fixture {
+             ]))
+             .unwrap(),
+         );
++        if matches!(mode, ResponseMode::Routes) {
++            config.mode = crate::Routes {
++                payload: crate::Payload::Http,
++                reverse: vec![
++                    crate::modes::RemoteReverse {
++                        backend: RemoteBackend::Relay,
++                        server_name: "one.edge.test".into(),
++                    },
++                    crate::modes::RemoteReverse {
++                        backend: RemoteBackend::Relay,
++                        server_name: "two.edge.test".into(),
++                    },
++                    crate::modes::RemoteReverse {
++                        backend: RemoteBackend::CloudflareWorker,
++                        server_name: RELAY.into(),
++                    },
++                ],
++                direct: false,
++                tunnel: vec![],
++            }
++            .into();
++        }
+         config.runtime.bandwidth = bandwidth;
++        if matches!(mode, ResponseMode::H2CapacityStop) {
++            config.runtime.connect_timeout_ms = 150;
++        }
+         if matches!(mode, ResponseMode::Mapped | ResponseMode::MappedWebSocket) {
+             config.runtime.edgeone_origins = BTreeMap::from([
+                 (FIRST.into(), "one.edge.test".into()),
+@@ -417,28 +514,50 @@ impl Fixture {
+         let stop = CancellationToken::new();
+         let carrier_received = Arc::new(AtomicUsize::new(0));
+         let dials = Arc::new(AtomicUsize::new(0));
+-        let backend = Arc::new(
+-            Backend::create(
++        let route_calls = Arc::new(Mutex::new(Vec::new()));
++        let tasks = TaskTracker::new();
++        let route_first_ready = Arc::new(std::sync::atomic::AtomicBool::new(false));
++        let mut prepared_backend = Backend::create(
++            &config,
++            Arc::new(Dialer {
++                received: matches!(mode, ResponseMode::CancelWindow(_))
++                    .then(|| carrier_received.clone()),
++                attempts: dials.clone(),
++                mapped: Some(address),
++                failures: if let ResponseMode::DialFailures(count) = mode {
++                    count
++                } else {
++                    0
++                },
++            }),
++            Arc::new(Connections::default()),
++            None,
++            stop.clone(),
++            ObservationContext::new(Kind::RemoteReverse, Arc::new(recorder.clone())),
++        )
++        .await
++        .unwrap();
++        if matches!(mode, ResponseMode::Routes) {
++            let dependencies = crate::Dependencies::new().with_dialer(RouteDialer {
++                address,
++                calls: route_calls.clone(),
++                first_ready: route_first_ready.clone(),
++            });
++            let registry = crate::routing::Registry::prepare(
+                 &config,
+-                Arc::new(Dialer {
+-                    received: matches!(mode, ResponseMode::CancelWindow(_))
+-                        .then(|| carrier_received.clone()),
+-                    attempts: dials.clone(),
+-                    mapped: Some(address),
+-                    failures: if let ResponseMode::DialFailures(count) = mode {
+-                        count
+-                    } else {
+-                        0
+-                    },
+-                }),
+-                Arc::new(Connections::default()),
+-                None,
++                &dependencies,
++                prepared_backend.sockets.clone(),
++                tasks.clone(),
+                 stop.clone(),
+-                ObservationContext::new(Kind::RemoteReverse, Arc::new(recorder.clone())),
+             )
+             .await
+-            .unwrap(),
+-        );
++            .unwrap();
++            for (index, state) in registry.health.write().iter_mut().enumerate() {
++                state.dial_elapsed = Some(Duration::from_millis([1, 2, 0][index]));
++            }
++            prepared_backend.routes = Some(registry);
++        }
++        let backend = Arc::new(prepared_backend);
+         let ca = trust.then(|| {
+             use pingora_core::utils::tls::{WrappedX509, parse_x509};
+             Arc::from(vec![WrappedX509::new(
+@@ -476,10 +595,12 @@ impl Fixture {
+                 .is_ok()
+         );
+         Self {
++            route_first_ready,
++            route_calls,
+             backend,
+             config,
+             stop,
+-            tasks: TaskTracker::new(),
++            tasks,
+             recorder,
+             accepted,
+             dials,
+@@ -1471,6 +1592,349 @@ async fn pingora_h1_reuses_relay_and_preserves_headers_query_and_upload() {
+     fixture.close().await;
+ }
+ 
++#[tokio::test]
++async fn pooled_h2_capacity_wait_obeys_operation_deadline_without_submitting_again() {
++    let fixture = Fixture::with_mode(true, Bytes::new(), true, ResponseMode::H2CapacityStop).await;
++    fixture
++        .request(FIRST, http::Method::GET, body(""))
++        .await
++        .unwrap()
++        .into_body()
++        .collect()
++        .await
++        .unwrap();
++    tokio::time::sleep(Duration::from_millis(30)).await;
++    let started = tokio::time::Instant::now();
++    let result = tokio::time::timeout(
++        Duration::from_millis(600),
++        fixture.request(FIRST, http::Method::GET, body("")),
++    )
++    .await;
++    let elapsed = started.elapsed();
++    let accepted = fixture.accepted.load(Ordering::SeqCst);
++    let requests = fixture.attempts.load(Ordering::SeqCst);
++    fixture.close().await;
++    assert!(
++        matches!(result, Ok(Err(_))),
++        "pool acquisition outlived the deadline"
++    );
++    assert!(
++        elapsed < Duration::from_millis(230),
++        "acquisition elapsed: {elapsed:?}"
++    );
++    assert_eq!(accepted, 1);
++    assert_eq!(requests, 1);
++}
++
++#[tokio::test]
++async fn routed_h2_selects_per_request_exhausts_relays_and_isolates_upstream_pools() {
++    let fixture = Fixture::with_mode(
++        true,
++        Bytes::from_static(b"routed"),
++        true,
++        ResponseMode::Routes,
++    )
++    .await;
++    assert_eq!(fixture.route_calls.lock().len(), 3);
++    let (client, downstream) = tokio::io::duplex(64 * 1024);
++    let backend = fixture.backend.clone();
++    let stop = fixture.stop.clone();
++    let serving = tokio::spawn(async move {
++        serve(
++            &backend,
++            Box::new(downstream),
++            FIRST.into(),
++            443,
++            true,
++            backend.observation.clone(),
++            &stop,
++        )
++        .await
++    });
++    let (mut sender, connection) =
++        hyper::client::conn::http2::handshake(TokioExecutor::new(), TokioIo::new(client))
++            .await
++            .unwrap();
++    let client_task = tokio::spawn(connection);
++    for expected in ["two.edge.test", "one.edge.test"] {
++        let response = sender
++            .send_request(
++                Request::builder()
++                    .uri(format!("https://{FIRST}/asset"))
++                    .body(body(""))
++                    .unwrap(),
++            )
++            .await
++            .unwrap();
++        assert_eq!(
++            response.into_body().collect().await.unwrap().to_bytes(),
++            "routed"
++        );
++        {
++            let seen = fixture.seen.lock();
++            let request = seen.last().unwrap();
++            assert_eq!(request.host, expected);
++            assert_eq!(request.original, FIRST);
++        }
++        fixture.route_first_ready.store(true, Ordering::SeqCst);
++        let mut health = fixture.backend.routes.as_ref().unwrap().health.write();
++        health[0].targets.clear();
++        health[0].failures = 0;
++    }
++    let business: Vec<_> = fixture
++        .route_calls
++        .lock()
++        .iter()
++        .filter(|host| host.starts_with("192."))
++        .cloned()
++        .collect();
++    assert_eq!(business, ["192.0.2.1", "192.0.2.2", "192.0.2.1"]);
++    assert_eq!(fixture.accepted.load(Ordering::SeqCst), 2);
++    drop(sender);
++    fixture.close().await;
++    let _ = serving.await.unwrap();
++    client_task.abort();
++    let _ = client_task.await;
++}
++
++#[cfg(feature = "websocket")]
++#[tokio::test]
++async fn http_over_tunnel_negotiates_origin_tls_and_reuses_only_its_own_pool() {
++    check_http_tunnel(false).await;
++}
++
++#[cfg(feature = "websocket")]
++#[tokio::test]
++async fn http_tunnel_target_timeout_preserves_access_health_and_drains_abandoned_bridge() {
++    check_http_tunnel(true).await;
++}
++
++#[cfg(feature = "websocket")]
++async fn check_http_tunnel(stall: bool) {
++    let key = rcgen::KeyPair::generate().unwrap();
++    let certificate = rcgen::CertificateParams::new(vec![RELAY.into(), FIRST.into()])
++        .unwrap()
++        .self_signed(&key)
++        .unwrap();
++    let provider = Arc::new(rustls::crypto::ring::default_provider());
++    let mut tls = rustls::ServerConfig::builder_with_provider(provider.clone())
++        .with_safe_default_protocol_versions()
++        .unwrap()
++        .with_no_client_auth()
++        .with_single_cert(
++            vec![certificate.der().clone()],
++            rustls::pki_types::PrivatePkcs8KeyDer::from(key.serialize_der()).into(),
++        )
++        .unwrap();
++    tls.alpn_protocols = vec![b"http/1.1".to_vec()];
++    let acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(tls));
++    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
++    let address = listener.local_addr().unwrap();
++    let accepts = Arc::new(AtomicUsize::new(0));
++    let observed = Arc::new(Mutex::new(Vec::new()));
++    let (count, requests) = (accepts.clone(), observed.clone());
++    let server = tokio::spawn(async move {
++        let mut children = tokio::task::JoinSet::new();
++        loop {
++            tokio::select! {
++                incoming = listener.accept() => {
++                    let (socket, _) = incoming.unwrap();
++                    let (acceptor, count, requests) = (acceptor.clone(), count.clone(), requests.clone());
++                    children.spawn(async move {
++                        let outer = acceptor.accept(socket).await.unwrap();
++                        assert_eq!(outer.get_ref().1.server_name(), Some(RELAY));
++                        let sockets = Arc::new(Connections::default());
++                        let outer = sockets.track(Box::new(outer)).unwrap();
++                        let socket = tokio_tungstenite::accept_hdr_async(outer,
++                            |request: &tokio_tungstenite::tungstenite::handshake::server::Request, response| {
++                                assert_eq!(request.uri().path(), format!("/pipe/{FIRST}/443"));
++                                Ok(response)
++                            }).await.unwrap();
++                        if stall {
++                            let mut stream = crate::websocket::ByteStream::from_socket(socket);
++                            let _ = tokio::io::copy(&mut stream, &mut tokio::io::sink()).await;
++                            return;
++                        }
++                        let inner = acceptor.accept(crate::websocket::ByteStream::from_socket(socket)).await.unwrap();
++                        assert_eq!(inner.get_ref().1.server_name(), Some(FIRST));
++                        count.fetch_add(1, Ordering::SeqCst);
++                        let service = hyper::service::service_fn(move |request: Request<hyper::body::Incoming>| {
++                            requests.lock().push((request.headers()[header::HOST].to_str().unwrap().to_owned(),
++                                request.headers().contains_key("x-steam-relay-host")));
++                            async { Ok::<_, Infallible>(Response::new(body("inner TLS"))) }
++                        });
++                        let _ = hyper::server::conn::http1::Builder::new()
++                            .serve_connection(TokioIo::new(inner), service).await;
++                    });
++                }
++                _ = children.join_next(), if !children.is_empty() => {}
++            }
++        }
++    });
++    struct TunnelDialer(SocketAddr);
++    #[async_trait]
++    impl TcpDialer for TunnelDialer {
++        async fn connect(&self, host: &str, port: u16) -> Result<BoxStream> {
++            assert_eq!((host, port), (RELAY, 443));
++            Ok(Box::new(TcpStream::connect(self.0).await.unwrap()))
++        }
++        async fn resolve(&self, _: &str, _: u16) -> Result<Vec<SocketAddr>> {
++            panic!("HTTP tunnel must leave target DNS to tunnel");
++        }
++    }
++    let tunnel = crate::ForwardConfig::parse(&format!("wss://{RELAY}/pipe")).unwrap();
++    let mut config = crate::Profile::new(
++        "http-tunnel",
++        crate::Routes {
++            payload: crate::Payload::Http,
++            reverse: vec![],
++            direct: false,
++            tunnel: vec![tunnel.clone()],
++        },
++        Whitelist::new(BTreeMap::from([(SECOND.into(), FIRST.into())])).unwrap(),
++    )
++    .into_dynamic();
++    if stall {
++        config.runtime.connect_timeout_ms = 200;
++    }
++    let sockets = Arc::new(Connections::default());
++    let cancel = CancellationToken::new();
++    let observation = ObservationContext::new(config.kind(), Arc::new(crate::NoopObserver));
++    let dialer: Arc<dyn TcpDialer> = Arc::new(TunnelDialer(address));
++    let mut child_config = config.clone();
++    child_config.mode = ModeConfig::ForwardProxy { protocol: tunnel };
++    let mut child = Backend::create(
++        &child_config,
++        dialer.clone(),
++        sockets.clone(),
++        None,
++        cancel.clone(),
++        observation.clone(),
++    )
++    .await
++    .unwrap();
++    let mut roots = rustls::RootCertStore::empty();
++    roots.add(certificate.der().clone()).unwrap();
++    let mut client = rustls::ClientConfig::builder_with_provider(provider)
++        .with_safe_default_protocol_versions()
++        .unwrap()
++        .with_root_certificates(roots)
++        .with_no_client_auth();
++    client.alpn_protocols = vec![b"http/1.1".to_vec()];
++    child.websocket_trust(Arc::new(client));
++    let registry = crate::routing::Registry::available(vec![crate::routing::Route {
++        tier: crate::routing::Tier::D,
++        payload: crate::Payload::Http,
++        downloads: true,
++        endpoint: None,
++        backend: Arc::new(child),
++    }]);
++    let mut root = Backend::create(
++        &config,
++        dialer,
++        sockets.clone(),
++        None,
++        cancel.clone(),
++        observation,
++    )
++    .await
++    .unwrap();
++    root.routes = Some(registry);
++    let root = Arc::new(root);
++    use pingora_core::utils::tls::{WrappedX509, parse_x509};
++    let ca = Arc::from(vec![WrappedX509::new(
++        certificate.der().to_vec(),
++        parse_x509,
++    )]);
++    assert!(
++        root.http
++            .set(build(Proxy {
++                backend: Arc::downgrade(&root),
++                requests: TaskTracker::new(),
++                peers: Default::default(),
++                acquisitions: Default::default(),
++                bandwidth: crate::bandwidth::SessionBandwidth::new(Default::default()),
++                #[cfg(feature = "http-cache")]
++                cache_namespace: "http-tunnel-test".into(),
++                #[cfg(feature = "http-cache")]
++                cache: Default::default(),
++                ca: Some(ca),
++                h2_stream_window: H2_UPSTREAM_STREAM_WINDOW,
++            }))
++            .is_ok()
++    );
++    let tasks = TaskTracker::new();
++    if stall {
++        assert!(
++            send(
++                &config,
++                &root,
++                Request::get(format!("https://{SECOND}/asset"))
++                    .body(body(""))
++                    .unwrap(),
++                &sockets,
++                &tasks,
++                &cancel,
++            )
++            .await
++            .is_err()
++        );
++        tokio::time::timeout(Duration::from_secs(1), async {
++            while sockets.count() > 0 || !engine(&root).requests.is_empty() {
++                tokio::task::yield_now().await;
++            }
++        })
++        .await
++        .unwrap();
++        let health = root.routes.as_ref().unwrap().health.read();
++        assert_eq!(
++            health[0].eligibility,
++            crate::routing::Eligibility::Available
++        );
++        assert_eq!(health[0].failures, 0);
++        assert!(health[0].targets.contains_key(SECOND));
++    } else {
++        for _ in 0..2 {
++            let response = send(
++                &config,
++                &root,
++                Request::get(format!("https://{SECOND}/asset"))
++                    .body(body(""))
++                    .unwrap(),
++                &sockets,
++                &tasks,
++                &cancel,
++            )
++            .await
++            .unwrap();
++            assert_eq!(
++                response.into_body().collect().await.unwrap().to_bytes(),
++                "inner TLS"
++            );
++            tokio::time::timeout(Duration::from_secs(2), async {
++                while !tasks.is_empty() || !engine(&root).requests.is_empty() {
++                    tokio::task::yield_now().await;
++                }
++            })
++            .await
++            .unwrap();
++        }
++        assert_eq!(accepts.load(Ordering::SeqCst), 1);
++        assert_eq!(
++            *observed.lock(),
++            [(FIRST.into(), false), (FIRST.into(), false)]
++        );
++    }
++    cancel.cancel();
++    sockets.close();
++    shutdown(&root).await;
++    tasks.close();
++    tasks.wait().await;
++    server.abort();
++    let _ = server.await;
++    assert_eq!(sockets.count(), 0);
++}
++
+ #[tokio::test]
+ async fn pingora_h2_multiplexes_cold_large_responses_across_registered_origins() {
+     let payload = Bytes::from(vec![0x5a; 3 * 1024 * 1024]);
+diff --git a/src/lib.rs b/src/lib.rs
+index 4d607bb..7fd3f26 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -39,13 +39,18 @@ pub mod modes;
+ #[cfg(feature = "fake-ip")]
+ pub mod network;
+ mod observation;
++#[cfg(any(feature = "reverse-proxy", feature = "tunnel-proxy"))]
++mod outbound;
+ #[cfg(feature = "reverse-proxy")]
+ mod pingora_io;
+ mod policy;
++mod probe;
+ #[cfg(any(feature = "reverse-proxy", feature = "tunnel-proxy"))]
+ mod relay;
+ #[cfg(any(feature = "reverse-proxy", feature = "tunnel-proxy"))]
+ mod retry;
++#[cfg(any(feature = "reverse-proxy", feature = "tunnel-proxy"))]
++mod routing;
+ #[cfg(feature = "reverse-proxy")]
+ mod server_identity;
+ #[cfg(any(feature = "reverse-proxy", feature = "tunnel-proxy"))]
+@@ -63,7 +68,7 @@ pub use capture::{
+ };
+ pub use config::{
+     BandwidthConfig, Config, ConfigurationPolicy, EndpointStrategy, ForwardConfig, Kind,
+-    ModeConfig, ModeSpec, Payload, ProbeBodyMode, ProbeMethod, Profile, RemoteBackend,
++    ModeConfig, ModeSpec, Payload, ProbeBodyMode, ProbeMethod, Profile, RemoteBackend, Routes,
+     RuntimeConfig, TunConfig, VerificationProbe, WebSocketTimeouts,
+ };
+ pub use dataplane::NativeFactory;
+diff --git a/src/lifecycle.rs b/src/lifecycle.rs
+index 9e2fe05..cacf798 100644
+--- a/src/lifecycle.rs
++++ b/src/lifecycle.rs
+@@ -238,6 +238,18 @@ impl Drop for Inner {
+ }
+ 
+ impl<M: ModeSpec> Mode<M> {
++    pub async fn restart(
++        &mut self,
++        next_config: Profile<M>,
++        cancel: CancellationToken,
++    ) -> Result<()> {
++        next_config.clone().into_dynamic().configuration_policy()?;
++        let next = Factory::new(self.inner.dependencies.clone()).create(next_config)?;
++        self.close().await?;
++        *self = next;
++        self.start(cancel).await
++    }
++
+     /// Move into a runtime-selected handle without opening or restarting
+     /// resources. Cloned typed handles still refer to the same session.
+     pub fn into_dynamic(self) -> Mode {
+diff --git a/src/managed_stream.rs b/src/managed_stream.rs
+index 09e8342..4afa811 100644
+--- a/src/managed_stream.rs
++++ b/src/managed_stream.rs
+@@ -46,6 +46,7 @@ impl Connections {
+     }
+ 
+     #[cfg(any(
++        feature = "reverse-proxy",
+         feature = "websocket",
+         feature = "shadowsocks",
+         feature = "vless-xhttp"
+diff --git a/src/modes.rs b/src/modes.rs
+index 900a3a3..ba2d830 100644
+--- a/src/modes.rs
++++ b/src/modes.rs
+@@ -9,7 +9,8 @@ pub struct LocalReverse {
+     pub endpoints: Vec<String>,
+ }
+ 
+-#[derive(Clone)]
++#[derive(Clone, serde::Serialize, serde::Deserialize)]
++#[serde(deny_unknown_fields)]
+ pub struct RemoteReverse<P = RemoteBackend> {
+     pub backend: P,
+     pub server_name: String,
+diff --git a/src/native_plane.rs b/src/native_plane.rs
+index 01505b8..7a9f73a 100644
+--- a/src/native_plane.rs
++++ b/src/native_plane.rs
+@@ -11,12 +11,8 @@ use std::sync::{
+ use async_trait::async_trait;
+ use http::{Request, Response};
+ use tokio::sync::{Mutex, Semaphore, watch};
+-#[cfg(feature = "reverse-proxy")]
+-use tokio::task::JoinSet;
+ use tokio_util::{sync::CancellationToken, task::TaskTracker};
+ 
+-#[cfg(feature = "reverse-proxy")]
+-use crate::Kind;
+ use crate::{
+     Config, Error, Failure, FailureCode, ObservationContext, Result, Stage,
+     backend::Backend,
+@@ -486,7 +482,14 @@ impl Session {
+         *self.accepting.lock() = false;
+         self.sockets.close();
+         #[cfg(feature = "reverse-proxy")]
+-        http_proxy::shutdown(&self.backend).await;
++        {
++            http_proxy::shutdown(&self.backend).await;
++            if let Some(routes) = &self.backend.routes {
++                for route in &routes.routes {
++                    http_proxy::shutdown(&route.backend).await;
++                }
++            }
++        }
+         self.tasks.close();
+         self.tasks.wait().await;
+         // Stop host interception before releasing stack/TUN resources. Keep
+@@ -576,203 +579,38 @@ async fn choose_backend(
+     _tasks: TaskTracker,
+     cancel: CancellationToken,
+ ) -> Result<Arc<Backend>> {
++    let routes = crate::routing::Registry::prepare(
++        config,
++        dependencies,
++        sockets.clone(),
++        _tasks.clone(),
++        cancel.clone(),
++    )
++    .await?;
+     let observation = ObservationContext::new(config.kind(), dependencies.observer.clone());
+-    if config.endpoint_strategy() == crate::EndpointStrategy::Configured {
+-        // DNS scheduling belongs to the provider. Do not resolve/race addresses
+-        // or request verification assets during startup for this policy.
+-        return observation
+-            .measure(
+-                Stage::Backend,
+-                Backend::create(
+-                    config,
+-                    dependencies.dialer.clone(),
+-                    sockets,
+-                    None,
+-                    cancel,
+-                    observation.clone(),
+-                ),
+-            )
+-            .await
+-            .map(|backend| {
+-                #[cfg(feature = "reverse-proxy")]
+-                let backend = {
+-                    let mut backend = backend;
+-                    backend.http_cache = dependencies.http_cache.clone();
+-                    backend
+-                };
+-                Arc::new(backend)
+-            });
+-    }
+-    #[cfg(feature = "reverse-proxy")]
+-    {
+-        select_backend(config, dependencies, sockets, _tasks, cancel, observation).await
+-    }
+-    #[cfg(not(feature = "reverse-proxy"))]
+-    Err(Error::Config(
+-        "endpoint selection requires the reverse-proxy feature",
+-    ))
+-}
+-
+-#[cfg(feature = "reverse-proxy")]
+-async fn select_backend(
+-    config: &Config,
+-    dependencies: &Dependencies,
+-    sockets: Arc<Connections>,
+-    tasks: TaskTracker,
+-    cancel: CancellationToken,
+-    observation: ObservationContext,
+-) -> Result<Arc<Backend>> {
+-    let span = observation.start(Stage::Selection);
+-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(35);
+-    let configured = config.mode.connection_endpoints();
+-    let configured = if configured.is_empty() && config.kind() == Kind::LocalReverse {
+-        config.runtime.discovery_endpoints.as_slice()
+-    } else {
+-        configured.as_ref()
+-    };
+-    let mut endpoints = Vec::new();
+-    let mut last = Failure::new(Stage::Selection, FailureCode::NoCandidates);
+-    // Resolution failures are observable even when there is nothing to probe.
+-    let resolving = async {
+-        for (index, endpoint) in configured.iter().enumerate() {
+-            let (host, port) = crate::config::parse_endpoint(endpoint)?;
+-            let context = observation.source(index as u32 + 1);
+-            let lookup = context.measure(Stage::Resolve, async {
+-                let addresses = tokio::select! {
+-                    biased;
+-                    _ = cancel.cancelled() => return Err(Error::Canceled),
+-                    result = tokio::time::timeout_at(deadline.min(tokio::time::Instant::now() + config.connect_timeout()), tokio::net::lookup_host((host.as_str(), port))) =>
+-                        result.map_err(|_| Error::Operation(Failure::new(Stage::Resolve, FailureCode::Timeout)))?
+-                            .map_err(|e| { let mut f = Failure::io(Stage::Resolve, &e); if f.code == FailureCode::Io { f.code = FailureCode::DnsLookup; } Error::Operation(f) })?,
+-                };
+-                let addresses: Vec<_> = addresses.take(8).collect();
+-                if addresses.is_empty() { return Err(Error::Operation(Failure::new(Stage::Resolve, FailureCode::DnsNoRecords))); }
+-                Ok(addresses)
+-            }).await;
+-            match lookup {
+-                Ok(addresses) => for address in addresses {
+-                    if !endpoints.iter().any(|(existing, _)| *existing == Some(address)) {
+-                        endpoints.push((Some(address), index as u32 + 1));
+-                    }
+-                },
+-                Err(Error::Canceled) => return Err(Error::Canceled),
+-                Err(error) => last = Failure::from_error(Stage::Resolve, &error),
+-            }
+-            if tokio::time::Instant::now() >= deadline {
+-                return Err(Error::Operation(Failure::new(Stage::Selection, FailureCode::Timeout)));
+-            }
+-        }
+-        Ok(())
+-    }.await;
+-    if let Err(error) = resolving {
+-        let result = Err(error);
+-        span.finish::<Arc<Backend>>(&result);
+-        return result;
+-    }
+-    if config.kind() == Kind::ForwardProxy {
+-        endpoints.push((None, 1));
+-    }
+-    if endpoints.is_empty() {
+-        let result = Err(Error::Selection {
+-            attempted: 0,
+-            failed: 0,
+-            last,
+-        });
+-        span.finish::<Arc<Backend>>(&result);
+-        return result;
+-    }
+-    let budget = Arc::new(Semaphore::new(3));
+-    let attempted = Arc::new(std::sync::atomic::AtomicU32::new(0));
+-    let probing = cancel.child_token();
+-    let mut pending = JoinSet::new();
+-    for (index, (endpoint, source)) in endpoints.into_iter().enumerate() {
+-        let (config, dependencies, sockets, tasks, stop, budget, attempted) = (
+-            config.clone(),
+-            dependencies.clone(),
+-            sockets.clone(),
+-            tasks.clone(),
+-            probing.clone(),
+-            budget.clone(),
+-            attempted.clone(),
+-        );
+-        let context = observation.source(source).candidate(index as u32 + 1);
+-        let lifetime = cancel.clone();
+-        pending.spawn(async move {
+-            let _permit = budget.acquire_owned().await.map_err(|_| Error::Canceled)?;
+-            attempted.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+-            let sockets = sockets.child()?;
+-            let guard = ProbeGuard {
+-                sockets: sockets.clone(),
+-                selected: false,
++    // DNS scheduling belongs to the provider. Do not resolve/race addresses
++    // or request verification assets during startup for this policy.
++    observation
++        .measure(
++            Stage::Backend,
++            Backend::create(
++                config,
++                dependencies.dialer.clone(),
++                sockets,
++                None,
++                cancel,
++                observation.clone(),
++            ),
++        )
++        .await
++        .map(|mut backend| {
++            backend.routes = Some(routes);
++            #[cfg(feature = "reverse-proxy")]
++            let backend = {
++                let mut backend = backend;
++                backend.http_cache = dependencies.http_cache.clone();
++                backend
+             };
+-            let mut backend = context
+-                .measure(
+-                    Stage::Backend,
+-                    Backend::create(
+-                        &config,
+-                        dependencies.dialer.clone(),
+-                        sockets.clone(),
+-                        endpoint,
+-                        lifetime,
+-                        context.clone(),
+-                    ),
+-                )
+-                .await?;
+-            backend.http_cache = dependencies.http_cache.clone();
+-            let backend = Arc::new(backend);
+-            if config.runtime.verify_endpoints {
+-                http_proxy::verify(&config, &backend, &sockets, &tasks, &stop).await?;
+-            }
+-            Ok::<_, Error>((backend, guard))
+-        });
+-    }
+-    let mut failed = 0;
+-    let choosing = async {
+-        while let Some(result) = pending.join_next().await {
+-            match result {
+-                Ok(Ok((backend, mut guard))) => {
+-                    guard.selected = true;
+-                    return Ok(backend);
+-                }
+-                Ok(Err(error @ (Error::Credential | Error::Config(_)))) => {
+-                    return Err(error);
+-                }
+-                Ok(Err(Error::Canceled)) if cancel.is_cancelled() => return Err(Error::Canceled),
+-                Ok(Err(error)) => {
+-                    failed += 1;
+-                    last = Failure::from_error(Stage::Verification, &error);
+-                }
+-                Err(_) => return Err(Error::Task),
+-            }
+-        }
+-        Err(Error::Selection {
+-            attempted: attempted.load(std::sync::atomic::Ordering::Relaxed),
+-            failed,
+-            last: last.clone(),
++            Arc::new(backend)
+         })
+-    };
+-    let result = tokio::select! {
+-        biased;
+-        _ = cancel.cancelled() => Err(Error::Canceled),
+-        result = tokio::time::timeout_at(deadline, choosing) => result.unwrap_or_else(|_| Err(Error::Operation(Failure::new(Stage::Selection, FailureCode::Timeout)))),
+-    };
+-    probing.cancel();
+-    pending.abort_all();
+-    while pending.join_next().await.is_some() {}
+-    span.finish(&result);
+-    result
+-}
+-
+-#[cfg(feature = "reverse-proxy")]
+-struct ProbeGuard {
+-    sockets: Arc<Connections>,
+-    selected: bool,
+-}
+-#[cfg(feature = "reverse-proxy")]
+-impl Drop for ProbeGuard {
+-    fn drop(&mut self) {
+-        if !self.selected {
+-            self.sockets.close();
+-        }
+-    }
+ }
+diff --git a/src/websocket.rs b/src/websocket.rs
+index d906c65..21bf168 100644
+--- a/src/websocket.rs
++++ b/src/websocket.rs
+@@ -55,6 +55,19 @@ pub(crate) struct ByteStream {
+     closed: bool,
+ }
+ 
++#[cfg(test)]
++impl ByteStream {
++    pub(crate) fn from_socket(socket: WebSocketStream<ManagedStream>) -> Self {
++        Self {
++            socket,
++            buffered: Bytes::new(),
++            heartbeat: Box::pin(tokio::time::sleep(Duration::from_secs(15))),
++            ping: false,
++            closed: false,
++        }
++    }
++}
++
+ fn io_error(error: WsError) -> io::Error {
+     match error {
+         WsError::Io(error) => error,
+diff --git a/tests/policy_lifecycle.rs b/tests/policy_lifecycle.rs
+index 43bad4d..fea779c 100644
+--- a/tests/policy_lifecycle.rs
++++ b/tests/policy_lifecycle.rs
+@@ -156,6 +156,150 @@ async fn canceled_parent_never_constructs_data_plane() {
+     assert_eq!(calls.load(Ordering::SeqCst), 0);
+ }
+ 
++#[derive(Clone, Default)]
++struct RestartFactory {
++    starts: Arc<parking_lot::Mutex<Vec<String>>>,
++    fail_close: Arc<std::sync::atomic::AtomicBool>,
++}
++
++struct RestartPlane {
++    name: String,
++    factory: RestartFactory,
++    state: parking_lot::Mutex<State>,
++}
++
++#[async_trait]
++impl DataPlaneFactory for RestartFactory {
++    async fn create(&self, config: Config, _: &Dependencies) -> Result<Arc<dyn DataPlane>> {
++        Ok(Arc::new(RestartPlane {
++            name: config.profile_id,
++            factory: self.clone(),
++            state: parking_lot::Mutex::new(State::Created),
++        }))
++    }
++}
++
++#[async_trait]
++impl DataPlane for RestartPlane {
++    async fn start(&self, _: CancellationToken) -> Result<()> {
++        self.factory.starts.lock().push(self.name.clone());
++        if self.name == "bad-start" {
++            *self.state.lock() = State::Failed;
++            return Err(Error::Transport);
++        }
++        *self.state.lock() = State::Running;
++        Ok(())
++    }
++    async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
++        Err(Error::Transport)
++    }
++    async fn request(&self, _: http::Request<Body>) -> Result<http::Response<Body>> {
++        Err(Error::Http)
++    }
++    async fn wait(&self) -> Result<()> {
++        Ok(())
++    }
++    async fn close(&self) -> Result<()> {
++        if self.factory.fail_close.load(Ordering::SeqCst) {
++            return Err(Error::System);
++        }
++        *self.state.lock() = State::Closed;
++        Ok(())
++    }
++    fn status(&self) -> Status {
++        Status {
++            kind: Kind::RemoteReverse,
++            state: *self.state.lock(),
++            active_sockets: 0,
++        }
++    }
++}
++
++fn restart_config(name: &str) -> Config {
++    Profile::new(
++        name,
++        Routes {
++            payload: Payload::Tcp,
++            reverse: vec![],
++            direct: true,
++            tunnel: vec![],
++        },
++        Whitelist::steam(),
++    )
++    .into_dynamic()
++}
++
++#[tokio::test]
++async fn restart_validates_first_and_keeps_old_handle_when_close_fails() {
++    let plane = RestartFactory::default();
++    let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
++        .create(restart_config("old"))
++        .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    let old = mode.clone();
++    assert!(
++        mode.restart(restart_config(""), Default::default())
++            .await
++            .is_err()
++    );
++    assert_eq!(old.status().await.state, State::Running);
++    plane.fail_close.store(true, Ordering::SeqCst);
++    assert!(matches!(
++        mode.restart(restart_config("next"), Default::default())
++            .await,
++        Err(Error::System)
++    ));
++    assert_eq!(*plane.starts.lock(), ["old"]);
++    plane.fail_close.store(false, Ordering::SeqCst);
++    mode.close().await.unwrap();
++    assert_eq!(old.status().await.state, State::Closed);
++}
++
++#[tokio::test]
++async fn restart_replaces_inner_and_old_clones_remain_closed_on_success_and_failure() {
++    for (name, succeeds) in [("next", true), ("bad-start", false), ("canceled", false)] {
++        let plane = RestartFactory::default();
++        let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
++            .create(restart_config("old"))
++            .unwrap();
++        mode.start(Default::default()).await.unwrap();
++        let old = mode.clone();
++        let cancel = CancellationToken::new();
++        if name == "canceled" {
++            cancel.cancel();
++        }
++        assert_eq!(
++            mode.restart(restart_config(name), cancel).await.is_ok(),
++            succeeds
++        );
++        assert_eq!(old.status().await.state, State::Closed);
++        assert!(old.connect("store.steampowered.com", 443).await.is_err());
++        assert_eq!(mode.status().await.state == State::Running, succeeds);
++        mode.close().await.unwrap();
++    }
++}
++
++#[cfg(feature = "vless-xhttp")]
++#[tokio::test]
++async fn restart_rejects_invalid_tunnel_encryption_without_closing_old() {
++    let plane = RestartFactory::default();
++    let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
++        .create(restart_config("old"))
++        .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    let mut next = restart_config("invalid-encryption");
++    next.mode = ModeConfig::ForwardProxy {
++        protocol: ForwardConfig::parse(
++            "vless://00000000-0000-0000-0000-000000000001@access.example.test?type=xhttp&security=tls&encryption=invalid",
++        )
++        .unwrap(),
++    };
++    assert!(mode.restart(next, Default::default()).await.is_err());
++    assert_eq!(mode.status().await.state, State::Running);
++    assert_eq!(*plane.starts.lock(), ["old"]);
++    mode.close().await.unwrap();
++}
++
+ #[test]
+ fn policy_is_exact_and_revalidated_after_deserialization() {
+     let policy = Whitelist::new(BTreeMap::from([(
+@@ -185,7 +329,11 @@ impl TcpDialer for RejectRelayDial {
+     async fn connect(&self, server: &str, port: u16) -> Result<BoxStream> {
+         assert!(matches!(server, "relay.example.com" | "127.0.0.1"));
+         assert_eq!(port, 443);
+-        self.0.fetch_add(1, Ordering::SeqCst);
++        if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            return Ok(Box::new(stream));
++        }
+         Err(Error::Transport)
+     }
+     async fn resolve(&self, server: &str, port: u16) -> Result<Vec<std::net::SocketAddr>> {
+@@ -221,7 +369,11 @@ async fn edgeone_origin_uses_shared_lifecycle_and_only_dials_for_allowed_traffic
+     let mode = factory.create(config).unwrap();
+     mode.start(CancellationToken::new()).await.unwrap();
+     assert_eq!(mode.status().await.state, State::Running);
+-    assert_eq!(calls.load(Ordering::SeqCst), 0, "startup must not probe");
++    assert_eq!(
++        calls.load(Ordering::SeqCst),
++        1,
++        "startup probes only the configured access socket"
++    );
+     let denied = http::Request::get("https://denied.example.com/")
+         .body(body(""))
+         .unwrap();
+@@ -229,12 +381,12 @@ async fn edgeone_origin_uses_shared_lifecycle_and_only_dials_for_allowed_traffic
+         mode.request(denied).await,
+         Err(Error::DomainDenied)
+     ));
+-    assert_eq!(calls.load(Ordering::SeqCst), 0);
++    assert_eq!(calls.load(Ordering::SeqCst), 1);
+     let allowed = http::Request::get("https://app.example.com/")
+         .body(body(""))
+         .unwrap();
+     assert!(mode.request(allowed).await.is_err());
+-    assert_eq!(calls.load(Ordering::SeqCst), 1);
++    assert_eq!(calls.load(Ordering::SeqCst), 2);
+     mode.close().await.unwrap();
+     mode.close().await.unwrap();
+     assert_eq!(mode.status().await.state, State::Closed);
+@@ -296,9 +448,9 @@ async fn websocket_ingress_starts_without_ca_state_or_credentials() {
+     let mode = Factory::new(dependencies).create(config).unwrap();
+     mode.start(CancellationToken::new()).await.unwrap();
+     assert_eq!(mode.status().await.state, State::Running);
+-    assert_eq!(calls.load(Ordering::SeqCst), 0);
+-    assert!(mode.connect("app.example.com", 443).await.is_err());
+     assert_eq!(calls.load(Ordering::SeqCst), 1);
++    assert!(mode.connect("app.example.com", 443).await.is_err());
++    assert_eq!(calls.load(Ordering::SeqCst), 2);
+     mode.close().await.unwrap();
+     mode.close().await.unwrap();
+     assert_eq!(mode.status().await.state, State::Closed);
+diff --git a/tests/serve_connection.rs b/tests/serve_connection.rs
+index 7af6aa6..271191f 100644
+--- a/tests/serve_connection.rs
++++ b/tests/serve_connection.rs
+@@ -19,7 +19,11 @@ struct NoNetwork(Arc<AtomicUsize>);
+ #[async_trait]
+ impl TcpDialer for NoNetwork {
+     async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
+-        self.0.fetch_add(1, Ordering::SeqCst);
++        if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            return Ok(Box::new(stream));
++        }
+         Err(Error::Transport)
+     }
+     async fn resolve(&self, _: &str, _: u16) -> Result<Vec<std::net::SocketAddr>> {
+@@ -101,7 +105,7 @@ async fn denied_hostname_and_unregistered_port_do_not_dial() {
+             Err(Error::DomainDenied)
+         ));
+     }
+-    assert_eq!(attempts.load(Ordering::SeqCst), 0);
++    assert_eq!(attempts.load(Ordering::SeqCst), 1);
+     mode.close().await.unwrap();
+ }
+ 
+diff --git a/tests/tunnel_ingress.rs b/tests/tunnel_ingress.rs
+index 7fca8e8..d16df26 100644
+--- a/tests/tunnel_ingress.rs
++++ b/tests/tunnel_ingress.rs
+@@ -21,6 +21,11 @@ impl TcpDialer for NodeOnly {
+     async fn connect(&self, host: &str, port: u16) -> Result<BoxStream> {
+         assert_eq!((host, port), ("node.example.test", 443));
+         self.0.lock().push((host.into(), port));
++        if self.0.lock().len() == 1 {
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            return Ok(Box::new(stream));
++        }
+         Err(Error::Canceled)
+     }
+ 
+@@ -74,7 +79,7 @@ fn hello() -> Vec<u8> {
+ }
+ 
+ #[tokio::test]
+-async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
++async fn each_tunnel_starts_without_ca_and_only_probes_the_node_before_handoff() {
+     for protocol in protocols() {
+         let dialer = Arc::new(NodeOnly::default());
+         let mut dependencies = Dependencies::new();
+@@ -84,7 +89,10 @@ async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
+         assert!(!config.configuration_policy().unwrap().requires_local_ca);
+         let mode = Factory::new(dependencies).create(config).unwrap();
+         mode.start(Default::default()).await.unwrap();
+-        assert!(dialer.0.lock().is_empty(), "startup dialed a node");
++        assert_eq!(
++            dialer.0.lock().as_slice(),
++            &[("node.example.test".into(), 443)]
++        );
+ 
+         for port in [80, 443, 27018, 27038] {
+             let bytes = if port == 80 {
+@@ -103,7 +111,7 @@ async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
+                 .await;
+             assert!(matches!(result, Err(Error::Canceled)));
+         }
+-        assert_eq!(dialer.0.lock().len(), 4);
++        assert_eq!(dialer.0.lock().len(), 5);
+         mode.close().await.unwrap();
+         assert_eq!(mode.status().await.active_sockets, 0);
+     }
+diff --git a/src/outbound.rs b/src/outbound.rs
+new file mode 100644
+index 0000000..8286b2f
+--- /dev/null
++++ b/src/outbound.rs
+@@ -0,0 +1,297 @@
++use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
++
++use parking_lot::Mutex;
++use tokio::time::Instant;
++
++use crate::{BoxStream, Error, ObservationContext, RemoteBackend, Result, TcpDialer};
++
++pub(crate) trait ReverseBackend {
++    fn allows_download(&self) -> bool;
++    fn target_headers(&self) -> bool;
++}
++
++impl ReverseBackend for RemoteBackend {
++    fn allows_download(&self) -> bool {
++        !matches!(self, Self::CloudflareWorker | Self::EdgeOne)
++    }
++
++    fn target_headers(&self) -> bool {
++        !matches!(self, Self::EdgeOneWebSocket)
++    }
++}
++
++pub(crate) struct ReverseProxy<B> {
++    pub backend: B,
++}
++
++impl<B: ReverseBackend> ReverseProxy<B> {
++    pub fn allows_download(&self) -> bool {
++        self.backend.allows_download()
++    }
++    pub fn target_headers(&self) -> bool {
++        self.backend.target_headers()
++    }
++}
++
++#[derive(Default)]
++struct AddressHealth {
++    failures: u32,
++    elapsed: Option<Duration>,
++}
++
++pub(crate) struct DirectOutbound<S: ?Sized> {
++    pub source: Arc<S>,
++    generation: u64,
++    health: Mutex<HashMap<(String, SocketAddr, u64), AddressHealth>>,
++}
++
++impl<S: TcpDialer + ?Sized> DirectOutbound<S> {
++    pub fn new(source: Arc<S>, generation: u64) -> Self {
++        Self {
++            source,
++            generation,
++            health: Mutex::new(HashMap::new()),
++        }
++    }
++
++    pub async fn connect(
++        &self,
++        domain: &str,
++        port: u16,
++        observation: &ObservationContext,
++    ) -> Result<BoxStream> {
++        let addresses = self.source.resolve(domain, port).await?;
++        self.connect_addresses(domain, addresses, observation).await
++    }
++
++    pub async fn connect_addresses(
++        &self,
++        domain: &str,
++        mut addresses: Vec<SocketAddr>,
++        observation: &ObservationContext,
++    ) -> Result<BoxStream> {
++        {
++            let health = self.health.lock();
++            addresses.sort_by_key(|address| {
++                let state = health.get(&(domain.into(), *address, self.generation));
++                (
++                    state.map_or(0, |state| state.failures),
++                    state
++                        .and_then(|state| state.elapsed)
++                        .unwrap_or(Duration::MAX),
++                )
++            });
++        }
++        let mut last = Error::NoEndpoint;
++        for address in addresses {
++            let started = Instant::now();
++            let result = self
++                .source
++                .connect_observed(&address.ip().to_string(), address.port(), observation)
++                .await;
++            if matches!(result, Err(Error::Canceled)) {
++                return result;
++            }
++            {
++                let mut health = self.health.lock();
++                let state = health
++                    .entry((domain.into(), address, self.generation))
++                    .or_default();
++                match &result {
++                    Ok(_) => {
++                        state.failures = 0;
++                        state.elapsed = Some(started.elapsed());
++                    }
++                    Err(_) => state.failures += 1,
++                }
++            }
++            match result {
++                Ok(stream) => return Ok(stream),
++                Err(error) => last = error,
++            }
++        }
++        Err(last)
++    }
++}
++
++#[cfg(feature = "reverse-proxy")]
++pub(crate) struct SocketBridge {
++    pub address: SocketAddr,
++    listener: tokio::sync::Mutex<Option<tokio::net::TcpListener>>,
++    tasks: tokio_util::task::TaskTracker,
++    stop: tokio_util::sync::CancellationToken,
++}
++
++#[cfg(feature = "reverse-proxy")]
++#[derive(Clone, Debug)]
++struct BridgeTrace {
++    native: Option<pingora_core::upstreams::peer::Tracer>,
++    cancel: tokio_util::sync::CancellationToken,
++}
++
++#[cfg(feature = "reverse-proxy")]
++impl pingora_core::upstreams::peer::Tracing for BridgeTrace {
++    fn on_connected(&self) {
++        if let Some(native) = &self.native {
++            native.0.on_connected();
++        }
++    }
++
++    fn on_disconnected(&self) {
++        self.cancel.cancel();
++        if let Some(native) = &self.native {
++            native.0.on_disconnected();
++        }
++    }
++
++    fn boxed_clone(&self) -> Box<dyn pingora_core::upstreams::peer::Tracing> {
++        Box::new(self.clone())
++    }
++}
++
++#[cfg(feature = "reverse-proxy")]
++impl SocketBridge {
++    pub async fn new() -> Result<Self> {
++        let listener = tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
++            .await
++            .map_err(|_| Error::Transport)?;
++        Ok(Self {
++            address: listener.local_addr().map_err(|_| Error::Transport)?,
++            listener: tokio::sync::Mutex::new(Some(listener)),
++            tasks: tokio_util::task::TaskTracker::new(),
++            stop: tokio_util::sync::CancellationToken::new(),
++        })
++    }
++
++    pub async fn connect(
++        &self,
++        mut upstream: BoxStream,
++        sockets: Arc<crate::stream::Connections>,
++        cancel: tokio_util::sync::CancellationToken,
++    ) -> Result<pingora_core::protocols::l4::stream::Stream> {
++        let listener = self.listener.lock().await;
++        let listener = listener.as_ref().ok_or(Error::Canceled)?;
++        if self.stop.is_cancelled() || cancel.is_cancelled() {
++            return Err(Error::Canceled);
++        }
++        let client = tokio::net::TcpStream::connect(self.address)
++            .await
++            .map_err(|_| Error::Transport)?;
++        client.set_nodelay(true).map_err(|_| Error::Transport)?;
++        let expected = client.local_addr().map_err(|_| Error::Transport)?;
++        let server = loop {
++            let (stream, address) = tokio::select! {
++                biased;
++                _ = self.stop.cancelled() => return Err(Error::Canceled),
++                result = listener.accept() => result.map_err(|_| Error::Transport)?,
++            };
++            if address == expected {
++                break stream;
++            }
++        };
++        server.set_nodelay(true).map_err(|_| Error::Transport)?;
++        let mut server = sockets.track(Box::new(server))?;
++        let mut client = sockets.track_native(client)?;
++        let lifetime = tokio_util::sync::CancellationToken::new();
++        client.tracer = Some(pingora_core::upstreams::peer::Tracer(Box::new(
++            BridgeTrace {
++                native: client.tracer.take(),
++                cancel: lifetime.clone(),
++            },
++        )));
++        let stop = self.stop.clone();
++        self.tasks.spawn(async move {
++            tokio::select! {
++                biased;
++                _ = stop.cancelled() => {}
++                _ = cancel.cancelled() => {}
++                _ = lifetime.cancelled() => {}
++                _ = sockets.cancelled() => {}
++                _ = tokio::io::copy_bidirectional(&mut server, &mut upstream) => {}
++            }
++        });
++        Ok(client)
++    }
++
++    pub async fn close(&self) {
++        self.stop.cancel();
++        self.listener.lock().await.take();
++        self.tasks.close();
++        self.tasks.wait().await;
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[cfg(feature = "reverse-proxy")]
++    #[tokio::test]
++    async fn dropping_bridge_connection_drains_half_open_upstream_before_sdk_close() {
++        let bridge = SocketBridge::new().await.unwrap();
++        let sockets = Arc::new(crate::stream::Connections::default());
++        let (upstream, _silent_peer) = tokio::io::duplex(128);
++        let stream = bridge
++            .connect(Box::new(upstream), sockets.clone(), Default::default())
++            .await
++            .unwrap();
++        drop(stream);
++        let drained = tokio::time::timeout(Duration::from_millis(200), async {
++            while !bridge.tasks.is_empty() {
++                tokio::task::yield_now().await;
++            }
++        })
++        .await;
++        let retained = sockets.count();
++        bridge.close().await;
++        assert!(
++            drained.is_ok(),
++            "abandoned connection retained a bridge task"
++        );
++        assert_eq!(retained, 0);
++    }
++
++    struct Source(Mutex<Vec<String>>);
++
++    #[async_trait::async_trait]
++    impl TcpDialer for Source {
++        async fn resolve(&self, domain: &str, port: u16) -> Result<Vec<SocketAddr>> {
++            assert_eq!((domain, port), ("origin.example.test", 443));
++            Ok(vec![
++                "192.0.2.1:443".parse().unwrap(),
++                "192.0.2.2:443".parse().unwrap(),
++            ])
++        }
++        async fn connect(&self, host: &str, _: u16) -> Result<BoxStream> {
++            self.0.lock().push(host.into());
++            if host == "192.0.2.1" {
++                return Err(Error::Transport);
++            }
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            Ok(Box::new(stream))
++        }
++    }
++
++    #[tokio::test]
++    async fn direct_addresses_only_learn_from_business_and_history_is_per_generation() {
++        let source = Arc::new(Source(Mutex::new(Vec::new())));
++        let outbound = DirectOutbound::new(source.clone(), 1);
++        assert!(source.0.lock().is_empty());
++        let observation =
++            ObservationContext::new(crate::Kind::RemoteReverse, Arc::new(crate::NoopObserver));
++        for _ in 0..2 {
++            outbound
++                .connect("origin.example.test", 443, &observation)
++                .await
++                .unwrap();
++        }
++        assert_eq!(*source.0.lock(), ["192.0.2.1", "192.0.2.2", "192.0.2.2"]);
++        let outbound = DirectOutbound::new(source.clone(), 2);
++        outbound
++            .connect("origin.example.test", 443, &observation)
++            .await
++            .unwrap();
++        assert_eq!(&source.0.lock()[3..], ["192.0.2.1", "192.0.2.2"]);
++    }
++}
+diff --git a/src/probe.rs b/src/probe.rs
+new file mode 100644
+index 0000000..22d577b
+--- /dev/null
++++ b/src/probe.rs
+@@ -0,0 +1,264 @@
++use std::{future::Future, sync::Arc, time::Duration};
++
++use tokio::time::Instant;
++use tokio_util::sync::CancellationToken;
++
++use crate::{Error, Result, TcpDialer};
++
++#[derive(Clone, Debug, Eq, PartialEq, Hash)]
++pub(crate) struct SocketEndpoint {
++    pub host: String,
++    pub port: u16,
++}
++
++pub(crate) trait Probe: Send + Sync {
++    type Target: Send + Sync;
++
++    fn probe<'a>(
++        &'a self,
++        target: &'a Self::Target,
++    ) -> impl Future<Output = Result<Duration>> + Send + 'a;
++}
++
++pub(crate) struct TcpProbe<D: ?Sized> {
++    pub dialer: Arc<D>,
++}
++
++impl<D: TcpDialer + ?Sized> Probe for TcpProbe<D> {
++    type Target = SocketEndpoint;
++
++    async fn probe(&self, target: &SocketEndpoint) -> Result<Duration> {
++        let started = Instant::now();
++        let stream = self.dialer.connect(&target.host, target.port).await?;
++        let dial_elapsed = started.elapsed();
++        drop(stream);
++        Ok(dial_elapsed)
++    }
++}
++
++pub(crate) struct ProbeRunner<P> {
++    pub probe: P,
++    pub timeout: Duration,
++}
++
++impl<P: Probe> ProbeRunner<P> {
++    pub async fn run(
++        &self,
++        target: &P::Target,
++        deadline: Instant,
++        cancel: &CancellationToken,
++    ) -> Result<Duration> {
++        if Instant::now() >= deadline {
++            return Err(Error::Transport);
++        }
++        tokio::select! {
++            biased;
++            _ = cancel.cancelled() => Err(Error::Canceled),
++            result = tokio::time::timeout_at(
++                deadline.min(Instant::now() + self.timeout),
++                self.probe.probe(target),
++            ) => result.unwrap_or(Err(Error::Transport)),
++        }
++    }
++}
++
++pub(crate) struct ProbeScheduler<P> {
++    pub runner: Arc<ProbeRunner<P>>,
++    pub concurrency: usize,
++}
++
++pub(crate) struct ProbeResult<T> {
++    pub target: T,
++    pub result: Result<Duration>,
++    pub completed: Instant,
++}
++
++impl<P: Probe + 'static> ProbeScheduler<P>
++where
++    P::Target: Clone + 'static,
++{
++    pub async fn run(
++        &self,
++        targets: Vec<P::Target>,
++        deadline: Instant,
++        cancel: &CancellationToken,
++    ) -> Result<Vec<ProbeResult<P::Target>>> {
++        let semaphore = Arc::new(tokio::sync::Semaphore::new(self.concurrency));
++        let mut pending = tokio::task::JoinSet::new();
++        for target in targets {
++            let runner = self.runner.clone();
++            let semaphore = semaphore.clone();
++            let cancel = cancel.clone();
++            pending.spawn(async move {
++                let operation = async {
++                    let _permit = tokio::time::timeout_at(deadline, semaphore.acquire_owned())
++                        .await
++                        .map_err(|_| Error::Transport)?
++                        .map_err(|_| Error::Canceled)?;
++                    runner.run(&target, deadline, &cancel).await
++                };
++                let result = tokio::select! {
++                    biased;
++                    _ = cancel.cancelled() => Err(Error::Canceled),
++                    result = operation => result,
++                };
++                ProbeResult {
++                    target,
++                    result,
++                    completed: Instant::now(),
++                }
++            });
++        }
++        let mut results = Vec::new();
++        while let Some(result) = pending.join_next().await {
++            results.push(result.map_err(|_| Error::Task)?);
++        }
++        Ok(results)
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use async_trait::async_trait;
++    use tokio::io::AsyncReadExt;
++
++    struct Dialer;
++    #[async_trait]
++    impl TcpDialer for Dialer {
++        async fn connect(&self, host: &str, port: u16) -> Result<crate::BoxStream> {
++            assert_eq!((host, port), ("access.invalid", 443));
++            let (stream, mut peer) = tokio::io::duplex(16);
++            tokio::spawn(async move {
++                assert_eq!(peer.read(&mut [0; 16]).await.unwrap(), 0);
++            });
++            Ok(Box::new(stream))
++        }
++    }
++
++    #[tokio::test]
++    async fn tcp_probe_only_opens_access_socket_and_closes_without_writing() {
++        let runner = ProbeRunner {
++            probe: TcpProbe {
++                dialer: Arc::new(Dialer),
++            },
++            timeout: Duration::from_secs(3),
++        };
++        runner
++            .run(
++                &SocketEndpoint {
++                    host: "access.invalid".into(),
++                    port: 443,
++                },
++                Instant::now() + Duration::from_secs(15),
++                &CancellationToken::new(),
++            )
++            .await
++            .unwrap();
++        tokio::task::yield_now().await;
++    }
++
++    struct FakeProbe {
++        active: Arc<std::sync::atomic::AtomicUsize>,
++        peak: Arc<std::sync::atomic::AtomicUsize>,
++    }
++
++    struct Active(Arc<std::sync::atomic::AtomicUsize>);
++    impl Drop for Active {
++        fn drop(&mut self) {
++            self.0.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
++        }
++    }
++
++    impl Probe for FakeProbe {
++        type Target = usize;
++        async fn probe(&self, target: &usize) -> Result<Duration> {
++            use std::sync::atomic::Ordering::SeqCst;
++            let active = self.active.fetch_add(1, SeqCst) + 1;
++            self.peak.fetch_max(active, SeqCst);
++            let _guard = Active(self.active.clone());
++            if *target == 0 {
++                return Ok(Duration::from_millis(1));
++            }
++            std::future::pending().await
++        }
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn scheduler_summarizes_all_timeouts_and_bounds_concurrency_and_total_budget() {
++        let active = Arc::new(std::sync::atomic::AtomicUsize::new(0));
++        let peak = Arc::new(std::sync::atomic::AtomicUsize::new(0));
++        let scheduler = ProbeScheduler {
++            runner: Arc::new(ProbeRunner {
++                probe: FakeProbe {
++                    active: active.clone(),
++                    peak: peak.clone(),
++                },
++                timeout: Duration::from_secs(3),
++            }),
++            concurrency: 3,
++        };
++        let started = Instant::now();
++        let results = scheduler
++            .run(
++                (0..30).collect(),
++                started + Duration::from_secs(15),
++                &CancellationToken::new(),
++            )
++            .await
++            .unwrap();
++        assert_eq!(results.len(), 30);
++        assert_eq!(
++            results
++                .iter()
++                .filter(|result| result.result.is_ok())
++                .count(),
++            1
++        );
++        assert!(started.elapsed() <= Duration::from_secs(15));
++        assert_eq!(
++            results
++                .iter()
++                .find(|result| result.target == 0)
++                .unwrap()
++                .completed,
++            started
++        );
++        assert!(peak.load(std::sync::atomic::Ordering::SeqCst) <= 3);
++        assert_eq!(active.load(std::sync::atomic::Ordering::SeqCst), 0);
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn cancel_drains_running_and_queued_probes() {
++        let active = Arc::new(std::sync::atomic::AtomicUsize::new(0));
++        let scheduler = ProbeScheduler {
++            runner: Arc::new(ProbeRunner {
++                probe: FakeProbe {
++                    active: active.clone(),
++                    peak: active.clone(),
++                },
++                timeout: Duration::from_secs(3),
++            }),
++            concurrency: 3,
++        };
++        let cancel = CancellationToken::new();
++        let (result, ()) = tokio::join!(
++            scheduler.run(
++                (1..30).collect(),
++                Instant::now() + Duration::from_secs(15),
++                &cancel
++            ),
++            async {
++                tokio::task::yield_now().await;
++                cancel.cancel();
++            },
++        );
++        assert!(
++            result
++                .unwrap()
++                .iter()
++                .all(|result| matches!(result.result, Err(Error::Canceled)))
++        );
++        assert_eq!(active.load(std::sync::atomic::Ordering::SeqCst), 0);
++    }
++}
+diff --git a/src/routing.rs b/src/routing.rs
+new file mode 100644
+index 0000000..05194ad
+--- /dev/null
++++ b/src/routing.rs
+@@ -0,0 +1,964 @@
++use std::{
++    collections::{BTreeSet, HashMap, VecDeque},
++    hash::{Hash, Hasher},
++    sync::Arc,
++    time::Duration,
++};
++
++use parking_lot::RwLock;
++use tokio::time::Instant;
++use tokio_util::{sync::CancellationToken, task::TaskTracker};
++
++use crate::{
++    Config, Error, ModeConfig, Payload, RemoteBackend, Result,
++    backend::Backend,
++    lifecycle::Dependencies,
++    probe::{ProbeRunner, ProbeScheduler, SocketEndpoint, TcpProbe},
++    stream::Connections,
++};
++
++#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
++pub(crate) enum Tier {
++    A,
++    B,
++    C,
++    D,
++}
++
++pub(crate) struct Route {
++    pub tier: Tier,
++    pub payload: Payload,
++    pub downloads: bool,
++    pub endpoint: Option<SocketEndpoint>,
++    pub backend: Arc<Backend>,
++}
++
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++pub(crate) enum Eligibility {
++    Available,
++    Unavailable,
++}
++
++pub(crate) struct Health {
++    pub eligibility: Eligibility,
++    pub failures: u32,
++    pub successes: u32,
++    pub dial_elapsed: Option<Duration>,
++    pub evidence: Instant,
++    updated: Instant,
++    pub due: Instant,
++    pub backoff: u32,
++    pub isolated: bool,
++    pub targets: HashMap<String, Instant>,
++    pub generation: u64,
++    pub samples: VecDeque<(Instant, bool)>,
++    pub cancellations: u64,
++}
++
++impl Health {
++    fn usable(&self, route: &Route, traffic: &Traffic<'_>, now: Instant) -> bool {
++        route.payload == traffic.payload
++            && (!traffic.download || route.downloads)
++            && self.eligibility == Eligibility::Available
++            && !self.isolated
++            && (route.endpoint.is_none()
++                || now.duration_since(self.evidence) < Duration::from_secs(60))
++            && !self
++                .targets
++                .get(traffic.host)
++                .is_some_and(|until| *until > now)
++    }
++
++    fn new(generation: u64) -> Self {
++        Self {
++            eligibility: Eligibility::Unavailable,
++            failures: 0,
++            successes: 0,
++            dial_elapsed: None,
++            evidence: Instant::now(),
++            updated: Instant::now(),
++            due: Instant::now(),
++            backoff: 0,
++            isolated: false,
++            targets: HashMap::new(),
++            generation,
++            samples: VecDeque::new(),
++            cancellations: 0,
++        }
++    }
++
++    fn record(&mut self, result: &Result<Duration>, startup: bool, generation: u64) {
++        self.record_at(result, startup, generation, Instant::now());
++    }
++
++    fn record_at(
++        &mut self,
++        result: &Result<Duration>,
++        startup: bool,
++        generation: u64,
++        now: Instant,
++    ) {
++        if self.generation != generation || now < self.updated {
++            return;
++        }
++        if matches!(result, Err(Error::Canceled)) {
++            self.cancellations += 1;
++            return;
++        }
++        self.updated = now;
++        while self
++            .samples
++            .front()
++            .is_some_and(|(time, _)| now.duration_since(*time) >= Duration::from_secs(60))
++        {
++            self.samples.pop_front();
++        }
++        self.samples.push_back((now, result.is_ok()));
++        match result {
++            Ok(elapsed) => {
++                self.failures = 0;
++                self.successes += 1;
++                self.evidence = now;
++                self.dial_elapsed = Some(
++                    self.dial_elapsed
++                        .map_or(*elapsed, |old| old.mul_f64(0.8) + elapsed.mul_f64(0.2)),
++                );
++                if startup || self.successes >= 2 {
++                    self.eligibility = Eligibility::Available;
++                    self.backoff = 0;
++                }
++                self.due = now + jitter();
++            }
++            Err(_) => {
++                self.successes = 0;
++                self.failures += 1;
++                if startup || self.failures >= 3 {
++                    self.eligibility = Eligibility::Unavailable;
++                }
++                let seconds = if self.eligibility == Eligibility::Unavailable {
++                    let seconds = (15u64 << self.backoff.min(3)).min(120);
++                    self.backoff = (self.backoff + 1).min(3);
++                    seconds
++                } else {
++                    15
++                };
++                self.due = now + Duration::from_secs(seconds);
++            }
++        }
++    }
++}
++
++fn jitter() -> Duration {
++    Duration::from_millis(12_000 + rand::random::<u64>() % 6_001)
++}
++
++pub(crate) struct Attempt {
++    pub deadline: Instant,
++    pub tried: BTreeSet<usize>,
++    pub committed: bool,
++}
++
++impl Attempt {
++    pub fn new(budget: Duration) -> Self {
++        Self {
++            deadline: Instant::now() + budget,
++            tried: BTreeSet::new(),
++            committed: false,
++        }
++    }
++}
++
++#[async_trait::async_trait]
++pub(crate) trait Executor: Send + Sync {
++    type Output: Send;
++    async fn execute(&self, backend: &Arc<Backend>) -> Result<Self::Output>;
++}
++
++pub(crate) trait OutcomeClassifier {
++    fn retry(&self, error: &Error, committed: bool) -> bool;
++}
++
++pub(crate) struct BeforeCommit;
++
++impl OutcomeClassifier for BeforeCommit {
++    fn retry(&self, error: &Error, committed: bool) -> bool {
++        !committed
++            && !matches!(
++                error,
++                Error::Canceled
++                    | Error::DomainDenied
++                    | Error::Operation(crate::Failure {
++                        code: crate::FailureCode::HttpStatus,
++                        ..
++                    })
++            )
++    }
++}
++
++pub(crate) struct AttemptLoop<E, O> {
++    pub executor: E,
++    pub outcomes: O,
++}
++
++impl<E: Executor, O: OutcomeClassifier> AttemptLoop<E, O> {
++    pub async fn run(
++        &self,
++        registry: &Registry,
++        traffic: &Traffic<'_>,
++        attempt: &mut Attempt,
++        cancel: &CancellationToken,
++    ) -> Result<E::Output> {
++        loop {
++            let (index, backend) = registry.select(traffic, attempt)?;
++            if !registry.usable(index, traffic) {
++                continue;
++            }
++            let result = tokio::select! {
++                biased;
++                _ = cancel.cancelled() => Err(Error::Canceled),
++                result = tokio::time::timeout_at(attempt.deadline, self.executor.execute(&backend)) =>
++                    result.unwrap_or_else(|_| Err(Error::Operation(crate::Failure::new(
++                        crate::Stage::Connect, crate::FailureCode::Timeout)))),
++            };
++            match result {
++                Ok(output) => {
++                    attempt.committed = true;
++                    return Ok(output);
++                }
++                Err(error) => {
++                    registry.failure(index, traffic.host, &error);
++                    if !self.outcomes.retry(&error, attempt.committed) {
++                        return Err(error);
++                    }
++                }
++            }
++        }
++    }
++}
++
++pub(crate) struct StreamExecutor<'a> {
++    pub host: &'a str,
++    pub port: u16,
++    pub observation: &'a crate::ObservationContext,
++}
++
++#[async_trait::async_trait]
++impl Executor for StreamExecutor<'_> {
++    type Output = crate::BoxStream;
++    async fn execute(&self, backend: &Arc<Backend>) -> Result<Self::Output> {
++        Box::pin(backend.connect_observed(self.host, self.port, self.observation)).await
++    }
++}
++
++pub(crate) struct Traffic<'a> {
++    pub host: &'a str,
++    pub payload: Payload,
++    pub download: bool,
++}
++
++pub(crate) fn download(host: &str, path: &str) -> bool {
++    [
++        "steamcontent.com",
++        "steamusercontent.com",
++        "steampipe.akamaized.net",
++    ]
++    .iter()
++    .any(|suffix| host == *suffix || host.ends_with(&format!(".{suffix}")))
++        || path.starts_with("/depot/")
++        || path.starts_with("/client/")
++        || [".zip", ".exe", ".msi", ".vpk", ".chunk"]
++            .iter()
++            .any(|suffix| path.ends_with(suffix))
++}
++
++pub(crate) struct Planner;
++
++impl Planner {
++    pub fn select(
++        &self,
++        traffic: &Traffic<'_>,
++        routes: &[Route],
++        health: &[Health],
++        attempt: &Attempt,
++        session: u64,
++    ) -> Result<usize> {
++        let now = Instant::now();
++        if attempt.committed || now >= attempt.deadline {
++            return Err(Error::NoEndpoint);
++        }
++        for tier in [Tier::A, Tier::B, Tier::C, Tier::D] {
++            let candidates: Vec<_> = routes
++                .iter()
++                .enumerate()
++                .filter(|(index, route)| {
++                    let state = &health[*index];
++                    route.tier == tier
++                        && !attempt.tried.contains(index)
++                        && state.usable(route, traffic, now)
++                })
++                .collect();
++            let Some(failures) = candidates
++                .iter()
++                .map(|(index, _)| health[*index].failures)
++                .min()
++            else {
++                continue;
++            };
++            let candidates: Vec<_> = candidates
++                .into_iter()
++                .filter(|(index, _)| health[*index].failures == failures)
++                .collect();
++            let fastest = candidates
++                .iter()
++                .filter_map(|(index, _)| health[*index].dial_elapsed)
++                .min();
++            let candidates: Vec<_> = candidates
++                .into_iter()
++                .filter(|(index, _)| {
++                    fastest.is_none_or(|fastest| {
++                        health[*index]
++                            .dial_elapsed
++                            .is_some_and(|elapsed| elapsed <= fastest.mul_f64(1.2))
++                    })
++                })
++                .collect();
++            let mut hash = std::collections::hash_map::DefaultHasher::new();
++            traffic.host.hash(&mut hash);
++            session.hash(&mut hash);
++            return Ok(candidates[hash.finish() as usize % candidates.len()].0);
++        }
++        Err(Error::NoEndpoint)
++    }
++}
++
++pub(crate) struct Registry {
++    pub routes: Vec<Route>,
++    pub health: RwLock<Vec<Health>>,
++    pub generation: u64,
++    session: u64,
++}
++
++impl Registry {
++    #[cfg(test)]
++    pub(crate) fn available(routes: Vec<Route>) -> Arc<Self> {
++        Arc::new(Self {
++            health: RwLock::new(
++                routes
++                    .iter()
++                    .map(|_| {
++                        let mut state = Health::new(1);
++                        state.record(&Ok(Duration::from_millis(1)), true, 1);
++                        state
++                    })
++                    .collect(),
++            ),
++            routes,
++            generation: 1,
++            session: 1,
++        })
++    }
++
++    pub async fn prepare(
++        config: &Config,
++        dependencies: &Dependencies,
++        sockets: Arc<Connections>,
++        tasks: TaskTracker,
++        cancel: CancellationToken,
++    ) -> Result<Arc<Self>> {
++        let generation = rand::random();
++        let mut specs = Vec::new();
++        match &config.mode {
++            ModeConfig::Routes(routes) => {
++                for reverse in &routes.reverse {
++                    if reverse.backend.payload() != routes.payload {
++                        continue;
++                    }
++                    let proxy = crate::outbound::ReverseProxy {
++                        backend: reverse.backend,
++                    };
++                    specs.push((
++                        ModeConfig::from(reverse.clone()),
++                        if reverse.backend == RemoteBackend::Relay {
++                            Tier::A
++                        } else {
++                            Tier::B
++                        },
++                        reverse.backend.payload(),
++                        proxy.allows_download(),
++                    ));
++                }
++                if routes.direct {
++                    specs.push((
++                        ModeConfig::Routes(crate::Routes {
++                            payload: routes.payload,
++                            reverse: vec![],
++                            direct: true,
++                            tunnel: vec![],
++                        }),
++                        Tier::C,
++                        routes.payload,
++                        true,
++                    ));
++                }
++                for protocol in &routes.tunnel {
++                    specs.push((
++                        ModeConfig::ForwardProxy {
++                            protocol: protocol.clone(),
++                        },
++                        Tier::D,
++                        routes.payload,
++                        true,
++                    ));
++                }
++            }
++            ModeConfig::LocalReverse {
++                tls_server_name,
++                endpoints,
++            } => {
++                let endpoints = if endpoints.is_empty() {
++                    &config.runtime.discovery_endpoints
++                } else {
++                    endpoints
++                };
++                for endpoint in endpoints {
++                    specs.push((
++                        ModeConfig::LocalReverse {
++                            tls_server_name: tls_server_name.clone(),
++                            endpoints: vec![endpoint.clone()],
++                        },
++                        Tier::A,
++                        Payload::Http,
++                        true,
++                    ));
++                }
++            }
++            _ => specs.push((
++                config.mode.clone(),
++                match &config.mode {
++                    ModeConfig::RemoteReverse {
++                        backend: RemoteBackend::Relay,
++                        ..
++                    } => Tier::A,
++                    ModeConfig::RemoteReverse { .. } => Tier::B,
++                    ModeConfig::ForwardProxy { .. } => Tier::D,
++                    _ => Tier::A,
++                },
++                config.payload(),
++                match &config.mode {
++                    ModeConfig::RemoteReverse { backend, .. } => {
++                        crate::outbound::ReverseProxy { backend: *backend }.allows_download()
++                    }
++                    _ => true,
++                },
++            )),
++        }
++        let mut routes = Vec::new();
++        for (mode, tier, payload, downloads) in specs {
++            let mut child = config.clone();
++            child.mode = mode;
++            let endpoint = match &child.mode {
++                ModeConfig::Routes(_) => None,
++                ModeConfig::ForwardProxy { protocol } => {
++                    let (host, port) = protocol.endpoint();
++                    Some(SocketEndpoint {
++                        host: host.into(),
++                        port,
++                    })
++                }
++                _ => {
++                    let endpoints = child.mode.connection_endpoints();
++                    let first = endpoints
++                        .first()
++                        .or(config.runtime.discovery_endpoints.first())
++                        .ok_or(Error::NoEndpoint)?;
++                    let (host, port) = crate::config::parse_endpoint(first)?;
++                    Some(SocketEndpoint { host, port })
++                }
++            };
++            let observation =
++                crate::ObservationContext::new(child.kind(), dependencies.observer.clone());
++            let mut backend = Backend::create(
++                &child,
++                dependencies.dialer.clone(),
++                sockets.clone(),
++                None,
++                cancel.clone(),
++                observation,
++            )
++            .await?;
++            backend.direct =
++                crate::outbound::DirectOutbound::new(dependencies.dialer.clone(), generation);
++            #[cfg(feature = "reverse-proxy")]
++            {
++                backend.http_cache = dependencies.http_cache.clone();
++            }
++            routes.push(Route {
++                tier,
++                payload,
++                downloads,
++                endpoint,
++                backend: Arc::new(backend),
++            });
++        }
++        let registry = Arc::new(Self {
++            health: RwLock::new(routes.iter().map(|_| Health::new(generation)).collect()),
++            routes,
++            generation,
++            session: rand::random(),
++        });
++        registry
++            .check(dependencies.dialer.clone(), &cancel, true)
++            .await?;
++        if !registry
++            .health
++            .read()
++            .iter()
++            .any(|state| state.eligibility == Eligibility::Available)
++        {
++            return Err(Error::NoEndpoint);
++        }
++        let running = registry.clone();
++        let dialer = dependencies.dialer.clone();
++        tasks.spawn(async move {
++            loop {
++                tokio::select! {
++                    biased;
++                    _ = cancel.cancelled() => break,
++                    _ = tokio::time::sleep(Duration::from_millis(250)) => {}
++                }
++                if running.check(dialer.clone(), &cancel, false).await.is_err()
++                    && cancel.is_cancelled()
++                {
++                    break;
++                }
++            }
++        });
++        Ok(registry)
++    }
++
++    async fn check(
++        &self,
++        dialer: Arc<dyn crate::TcpDialer>,
++        cancel: &CancellationToken,
++        startup: bool,
++    ) -> Result<()> {
++        let deadline = Instant::now() + Duration::from_secs(15);
++        let mut groups: HashMap<SocketEndpoint, Vec<usize>> = HashMap::new();
++        {
++            let mut health = self.health.write();
++            for (index, route) in self.routes.iter().enumerate() {
++                match &route.endpoint {
++                    None => health[index].eligibility = Eligibility::Available,
++                    Some(endpoint) if startup || health[index].due <= Instant::now() => {
++                        groups.entry(endpoint.clone()).or_default().push(index);
++                    }
++                    _ => {}
++                }
++            }
++        }
++        let scheduler = ProbeScheduler {
++            runner: Arc::new(ProbeRunner {
++                probe: TcpProbe { dialer },
++                timeout: Duration::from_secs(3),
++            }),
++            concurrency: 3,
++        };
++        for result in scheduler
++            .run(groups.keys().cloned().collect(), deadline, cancel)
++            .await?
++        {
++            let mut health = self.health.write();
++            for index in &groups[&result.target] {
++                health[*index].record_at(
++                    &result.result,
++                    startup,
++                    self.generation,
++                    result.completed,
++                );
++            }
++        }
++        if cancel.is_cancelled() {
++            Err(Error::Canceled)
++        } else {
++            Ok(())
++        }
++    }
++
++    pub fn select(
++        &self,
++        traffic: &Traffic<'_>,
++        attempt: &mut Attempt,
++    ) -> Result<(usize, Arc<Backend>)> {
++        let index = Planner.select(
++            traffic,
++            &self.routes,
++            &self.health.read(),
++            attempt,
++            self.session,
++        )?;
++        attempt.tried.insert(index);
++        Ok((index, self.routes[index].backend.clone()))
++    }
++
++    pub fn usable(&self, index: usize, traffic: &Traffic<'_>) -> bool {
++        self.health.read()[index].usable(&self.routes[index], traffic, Instant::now())
++    }
++
++    pub fn failure(&self, index: usize, host: &str, error: &Error) {
++        self.failure_at(index, host, error, false);
++    }
++
++    pub fn failure_at(&self, index: usize, host: &str, error: &Error, target: bool) {
++        if matches!(error, Error::Canceled) {
++            return;
++        }
++        let route = &self.routes[index];
++        let target_failure = target
++            || route.tier == Tier::C
++            || route
++                .backend
++                .config
++                .edgeone_origin(host)
++                .is_ok_and(|alias| alias.is_some())
++            || (route.tier == Tier::D
++                && matches!(error, Error::Operation(failure)
++                if failure.stage == crate::Stage::Connect && matches!(failure.code,
++                    crate::FailureCode::Certificate | crate::FailureCode::TlsProtocol)));
++        let mut health = self.health.write();
++        if let Error::Operation(failure) = error {
++            if matches!(failure.stage, crate::Stage::Connect | crate::Stage::Resolve)
++                && !matches!(
++                    failure.code,
++                    crate::FailureCode::Certificate
++                        | crate::FailureCode::TlsProtocol
++                        | crate::FailureCode::HttpStatus
++                )
++                && !target_failure
++                && let Some(endpoint) = &self.routes[index].endpoint
++            {
++                for (route, state) in self.routes.iter().zip(health.iter_mut()) {
++                    if route.endpoint.as_ref() == Some(endpoint) {
++                        state.record(&Err(error.clone()), false, self.generation);
++                    }
++                }
++                return;
++            }
++        }
++        let state = &mut health[index];
++        match error {
++            Error::Credential => state.isolated = true,
++            Error::Operation(failure)
++                if matches!(
++                    failure.code,
++                    crate::FailureCode::Certificate
++                        | crate::FailureCode::TlsProtocol
++                        | crate::FailureCode::ProxyProtocol
++                ) && !target_failure =>
++            {
++                state.isolated = true
++            }
++            Error::Operation(failure) if failure.code == crate::FailureCode::HttpStatus => {}
++            _ => {
++                state
++                    .targets
++                    .insert(host.into(), Instant::now() + Duration::from_secs(15));
++            }
++        }
++    }
++
++    pub fn access_success(&self, index: usize) {
++        let mut health = self.health.write();
++        for (route, state) in self.routes.iter().zip(health.iter_mut()) {
++            if route.endpoint == self.routes[index].endpoint {
++                state.evidence = Instant::now();
++                state.updated = state.evidence;
++                state.failures = 0;
++            }
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    async fn routes() -> (Vec<Route>, Vec<Health>) {
++        let config = Config::new(
++            "planner",
++            crate::Routes {
++                payload: Payload::Tcp,
++                reverse: vec![],
++                direct: true,
++                tunnel: vec![],
++            }
++            .into(),
++            crate::Whitelist::steam(),
++        );
++        let dependencies = Dependencies::new();
++        let mut routes = Vec::new();
++        for tier in [Tier::A, Tier::A, Tier::B, Tier::C, Tier::D] {
++            let backend = Backend::create(
++                &config,
++                dependencies.dialer.clone(),
++                Arc::new(Connections::default()),
++                None,
++                CancellationToken::new(),
++                crate::ObservationContext::new(config.kind(), dependencies.observer.clone()),
++            )
++            .await
++            .unwrap();
++            routes.push(Route {
++                tier,
++                payload: Payload::Tcp,
++                downloads: true,
++                endpoint: Some(SocketEndpoint {
++                    host: "access.invalid".into(),
++                    port: 443,
++                }),
++                backend: Arc::new(backend),
++            });
++        }
++        let health = [40, 45, 10, 1, 1]
++            .into_iter()
++            .map(|milliseconds| {
++                let mut state = Health::new(1);
++                state.record(&Ok(Duration::from_millis(milliseconds)), true, 1);
++                state
++            })
++            .collect();
++        (routes, health)
++    }
++
++    #[tokio::test]
++    async fn fixed_tiers_exhaust_same_tier_and_hash_is_stable() {
++        let (routes, health) = routes().await;
++        let traffic = Traffic {
++            host: "store.steampowered.com",
++            payload: Payload::Tcp,
++            download: false,
++        };
++        let mut attempt = Attempt::new(Duration::from_secs(3));
++        let first = Planner
++            .select(&traffic, &routes, &health, &attempt, 9)
++            .unwrap();
++        let distributed: BTreeSet<_> = (0..128)
++            .map(|session| {
++                Planner
++                    .select(&traffic, &routes, &health, &attempt, session)
++                    .unwrap()
++            })
++            .collect();
++        assert_eq!(distributed, BTreeSet::from([0, 1]));
++        assert!(first < 2);
++        assert_eq!(
++            first,
++            Planner
++                .select(&traffic, &routes, &health, &attempt, 9)
++                .unwrap()
++        );
++        attempt.tried.insert(first);
++        let second = Planner
++            .select(&traffic, &routes, &health, &attempt, 9)
++            .unwrap();
++        assert!(second < 2 && second != first);
++        attempt.tried.insert(second);
++        for expected in [2, 3, 4] {
++            assert_eq!(
++                Planner
++                    .select(&traffic, &routes, &health, &attempt, 9)
++                    .unwrap(),
++                expected
++            );
++            attempt.tried.insert(expected);
++        }
++        assert!(
++            Planner
++                .select(&traffic, &routes, &health, &attempt, 9)
++                .is_err()
++        );
++    }
++
++    #[tokio::test]
++    async fn failure_count_then_twenty_percent_window_then_capability_filter() {
++        let (mut routes, mut health) = routes().await;
++        let traffic = Traffic {
++            host: "store.steampowered.com",
++            payload: Payload::Tcp,
++            download: false,
++        };
++        let attempt = Attempt::new(Duration::from_secs(3));
++        health[1].dial_elapsed = Some(Duration::from_millis(80));
++        assert_eq!(
++            Planner
++                .select(&traffic, &routes, &health, &attempt, 9)
++                .unwrap(),
++            0
++        );
++        health[0].failures = 1;
++        assert_eq!(
++            Planner
++                .select(&traffic, &routes, &health, &attempt, 9)
++                .unwrap(),
++            1
++        );
++        routes[0].payload = Payload::Http;
++        routes[1].downloads = false;
++        let traffic = Traffic {
++            download: true,
++            ..traffic
++        };
++        assert_eq!(
++            Planner
++                .select(&traffic, &routes, &health, &attempt, 9)
++                .unwrap(),
++            2
++        );
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn delayed_probe_publication_preserves_completion_time_and_ignores_older_evidence() {
++        let mut state = Health::new(1);
++        let completed = Instant::now();
++        tokio::time::advance(Duration::from_secs(15)).await;
++        state.record_at(&Ok(Duration::from_millis(10)), true, 1, completed);
++        assert_eq!(state.evidence, completed);
++        state.record(&Err(Error::Transport), false, 1);
++        state.record_at(&Ok(Duration::from_millis(1)), false, 1, completed);
++        assert_eq!(state.failures, 1);
++        assert_eq!(state.dial_elapsed, Some(Duration::from_millis(10)));
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn health_ewma_recovery_backoff_expiry_and_generation() {
++        let mut state = Health::new(1);
++        state.record(&Ok(Duration::from_millis(40)), true, 1);
++        state.record(&Ok(Duration::from_millis(90)), false, 1);
++        assert_eq!(state.dial_elapsed, Some(Duration::from_millis(50)));
++        let failure = Err(Error::Transport);
++        for expected in [
++            Eligibility::Available,
++            Eligibility::Available,
++            Eligibility::Unavailable,
++        ] {
++            state.record(&failure, false, 1);
++            assert_eq!(state.eligibility, expected);
++        }
++        for seconds in [30, 60, 120, 120] {
++            state.record(&failure, false, 1);
++            assert_eq!(
++                state.due.duration_since(Instant::now()),
++                Duration::from_secs(seconds)
++            );
++        }
++        state.isolated = true;
++        state
++            .targets
++            .insert("target".into(), Instant::now() + Duration::from_secs(15));
++        state.record(&Ok(Duration::from_millis(10)), false, 2);
++        assert_eq!(state.successes, 0);
++        state.record(&Ok(Duration::from_millis(10)), false, 1);
++        assert_eq!(state.eligibility, Eligibility::Unavailable);
++        state.record(&Ok(Duration::from_millis(10)), false, 1);
++        assert_eq!(state.eligibility, Eligibility::Available);
++        assert!(state.isolated);
++        assert!(state.targets.contains_key("target"));
++        let (routes, mut health) = routes().await;
++        tokio::time::advance(Duration::from_secs(61)).await;
++        assert!(
++            Planner
++                .select(
++                    &Traffic {
++                        host: "target",
++                        payload: Payload::Tcp,
++                        download: false
++                    },
++                    &routes,
++                    &health,
++                    &Attempt::new(Duration::from_secs(1)),
++                    1
++                )
++                .is_err()
++        );
++        health[0].evidence = Instant::now();
++        let mut attempt = Attempt::new(Duration::from_secs(1));
++        attempt.committed = true;
++        assert!(
++            Planner
++                .select(
++                    &Traffic {
++                        host: "target",
++                        payload: Payload::Tcp,
++                        download: false
++                    },
++                    &routes,
++                    &health,
++                    &attempt,
++                    1
++                )
++                .is_err()
++        );
++    }
++
++    struct SlowExecutor(std::sync::atomic::AtomicUsize);
++
++    #[async_trait::async_trait]
++    impl Executor for SlowExecutor {
++        type Output = ();
++        async fn execute(&self, _: &Arc<Backend>) -> Result<()> {
++            self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
++            tokio::time::sleep(Duration::from_millis(600)).await;
++            Err(Error::Operation(crate::Failure::new(
++                crate::Stage::Connect,
++                crate::FailureCode::Refused,
++            )))
++        }
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn attempt_loop_shares_deadline_across_candidates_and_stops_after_commit() {
++        let (routes, _) = routes().await;
++        let registry = Registry::available(routes);
++        let executor = AttemptLoop {
++            executor: SlowExecutor(std::sync::atomic::AtomicUsize::new(0)),
++            outcomes: BeforeCommit,
++        };
++        let started = Instant::now();
++        let mut attempt = Attempt::new(Duration::from_secs(1));
++        let result = executor
++            .run(
++                &registry,
++                &Traffic {
++                    host: "target",
++                    payload: Payload::Tcp,
++                    download: false,
++                },
++                &mut attempt,
++                &CancellationToken::new(),
++            )
++            .await;
++        assert!(result.is_err());
++        assert_eq!(started.elapsed(), Duration::from_secs(1));
++        assert_eq!(
++            executor
++                .executor
++                .0
++                .load(std::sync::atomic::Ordering::SeqCst),
++            2
++        );
++        assert!(!BeforeCommit.retry(&Error::Transport, true));
++        for status in [403, 404, 429, 500, 503] {
++            assert!(
++                !BeforeCommit.retry(
++                    &Error::Operation(
++                        crate::Failure::new(
++                            crate::Stage::HttpHeaders,
++                            crate::FailureCode::HttpStatus
++                        )
++                        .values(200, status)
++                    ),
++                    false
++                )
++            );
++        }
++    }
++}
+diff --git a/tests/routes.rs b/tests/routes.rs
+new file mode 100644
+index 0000000..3cf7a0b
+--- /dev/null
++++ b/tests/routes.rs
+@@ -0,0 +1,315 @@
++#![cfg(any(feature = "reverse-proxy", feature = "tunnel-proxy"))]
++
++use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Duration};
++
++use async_trait::async_trait;
++use parking_lot::Mutex;
++use steam_proxy::*;
++use tokio::io::{AsyncReadExt, AsyncWriteExt};
++
++#[derive(Clone)]
++struct Dialer {
++    calls: Arc<Mutex<Vec<String>>>,
++    fail: bool,
++}
++
++#[async_trait]
++impl TcpDialer for Dialer {
++    async fn connect(&self, host: &str, _: u16) -> Result<BoxStream> {
++        self.calls.lock().push(host.into());
++        if self.fail {
++            return Err(Error::Transport);
++        }
++        let (stream, peer) = tokio::io::duplex(128);
++        drop(peer);
++        Ok(Box::new(stream))
++    }
++
++    async fn resolve(&self, _: &str, port: u16) -> Result<Vec<SocketAddr>> {
++        Ok(vec![SocketAddr::from(([192, 0, 2, 1], port))])
++    }
++}
++
++fn whitelist() -> Whitelist {
++    Whitelist::new(BTreeMap::from([(
++        "app.example.test".into(),
++        "origin.example.test".into(),
++    )]))
++    .unwrap()
++}
++
++fn direct(payload: Payload) -> Routes {
++    Routes {
++        payload,
++        reverse: vec![],
++        direct: true,
++        tunnel: vec![],
++    }
++}
++
++#[tokio::test]
++async fn direct_only_start_never_connects_origin_and_close_stops_pending_calls() {
++    let calls = Arc::new(Mutex::new(Vec::new()));
++    let mode = Factory::new(Dependencies::new().with_dialer(Dialer {
++        calls: calls.clone(),
++        fail: false,
++    }))
++    .create(Profile::new("direct", direct(Payload::Tcp), whitelist()))
++    .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    assert!(calls.lock().is_empty());
++    mode.connect("app.example.test", 443).await.unwrap();
++    assert_eq!(*calls.lock(), ["192.0.2.1"]);
++    mode.close().await.unwrap();
++    assert_eq!(mode.status().await.active_sockets, 0);
++    assert!(mode.connect("app.example.test", 443).await.is_err());
++}
++
++#[cfg(feature = "reverse-proxy")]
++#[tokio::test]
++async fn startup_collects_failed_and_good_candidates_and_rejects_all_failed() {
++    let calls = Arc::new(Mutex::new(Vec::new()));
++    let routes = Routes {
++        reverse: vec![modes::RemoteReverse {
++            backend: RemoteBackend::Relay,
++            server_name: "access.example.test".into(),
++        }],
++        ..direct(Payload::Http)
++    };
++    let factory = Factory::new(Dependencies::new().with_dialer(Dialer {
++        calls: calls.clone(),
++        fail: true,
++    }));
++    let mode = factory
++        .create(Profile::new("partial", routes.clone(), whitelist()))
++        .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    assert_eq!(*calls.lock(), ["access.example.test"]);
++    assert_eq!(mode.status().await.state, State::Running);
++    mode.close().await.unwrap();
++    let mut routes = routes;
++    routes.direct = false;
++    let mode = factory
++        .create(Profile::new("failed", routes, whitelist()))
++        .unwrap();
++    assert!(matches!(
++        mode.start(Default::default()).await,
++        Err(Error::NoEndpoint)
++    ));
++    mode.close().await.unwrap();
++    assert_eq!(mode.status().await.active_sockets, 0);
++}
++
++#[cfg(feature = "reverse-proxy")]
++#[test]
++fn dynamic_routes_round_trip_and_payload_policy() {
++    let profile = Profile::new("routes", direct(Payload::Http), whitelist()).into_dynamic();
++    let wire = serde_json::to_value(&profile).unwrap();
++    assert_eq!(wire["mode"]["kind"], "routes");
++    assert_eq!(wire["mode"]["payload"], "http");
++    let decoded: Config = serde_json::from_value(wire).unwrap();
++    assert!(decoded.configuration_policy().unwrap().requires_local_ca);
++    let mut routes = direct(Payload::Http);
++    routes.direct = false;
++    assert!(
++        Factory::new(Dependencies::new())
++            .create(Profile::new("empty", routes, whitelist()))
++            .is_err()
++    );
++    let routes = Routes {
++        payload: Payload::Tcp,
++        reverse: vec![modes::RemoteReverse {
++            backend: RemoteBackend::Relay,
++            server_name: "access.example.test".into(),
++        }],
++        direct: false,
++        tunnel: vec![],
++    };
++    assert!(
++        Factory::new(Dependencies::new())
++            .create(Profile::new("incompatible", routes, whitelist()))
++            .is_err()
++    );
++}
++
++struct HttpDialer {
++    calls: Arc<Mutex<Vec<String>>>,
++    requests: Arc<Mutex<Vec<String>>>,
++}
++
++#[async_trait]
++impl TcpDialer for HttpDialer {
++    async fn resolve(&self, host: &str, port: u16) -> Result<Vec<SocketAddr>> {
++        assert_eq!(host, "origin.example.test");
++        Ok(vec![SocketAddr::from(([192, 0, 2, 2], port))])
++    }
++
++    async fn connect(&self, host: &str, port: u16) -> Result<BoxStream> {
++        if host == "cdn.example.test" {
++            self.calls.lock().push(host.into());
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            return Ok(Box::new(stream));
++        }
++        assert_eq!((host, port), ("192.0.2.2", 80));
++        self.calls.lock().push(host.into());
++        let (stream, mut server) = tokio::io::duplex(8192);
++        let requests = self.requests.clone();
++        tokio::spawn(async move {
++            let mut bytes = Vec::new();
++            while !bytes.ends_with(b"\r\n\r\n") {
++                match server.read_u8().await {
++                    Ok(byte) => bytes.push(byte),
++                    Err(_) => return,
++                }
++            }
++            requests.lock().push(String::from_utf8(bytes).unwrap());
++            server.write_all(b"HTTP/1.1 429 Too Many Requests\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await.unwrap();
++        });
++        Ok(Box::new(stream))
++    }
++}
++
++#[cfg(feature = "reverse-proxy")]
++#[tokio::test]
++async fn direct_http_preserves_mapped_identity_and_does_not_replay_business_response() {
++    let calls = Arc::new(Mutex::new(Vec::new()));
++    let requests = Arc::new(Mutex::new(Vec::new()));
++    let mode = Factory::new(Dependencies::new().with_dialer(HttpDialer {
++        calls: calls.clone(),
++        requests: requests.clone(),
++    }))
++    .create(Profile::new("http", direct(Payload::Http), whitelist()))
++    .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    let response = tokio::time::timeout(
++        Duration::from_secs(2),
++        mode.request(
++            http::Request::get("http://app.example.test:80/asset")
++                .body(body(""))
++                .unwrap(),
++        ),
++    )
++    .await
++    .unwrap()
++    .unwrap();
++    assert_eq!(response.status(), 429);
++    assert_eq!(calls.lock().len(), 1);
++    assert!(
++        requests.lock()[0]
++            .to_ascii_lowercase()
++            .contains("host: origin.example.test\r\n")
++    );
++    assert!(!requests.lock()[0].contains("x-steam-relay-host"));
++    mode.close().await.unwrap();
++}
++
++#[cfg(feature = "reverse-proxy")]
++#[tokio::test]
++async fn known_download_skips_incompatible_cdn_before_http_is_sent() {
++    let calls = Arc::new(Mutex::new(Vec::new()));
++    let requests = Arc::new(Mutex::new(Vec::new()));
++    let routes = Routes {
++        reverse: vec![modes::RemoteReverse {
++            backend: RemoteBackend::CloudflareWorker,
++            server_name: "cdn.example.test".into(),
++        }],
++        ..direct(Payload::Http)
++    };
++    let mode = Factory::new(Dependencies::new().with_dialer(HttpDialer {
++        calls: calls.clone(),
++        requests: requests.clone(),
++    }))
++    .create(Profile::new("download", routes, whitelist()))
++    .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    let response = mode
++        .request(
++            http::Request::get("http://app.example.test:80/depot/chunk")
++                .body(body(""))
++                .unwrap(),
++        )
++        .await
++        .unwrap();
++    assert_eq!(response.status(), 429);
++    assert_eq!(*calls.lock(), ["cdn.example.test", "192.0.2.2"]);
++    assert_eq!(requests.lock().len(), 1);
++    mode.close().await.unwrap();
++}
++
++#[cfg(all(feature = "reverse-proxy", feature = "websocket"))]
++#[tokio::test]
++async fn edgeone_websocket_is_filtered_from_http_candidates_before_probing() {
++    let calls = Arc::new(Mutex::new(Vec::new()));
++    let routes = Routes {
++        reverse: vec![modes::RemoteReverse {
++            backend: RemoteBackend::EdgeOneWebSocket,
++            server_name: "raw.example.test".into(),
++        }],
++        ..direct(Payload::Http)
++    };
++    let mode = Factory::new(Dependencies::new().with_dialer(Dialer {
++        calls: calls.clone(),
++        fail: true,
++    }))
++    .create(Profile::new("capability", routes, whitelist()))
++    .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    assert!(calls.lock().is_empty());
++    mode.close().await.unwrap();
++}
++
++struct PendingDialer(Arc<std::sync::atomic::AtomicUsize>);
++
++struct PendingGuard(Arc<std::sync::atomic::AtomicUsize>);
++
++impl Drop for PendingGuard {
++    fn drop(&mut self) {
++        self.0.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
++    }
++}
++
++#[async_trait]
++impl TcpDialer for PendingDialer {
++    async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
++        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
++        let _guard = PendingGuard(self.0.clone());
++        std::future::pending().await
++    }
++}
++
++#[cfg(feature = "reverse-proxy")]
++#[tokio::test]
++async fn canceled_start_drains_probes_and_never_accepts_business_before_publication() {
++    let active = Arc::new(std::sync::atomic::AtomicUsize::new(0));
++    let routes = Routes {
++        reverse: vec![modes::RemoteReverse {
++            backend: RemoteBackend::Relay,
++            server_name: "access.example.test".into(),
++        }],
++        ..direct(Payload::Http)
++    };
++    let mode = Factory::new(Dependencies::new().with_dialer(PendingDialer(active.clone())))
++        .create(Profile::new("cancel", routes, whitelist()))
++        .unwrap();
++    let cancel = tokio_util::sync::CancellationToken::new();
++    let (result, ()) = tokio::join!(mode.start(cancel.clone()), async {
++        while active.load(std::sync::atomic::Ordering::SeqCst) == 0 {
++            tokio::task::yield_now().await;
++        }
++        assert!(matches!(
++            mode.request(
++                http::Request::get("https://app.example.test/")
++                    .body(body(""))
++                    .unwrap()
++            )
++            .await,
++            Err(Error::Lifecycle)
++        ));
++        cancel.cancel();
++    });
++    assert!(matches!(result, Err(Error::Canceled)));
++    assert_eq!(active.load(std::sync::atomic::Ordering::SeqCst), 0);
++    mode.close().await.unwrap();
++    assert_eq!(mode.status().await.active_sockets, 0);
++}

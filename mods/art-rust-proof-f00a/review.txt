@@ -1,0 +1,26 @@
+SPS-1 independent read-only review
+Reviewer: codex auto/gpt-6-astra, interactive child sps-1-review (t52), parent t4z.
+Reviewed: current uncommitted diff from fdd883aae27b5534426dd1dd11aedd28946603d7, including untracked new Rust modules/tests.
+One review round completed. Reviewer was ended after its final report.
+
+Findings and worker disposition:
+
+1. BLOCKER: VLESS encryption=invalid passed preliminary restart checks, allowing the old instance to close before Backend::create rejected it.
+   Fixed: check_route_features parses the deterministic VLESS encryption configuration and validates enabled Shadowsocks credentials offline. Regression restart_rejects_invalid_tunnel_encryption_without_closing_old failed before the fix; it passes in final default/combined runs and verifies the old instance remains Running.
+
+2. MAJOR: complete Pingora H2 pool/stream acquisition may exceed the operation deadline, and submission lacked a final deadline check.
+   Added: request-scoped BoundedProxy watchdog around Pingora's process_new_http acquisition phase; it ends at connected_to_upstream and leaves response streaming independent. upstream_request_filter rechecks the deadline immediately before submission.
+   The zero-capacity pooled H2 scenario remained bounded even before this guard on this installed Pingora source. The infinite wait alleged by the reviewer was not reproduced by that scenario. Final tests exercise a warm pool advertising zero capacity with PING traffic, verify the request remains bounded, and verify no second HTTP request is submitted.
+
+3. MAJOR: dropping C/D's local socket during failed setup could leave the bridge copy task and half-open upstream alive until SDK shutdown.
+   Fixed: the native socket tracer cancels the bridge's per-connection lifetime on disconnect, while retaining the original socket shutdown tracer. dropping_bridge_connection_drains_half_open_upstream_before_sdk_close failed before the fix; it passes afterward without closing the SDK.
+
+4. MAJOR: a D inner-target TLS timeout could increment shared tunnel-node access failures.
+   Fixed: the connector records when the tunnel transport has reached the target phase; fail_to_connect attributes subsequent failures to that target. The request watchdog records its expiration as a target-phase timeout. Real local WebSocket + TLS integration test http_tunnel_target_timeout_preserves_access_health_and_drains_abandoned_bridge passes, preserving Available and zero access failures, adding target cooldown, and draining sockets before SDK close.
+
+5. MAJOR: generation does not change automatically inside a running instance on a physical network switch.
+   Not adopted as an automatic OS network detector. The task explicitly allows a reasonable internal boundary where no existing network-change entry point exists and forbids adding an unrequested external control API. This SDK has no existing notification entry point; the chosen boundary is instance replacement/restart. Each registry, direct address history and pool belongs to that instance/generation; old clones retain the old instance, and old probe results cannot reach a replacement registry. Automatic detection of physical network changes is NOT implemented or proven. Hosts must restart after a switch. This limitation is stated in README and proof.
+
+The reviewer reran ten already-built in-memory tests read-only; all passed. Fresh final-source Cargo checks were run by the worker after fixes.
+No additional review round was started. Post-review fixes have regression coverage but were not independently reviewed again.
+No commit is authorized, so no commit-based herdr-task reviewed or ready record was fabricated.

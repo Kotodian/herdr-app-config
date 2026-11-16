@@ -2,6 +2,7 @@
   "schema": 1,
   "mods": [
     "agenttrail",
+    "art-rust-proof-f00a",
     "gitview",
     "gitview-agents",
     "gitview-ask",
@@ -3174,6 +3175,66 @@
     },
     "mods/agenttrail/mod.json": {
       "sha256": "f883c583cbc0d16a697089cbeb232a92a16d67ca09e3f466c953bfd7913acab2"
+    },
+    "mods/art-rust-proof-f00a/artifact-main.js": {
+      "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
+    },
+    "mods/art-rust-proof-f00a/artifact-markup.js": {
+      "sha256": "146fca169dc1a80cf173e77b16db5b2a9d95719dd2e817d310cc4c02918c9bd1"
+    },
+    "mods/art-rust-proof-f00a/artifact.js": {
+      "sha256": "d3f5c8994aac727f885d05d2d0079b0eea73c58217d83b9eba561341c3f2ae52"
+    },
+    "mods/art-rust-proof-f00a/bridge-before.txt": {
+      "sha256": "6dd62ca61bf39073bbd025c39ad38aaea7d46897d6704547963d1d441e4728e3"
+    },
+    "mods/art-rust-proof-f00a/changes.txt": {
+      "sha256": "a9eec95b3991b4a74aa34442c10a86666987e2634be469b629d690827b024119"
+    },
+    "mods/art-rust-proof-f00a/combined-final.txt": {
+      "sha256": "ae8c6d07fbb7cd2eaeb9e72450005db320b7c62b56d8654172e4967f0562b5c3"
+    },
+    "mods/art-rust-proof-f00a/core/paths.js": {
+      "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
+    },
+    "mods/art-rust-proof-f00a/default-final.txt": {
+      "sha256": "d435cb2df350bad75a4194ea6a3d51d82eb8d0e5960d7edb88856a9079bca3b5"
+    },
+    "mods/art-rust-proof-f00a/dirs.js": {
+      "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
+    },
+    "mods/art-rust-proof-f00a/main.js": {
+      "sha256": "374be9b5cce5935607c81391521342fab467e96c9ab4daae69dc64870b148f2a"
+    },
+    "mods/art-rust-proof-f00a/mod.json": {
+      "sha256": "7f3d7fa21806bc6e8a01445cc03378d7a5425b29fa948a8bbd4e35e8b5828268"
+    },
+    "mods/art-rust-proof-f00a/no-default-final.txt": {
+      "sha256": "f95ef17d9665e2f4a8a22b1c6d1c07f5b30e30923fa6fcd5302525fdb341f9b7"
+    },
+    "mods/art-rust-proof-f00a/recipe-data.js": {
+      "sha256": "095f9f251032c54ed0eea8795419421992ba1a61466446959442c62945ceeafe"
+    },
+    "mods/art-rust-proof-f00a/recipe-view.js": {
+      "sha256": "5db98a2f3b33f9735415f74fcb61ae4e8a5d863b7995c82224b3aa7b0d41b4c8"
+    },
+    "mods/art-rust-proof-f00a/recipe.js": {
+      "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
+    },
+    "mods/art-rust-proof-f00a/restart-before.txt": {
+      "sha256": "5f9df6009e9d19348bd56e6423078d97003b006de330263de61da970ae78f902"
+    },
+    "mods/art-rust-proof-f00a/reverse-final.txt": {
+      "sha256": "b18a6f6f769f199423482d07d2f5dd44b18fa8b6635ffca9e42fdfefdae63078"
+    },
+    "mods/art-rust-proof-f00a/review.txt": {
+      "sha256": "905bff971f65e39be7c215ab4c5e449624f01c79b2bbd3d89280561f982dfd8f"
+    },
+    "mods/art-rust-proof-f00a/tunnels-filtered-final.txt": {
+      "sha256": "da0d4472b75c54410f3756fc0d578d5012578b1ad80120f848fe50c7669d159f"
+    },
+    "mods/art-rust-proof-f00a/tunnels.txt": {
+      "sha256": "fa2c76baa85372f525b4b946ca9a46d35a322659ee4dc8d1b1dac48e71b1e19e"
     },
     "mods/gitview-agents/engine.js": {
       "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
