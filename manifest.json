@@ -5,6 +5,7 @@
     "art-12-sdk-proof-0d52",
     "art-c-ts-swift-kotlin-proof-0217",
     "art-go-proof-f2db",
+    "art-planner-proof-bc3f",
     "art-rust-proof-f00a",
     "art-sdk-proof-c66c",
     "art-sdk-proof-c66c--v1",
@@ -3373,6 +3374,57 @@
     },
     "mods/art-go-proof-f2db/toolchain.txt": {
       "sha256": "70f94d37a097ca424ec1a1c0d5a81288ec60b4ceeae67edc3a75aeb6ce378600"
+    },
+    "mods/art-planner-proof-bc3f/artifact-main.js": {
+      "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
+    },
+    "mods/art-planner-proof-bc3f/artifact-markup.js": {
+      "sha256": "146fca169dc1a80cf173e77b16db5b2a9d95719dd2e817d310cc4c02918c9bd1"
+    },
+    "mods/art-planner-proof-bc3f/artifact.js": {
+      "sha256": "d0155ec3a66d3a31ad4949b2bd3c56a5d16a4aa3f7b54226db20df0f7135ccde"
+    },
+    "mods/art-planner-proof-bc3f/cargo-check.txt": {
+      "sha256": "1935e52f970ce6e64c84c39857da15985ec3233d33b2bd33a09904f13bc0344f"
+    },
+    "mods/art-planner-proof-bc3f/core/paths.js": {
+      "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
+    },
+    "mods/art-planner-proof-bc3f/diff-check.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mods/art-planner-proof-bc3f/dirs.js": {
+      "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
+    },
+    "mods/art-planner-proof-bc3f/format.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mods/art-planner-proof-bc3f/ledger.md": {
+      "sha256": "a188489736429ee73067e7113ee5c42e9299da51c7a80466e8f59c1696f08609"
+    },
+    "mods/art-planner-proof-bc3f/main.js": {
+      "sha256": "374be9b5cce5935607c81391521342fab467e96c9ab4daae69dc64870b148f2a"
+    },
+    "mods/art-planner-proof-bc3f/mod.json": {
+      "sha256": "7f3d7fa21806bc6e8a01445cc03378d7a5425b29fa948a8bbd4e35e8b5828268"
+    },
+    "mods/art-planner-proof-bc3f/pr.txt": {
+      "sha256": "b9f5ac286fc6bfd82ab14ab6cab15a45f4c6f36d7c98e835cc2c2e01cdaaf726"
+    },
+    "mods/art-planner-proof-bc3f/recipe-data.js": {
+      "sha256": "cc144d79647823de11774b30c3596b40c72c2db439fc14e0108387a8b6980c50"
+    },
+    "mods/art-planner-proof-bc3f/recipe-view.js": {
+      "sha256": "5db98a2f3b33f9735415f74fcb61ae4e8a5d863b7995c82224b3aa7b0d41b4c8"
+    },
+    "mods/art-planner-proof-bc3f/recipe.js": {
+      "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
+    },
+    "mods/art-planner-proof-bc3f/review.txt": {
+      "sha256": "240e75dddb3049f69312a702a090be1d6641e6ce8a56a6e451c2cb9ea17ebc4f"
+    },
+    "mods/art-planner-proof-bc3f/static-audit.txt": {
+      "sha256": "51b0ca634b0427fa84e6b7751f618786addc38cb3d670f17fca28ea50f610c5e"
     },
     "mods/art-rust-proof-f00a/artifact-main.js": {
       "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"

@@ -1,0 +1,21 @@
+正式独立评审：codex / auto/gpt-6-astra / medium，read-only，sps-6-review（SPS-6 的唯一一轮）。
+
+Reviewer 最后报告：
+
+No findings—no blocker, major, or minor issues identified within the SPS-6 Planner scope.
+
+Reviewed exact SHA bfe9fcbf5b89e0ed59d938cae8465d5852898f83 against base eeb40b49005ffe0872f07d4dd8d254764a03f105. The actual git diff dev...HEAD matches /private/tmp/sps6-review.diff byte-for-byte.
+
+Static review confirmed:
+
+- Planner<F, N> actually calls both strategy traits, borrows the existing inputs, and returns only a route index.
+- A→B→C→D traversal remains fixed. The selector receives immutable candidates from one tier; its returned ID must belong to that filtered set. An invalid ID or None cannot skip a nonempty tier.
+- Default filtering and selection preserve eligibility, capability/download restrictions, isolation, evidence expiry, target cooldown, tried-node exclusion, minimum failures, the inclusive 20% latency window, and host/session hashing.
+- Native HTTP and byte-stream paths reach the default wrapper. Health locks remain short-lived; outlet lookup stays outside Planner; execution-time eligibility rechecks, shared deadlines, and commit boundaries remain intact.
+- Public signatures, configuration, bindings, and wire formats are unchanged.
+
+cargo fmt --all -- --check and git diff --check dev...HEAD both exited 0. Git emitted sandbox cache-write diagnostics but completed the diff check. The supplied worker compilation log records a successful check; I did not rerun compilation.
+
+No runtime tests, regressions, feature/race/cross-language/device runs, network requests, or dependency downloads were performed. This review and the compilation log are not runtime acceptance evidence. Other design gaps remain outside this review as recorded in the ledger.
+
+登记结果：herdr-task reviewed 已把 round 1 of 1 记录在 bfe9fcb。未修改候选提交；没有待修 finding。reviewer 已结束。

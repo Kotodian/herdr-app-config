@@ -1,0 +1,15 @@
+Source-only contract check at eeb40b49005ffe0872f07d4dd8d254764a03f105:
+  MISSING: CandidateFilter contract and default implementation
+  MISSING: NodeSelector contract and default implementation
+  MISSING: Planner owns and invokes the two strategies
+  MISSING: Returned ID is checked against this tier's filtered candidates
+Source-only contract check at bfe9fcbf5b89e0ed59d938cae8465d5852898f83:
+  PASS: CandidateFilter contract and default implementation
+  PASS: NodeSelector contract and default implementation
+  PASS: Planner owns and invokes the two strategies
+  PASS: Returned ID is checked against this tier's filtered candidates
+Existing execution-time eligibility helper is byte-for-byte unchanged.
+Fixed tiers, operation boundary, 20% threshold and hash inputs retained in source.
+All pre-existing routing test bodies preserved except default Planner construction.
+Only filter.rs, select.rs and routing/tests.rs changed; public API/wire untouched.
+This is static source inspection, not execution of Planner or behavior tests.

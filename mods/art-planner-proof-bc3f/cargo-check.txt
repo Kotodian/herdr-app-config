@@ -1,0 +1,485 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling syn v3.0.10
+   Compiling syn v2.0.119
+    Checking cfg-if v1.0.5
+   Compiling serde_core v1.0.229
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling zeroize_derive v1.5.0
+    Checking typenum v1.20.1
+    Checking zeroize v1.9.1
+   Compiling jobserver v0.1.35
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.15
+    Checking cmov v0.5.4
+   Compiling cc v1.11.1
+    Checking smallvec v1.16.5
+    Checking ctutils v0.4.8
+    Checking rand_core v0.10.1
+    Checking memchr v2.8.3
+   Compiling getrandom v0.4.3
+    Checking hybrid-array v0.4.15
+    Checking pin-project-lite v0.2.17
+    Checking scopeguard v1.2.0
+   Compiling parking_lot_core v0.9.12
+    Checking crypto-common v0.2.2
+    Checking bytes v1.12.1
+    Checking lock_api v0.4.14
+   Compiling portable-atomic v1.15.0
+   Compiling autocfg v1.5.1
+    Checking parking_lot v0.12.5
+    Checking critical-section v1.2.0
+    Checking block-buffer v0.12.1
+   Compiling version_check v0.9.5
+    Checking errno v0.3.14
+    Checking socket2 v0.6.5
+    Checking once_cell v1.21.4
+   Compiling pkg-config v0.3.34
+    Checking signal-hook-registry v1.4.8
+   Compiling cmake v0.1.58
+   Compiling tokio-macros v2.7.2
+    Checking mio v1.2.4
+   Compiling num-traits v0.2.19
+    Checking tokio v1.54.1
+   Compiling displaydoc v0.2.7
+    Checking futures-core v0.3.34
+    Checking itoa v1.0.19
+    Checking getrandom v0.2.17
+    Checking cpufeatures v0.3.1
+    Checking const-oid v0.10.3
+    Checking digest v0.11.3
+   Compiling zerocopy v0.8.63
+   Compiling thiserror v2.0.21
+    Checking slab v0.4.12
+   Compiling thiserror-impl v2.0.21
+    Checking futures-sink v0.3.34
+   Compiling fs_extra v1.3.0
+   Compiling dunce v1.0.5
+    Checking futures-io v0.3.34
+   Compiling aws-lc-sys v0.45.0
+    Checking futures-channel v0.3.34
+   Compiling futures-macro v0.3.34
+   Compiling synstructure v0.14.0
+    Checking subtle v2.6.1
+    Checking futures-task v0.3.34
+    Checking futures-util v0.3.34
+   Compiling zerofrom-derive v0.1.8
+   Compiling ring v0.17.14
+    Checking foldhash v0.2.0
+   Compiling num-conv v0.2.2
+    Checking equivalent v1.0.3
+    Checking allocator-api2 v0.2.21
+   Compiling time-core v0.1.9
+   Compiling aws-lc-rs v1.18.1
+   Compiling time-macros v0.2.32
+    Checking hashbrown v0.17.1
+    Checking zerofrom v0.1.8
+   Compiling yoke-derive v0.8.4
+    Checking ppv-lite86 v0.2.21
+    Checking http v1.5.0
+    Checking rustls-pki-types v1.16.0
+   Compiling synstructure v0.13.2
+    Checking log v0.4.35
+    Checking minimal-lexical v0.2.1
+    Checking deranged v0.5.9
+    Checking stable_deref_trait v1.2.1
+   Compiling getrandom v0.3.4
+    Checking alloc-no-stdlib v2.0.4
+    Checking powerfmt v0.2.1
+    Checking time v0.3.55
+    Checking alloc-stdlib v0.2.4
+    Checking yoke v0.8.4
+    Checking nom v7.1.3
+    Checking keccak v0.2.2
+    Checking inout v0.2.6
+   Compiling thiserror v1.0.69
+   Compiling cfg_aliases v0.2.2
+    Checking untrusted v0.9.0
+    Checking rusticata-macros v4.1.0
+    Checking tracing-core v0.1.36
+   Compiling thiserror-impl v1.0.69
+   Compiling asn1-rs-impl v0.2.0
+   Compiling tracing-attributes v0.1.31
+   Compiling zerovec-derive v0.11.7
+   Compiling crossbeam-utils v0.8.23
+    Checking zerovec v0.11.9
+    Checking tracing v0.1.44
+    Checking cipher v0.5.2
+    Checking sponge-cursor v0.1.0
+   Compiling crunchy v0.2.4
+    Checking shake v0.1.0
+    Checking brotli-decompressor v5.0.3
+    Checking indexmap v2.14.2
+    Checking rand_core v0.6.4
+   Compiling generic-array v0.14.7
+   Compiling tiny-keccak v2.0.2
+   Compiling syn v1.0.109
+   Compiling strsim v0.11.1
+   Compiling rustls v0.23.40 (https://github.com/aimalygin/shaped-rustls?rev=3a131beaef0183b0cb61e5a9070a703b6be39ed3#3a131bea)
+   Compiling ident_case v1.0.1
+    Checking brotli v8.0.4
+    Checking num-integer v0.1.47
+   Compiling zstd-sys v2.1.2+zstd.1.5.7
+    Checking arrayvec v0.7.8
+   Compiling crc32fast v1.5.5
+    Checking zlib-rs v0.6.8
+    Checking data-encoding v2.11.1
+    Checking fnv v1.0.7
+    Checking lazy_static v1.5.1
+   Compiling httparse v1.10.1
+    Checking rustls-webpki v0.103.16
+    Checking num-bigint v0.4.8
+    Checking rand_chacha v0.3.1
+    Checking tinystr v0.8.5
+   Compiling libz-ng-sys v1.1.33
+    Checking aho-corasick v1.1.5
+   Compiling heck v0.5.0
+    Checking writeable v0.6.4
+    Checking litemap v0.8.3
+    Checking bitflags v2.13.2
+    Checking regex-syntax v0.8.11
+    Checking utf_types v1.0.0
+    Checking utf8_iter v1.1.0
+    Checking icu_locale_core v2.4.0
+   Compiling const-random-macro v0.1.16
+    Checking regex-automata v0.4.18
+    Checking rand v0.8.8
+    Checking potential_utf v0.1.6
+    Checking zerotrie v0.2.5
+    Checking tokio-util v0.7.20
+   Compiling ahash v0.8.12
+    Checking core-foundation-sys v0.8.7
+   Compiling icu_normalizer_data v2.4.0
+    Checking adler2 v2.0.1
+   Compiling icu_properties_data v2.4.0
+    Checking simd-adler32 v0.3.10
+   Compiling zstd-safe v8.2.0
+    Checking miniz_oxide v0.9.1
+    Checking icu_provider v2.4.0
+    Checking icu_collections v2.4.0
+    Checking const-random v0.1.18
+    Checking crypto-common v0.1.7
+    Checking block-buffer v0.10.4
+    Checking chacha20 v0.10.2
+   Compiling asn1-rs-derive v0.5.1
+    Checking futures-executor v0.3.34
+   Compiling proc-macro2-diagnostics v0.10.1
+    Checking universal-hash v0.6.1
+    Checking thread_local v1.1.10
+   Compiling semver v1.0.28
+    Checking ryu v1.0.23
+    Checking cpubits v0.1.1
+    Checking atomic-waker v1.1.2
+    Checking utf8parse v0.2.2
+   Compiling rustversion v1.0.23
+    Checking anstyle-parse v1.0.0
+    Checking h2 v0.4.20 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking flate2 v1.1.11
+   Compiling rustc_version v0.4.1
+    Checking futures v0.3.34
+    Checking asn1-rs v0.6.2
+    Checking digest v0.10.7
+    Checking security-framework-sys v2.17.0
+    Checking core-foundation v0.9.4
+    Checking regex v1.13.1
+   Compiling darling_core v0.24.1
+    Checking crossbeam-queue v0.3.14
+   Compiling asn1-rs-derive v0.6.0
+   Compiling memoffset v0.9.1
+    Checking parking v2.2.1
+   Compiling anyhow v1.0.104
+    Checking is_terminal_polyfill v1.70.2
+   Compiling oid-registry v0.7.1
+   Compiling yansi v1.0.1
+    Checking anstyle v1.0.14
+    Checking anstyle-query v1.1.5
+   Compiling zmij v1.0.23
+    Checking colorchoice v1.0.5
+    Checking pingora-error v0.9.1
+   Compiling rust_decimal v1.43.0
+    Checking percent-encoding v2.3.2
+    Checking anstream v1.0.0
+   Compiling darling_macro v0.24.1
+    Checking event-listener v5.4.2
+    Checking asn1-rs v0.7.2
+    Checking security-framework v2.11.1
+    Checking icu_properties v2.4.0
+    Checking icu_normalizer v2.4.0
+    Checking zstd v0.14.3
+   Compiling curve25519-dalek v4.1.3
+    Checking tokio-rustls v0.26.6
+   Compiling darling_core v0.23.0
+    Checking rand_core v0.9.5
+   Compiling quinn-udp v0.5.16
+   Compiling nix v0.31.3
+    Checking rustls-pemfile v2.2.0
+   Compiling blake3 v1.8.5 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+   Compiling async-trait v0.1.92
+    Checking num_cpus v1.17.0
+   Compiling typeid v1.0.3
+    Checking fastrand v2.5.0
+    Checking httpdate v1.0.3
+   Compiling either v1.19.0
+    Checking seize v0.3.3
+    Checking base64 v0.22.1
+   Compiling oid-registry v0.8.1
+    Checking hashbrown v0.14.5
+    Checking tinyvec v1.13.3
+   Compiling serde_json v1.0.154
+    Checking clap_lex v1.1.1
+    Checking base64 v0.23.1
+   Compiling protobuf v3.7.2
+    Checking fixedbitset v0.5.9
+   Compiling heck v0.4.1
+    Checking petgraph v0.7.1
+   Compiling ouroboros_macro v0.18.5
+    Checking clap_builder v4.6.7
+    Checking dashmap v5.5.3
+    Checking flurry v0.5.2
+   Compiling itertools v0.14.0
+   Compiling darling_macro v0.23.0
+    Checking rustls-native-certs v0.7.3
+    Checking rand_chacha v0.9.0
+   Compiling strum_macros v0.26.4
+    Checking idna_adapter v1.2.2
+    Checking event-listener-strategy v0.5.4
+   Compiling darling v0.24.1
+    Checking pingora-http v0.9.1
+    Checking der-parser v9.0.0
+    Checking aes v0.9.4
+    Checking pingora-timeout v0.9.1
+    Checking rand v0.10.3
+   Compiling clap_derive v4.6.7
+   Compiling prometheus-client-derive-text-encode v0.3.0
+    Checking concurrent-queue v2.5.0
+    Checking protobuf-support v3.7.2
+   Compiling quinn v0.11.9 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking aead v0.6.1
+    Checking brotli-decompressor v2.5.1
+    Checking lru v0.18.5
+    Checking tokio-stream v0.1.19
+   Compiling indexmap v1.9.3
+    Checking lock_api v0.5.0
+    Checking rand_pcg v0.10.2
+    Checking parking_lot_core v0.10.0
+    Checking static_assertions v1.1.0
+   Compiling crossbeam-epoch v0.9.21
+    Checking aliasable v0.1.3
+    Checking arrayref v0.3.9
+    Checking dtoa v1.0.11
+    Checking no_debug v3.1.0
+   Compiling erased-serde v0.4.11
+    Checking lru-slab v0.1.3
+    Checking rustc-hash v2.1.3
+   Compiling prometheus v0.14.0
+    Checking constant_time_eq v0.4.2
+    Checking unsafe-libyaml v0.2.11
+    Checking serde_yaml v0.9.34+deprecated
+    Checking quinn-proto v0.11.16 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking pingora-rustls v0.9.1
+    Checking prometheus-client v0.18.1
+    Checking ouroboros v0.18.5
+    Checking parking_lot v0.13.0
+    Checking brotli v3.5.0
+    Checking tokio-test v0.4.6
+    Checking pingora-pool v0.9.1
+    Checking clap v4.6.7
+    Checking async-channel v2.5.0
+    Checking x509-parser v0.16.0
+   Compiling serde_with_macros v3.24.0
+    Checking sfv v0.10.4
+    Checking strum v0.26.3
+   Compiling prost-derive v0.14.5
+    Checking idna v1.1.0
+    Checking rand v0.9.5
+   Compiling darling v0.23.0
+    Checking daggy v0.8.1
+    Checking der-parser v10.0.0
+    Checking polyval v0.7.3
+    Checking pingora-runtime v0.9.1
+    Checking poly1305 v0.9.1
+    Checking bstr v1.13.1
+   Compiling derivative v2.2.0
+    Checking ctr v0.10.1
+    Checking http-body v1.1.0
+    Checking rmp v0.8.15
+    Checking chrono v0.4.45
+   Compiling uncased v0.9.10
+    Checking daemonix v0.1.0
+    Checking hashbrown v0.12.3
+    Checking unicase v2.10.0
+    Checking compression-core v0.4.34
+    Checking openssl-probe v0.1.6
+   Compiling foundations v5.12.0
+    Checking pingora-core v0.9.1
+    Checking compression-codecs v0.4.47
+    Checking rmp-serde v1.3.1
+    Checking chacha20poly1305 v0.11.0
+    Checking x509-parser v0.18.1
+    Checking ghash v0.6.0
+   Compiling foundations-macros v5.12.0
+    Checking x25519-dalek v2.0.1
+    Checking prost v0.14.5
+    Checking serde_with v3.24.0
+    Checking pingora-lru v0.9.1
+    Checking prometools v0.2.3
+    Checking pingora-header-serde v0.9.1
+    Checking h3 v0.0.8 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking form_urlencoded v1.2.2
+    Checking xray-routing v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking blake2 v0.10.6
+    Checking sha3 v0.11.0
+    Checking md-5 v0.11.0
+    Checking sha2 v0.11.1
+    Checking hmac v0.13.0
+    Checking signature v3.0.0
+    Checking module-lattice v0.2.4
+   Compiling figment v0.10.19
+    Checking uuid v1.29.0
+    Checking cpufeatures v0.2.17
+    Checking try-lock v0.2.5
+    Checking hex v0.4.3
+   Compiling rustix v1.1.6
+    Checking pingora-cache v0.9.1
+    Checking want v0.3.2
+    Checking xray-proxy v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking sha1 v0.10.7
+    Checking ml-dsa v0.1.2
+    Checking hkdf v0.13.0
+    Checking h3-quinn v0.0.10 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking url v2.5.8
+    Checking crossbeam v0.8.5
+    Checking aes-gcm v0.11.1
+    Checking async-compression v0.4.42
+    Checking pem v4.0.0
+   Compiling enum-as-inner v0.6.1
+    Checking yasna v0.6.0
+    Checking webpki-roots v1.0.12
+    Checking sha1 v0.11.0
+    Checking blake2 v0.11.0
+    Checking xray-utls v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking ipnet v2.12.2
+    Checking xray-transport v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking hickory-proto v0.25.2
+    Checking rcgen v0.14.10
+    Checking buffer-pool v0.2.1
+    Checking tungstenite v0.29.0
+    Checking hyper v1.12.0
+    Checking pingora-proxy v0.9.1
+    Checking xray-vless-encryption v0.9.0 (https://github.com/aimalygin/xray-rust?rev=0cabb69b85214b959033e74c542408585bbbe4e8#0cabb69b)
+    Checking http-body-util v0.1.5
+    Checking pem v3.0.6
+    Checking backon v1.6.0
+    Checking pingora-limits v0.9.1
+    Checking tempfile v3.27.0
+    Checking hyper-util v0.1.21
+    Checking tokio-tungstenite v0.29.0
+    Checking steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-6-planner)
+warning: unused imports: `DiagnosticRecorder`, `Kind`, and `ObservationContext`
+ --> src/inspection_tests.rs:2:13
+  |
+2 | use crate::{DiagnosticRecorder, Kind, ObservationContext};
+  |             ^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bytes::Bytes`
+ --> src/inspection_tests.rs:3:5
+  |
+3 | use bytes::Bytes;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `sync::Arc`
+ --> src/inspection_tests.rs:4:34
+  |
+4 | use std::{collections::BTreeMap, sync::Arc};
+  |                                  ^^^^^^^^^
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `child` is never used
+  --> src/managed_stream.rs:38:12
+   |
+36 | impl Connections {
+   | ---------------- method in this implementation
+37 |     #[cfg(feature = "reverse-proxy")]
+38 |     pub fn child(self: &Arc<Self>) -> crate::Result<Arc<Self>> {
+   |            ^^^^^
+
+warning: fields `cipher` and `password` are never read
+  --> src/tunnel_url.rs:16:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- fields in this struct
+...
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+17 |     pub(crate) password: Zeroizing<String>,
+   |                ^^^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: field `path` is never read
+  --> src/tunnel_url.rs:25:16
+   |
+21 | pub struct WebSocketUrl {
+   |            ------------ field in this struct
+...
+25 |     pub(crate) path: String,
+   |                ^^^^
+   |
+   = note: `WebSocketUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `steam-proxy` (lib) generated 4 warnings
+warning: variants `CacheSlow`, `CacheSized`, `CacheVary`, and `CacheRange` are never constructed
+   --> src/http_proxy_tests.rs:157:5
+    |
+155 | enum ResponseMode {
+    |      ------------ variants in this enum
+156 |     RoutesTimeout,
+157 |     CacheSlow,
+    |     ^^^^^^^^^
+...
+165 |     CacheSized,
+    |     ^^^^^^^^^^
+...
+169 |     CacheVary,
+    |     ^^^^^^^^^
+170 |     CacheRange,
+    |     ^^^^^^^^^^
+    |
+    = note: `ResponseMode` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+
+warning: field `cipher` is never read
+  --> src/tunnel_url.rs:16:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- field in this struct
+...
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `steam-proxy` (lib test) generated 7 warnings (1 duplicate) (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 28s

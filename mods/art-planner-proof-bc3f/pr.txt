@@ -1,0 +1,6 @@
+PR #6: https://github.com/gamesir123/steam-proxy-sdk/pull/6
+
+真实 gh pr view 结果：
+{"baseRefName":"dev","headRefName":"task/6-planner","headRefOid":"bfe9fcbf5b89e0ed59d938cae8465d5852898f83","mergeStateStatus":"CLEAN","number":6,"state":"OPEN","statusCheckRollup":[]}
+
+只推送任务分支；未合并、未 Accept / Done、未推送 main、未打 tag、未部署。GitHub 当前没有检查结果，不能据此声称 CI 或运行矩阵通过。
