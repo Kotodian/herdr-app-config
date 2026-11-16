@@ -6,8 +6,9 @@
 - 原笔记再次通过 Obsidian CLI 完整读取，与 /private/tmp/steam-sdk-routing-design-20261115.md 逐字一致。
 - 已读 SPS-6 最终 recipe、review 和 ledger。其 Planner 候选 bfe9fcb 的合入提交是 d8ca233；本次静态核对 Planner 主体不变。
 - 首个完整候选提交：733b02b9d3236495c36fa54c12dedd2729af8f9c。
-- 最终提交：1136014e45ef1a81baf5a4da2594a280d67d0431。指定 codex / auto/gpt-6-astra / medium 唯一正式评审在同轮核对最终修正，待最终报告。
+- 最终提交：1136014e45ef1a81baf5a4da2594a280d67d0431。指定 codex / auto/gpt-6-astra / medium 唯一正式评审已在同轮核对最终修正，最终无遗留 blocker/major/minor；round 1 of 1 已登记于该 SHA。
 - 初次报告有两项 major：替换隧道未接入 Native 会话关闭等待、共享 HTTP 适配器仍固定 BuiltinTunnel。均已修正；没有隐去报告或把旧 SHA 伪记成最终审查。
+- 默认与 websocket/shadowsocks compile-only、fmt、diff check 均退出 0，证据对应最终源码；没有测试执行。PR #7 为 OPEN，head task/7-task 指向最终 SHA，base 已核对为 dev；没有 GitHub checks 配置/结果，不能算 CI 行为通过。
 - A 只表示源码事实/静态证据；B 表示实现存在但运行未验收；C 是明确实现缺口；D 是尚待核实。没有任何本次行为运行通过证据。
 
 ## 本次覆盖与当前结论

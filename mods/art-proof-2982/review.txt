@@ -1,0 +1,25 @@
+正式独立评审：codex / auto/gpt-6-astra / medium，read-only，sps-7-review，parent t5x。
+这是唯一正式 round 1 of 1；同一 reviewer 在原轮次核对修正后的实际最终 SHA。
+
+初次候选 733b02b9d3236495c36fa54c12dedd2729af8f9c：
+两项 major，无 blocker/minor：
+1. 替换的 NativeStream<T> 未接入实际 Session 关闭等待。
+2. NativeHttp 固定 NativeStream<BuiltinTunnel>，替换隧道不能组合到共享 HTTP D。
+两项均已修正，没有因 Must fix=blocker 而跳过。
+
+Reviewer 最后报告：
+
+Both existing major findings are resolved. No remaining blocker, major, or minor code findings for final SHA 1136014e45ef1a81baf5a4da2594a280d67d0431, against dev d8ca2339df48cb881103d0c7fd7ff26e916fa54f. This verification remains within round 1 of 1.
+
+- Replacement-tunnel shutdown — resolved. The production Session::run shutdown reaches src/outbound/tunnel.rs:474, which now awaits both installed outlet capabilities. Their implementations close the actual shared tunnel. TunnelOutbound<T>::close cancels first and uses OnceCell to consolidate completed protocol cleanup across those calls.
+- HTTP tunnel composition — resolved. src/outbound/reverse.rs:130 now defines NativeHttp<B, T> and accepts NativeStream<T>, allowing a replacement tunnel to execute through the existing HTTP adapter and Pingora connector.
+
+The added integration test source (src/http_proxy_tests.rs:896) installs that combination, exercises origin TLS and pooled HTTP requests, then invokes the actual Session::run shutdown through a test-only helper. Its assertions cover completion of the replacement’s asynchronous task and one protocol close.
+
+Static verification: Independently confirmed the final SHA and clean worktree. /private/tmp/sps7-review-final.diff matches git diff dev...HEAD byte-for-byte. Reviewed the complete fix diff from 733b02b and the refreshed successful compilation logs. Independently ran formatting and diff whitespace checks; both exited 0.
+
+Runtime acceptance remains unproven. No tests or runtime traffic were executed. These dispositions establish source-level fixes and compiled test coverage, not observed TLS, pooling, or shutdown behavior.
+
+登记结果：
+herdr-task reviewed：review round 1 of 1 recorded for commit 1136014。
+Reviewer 已结束；没有创建其他开发任务或开发代理。
