@@ -1,0 +1,5 @@
+PR: https://github.com/gamesir123/steam-proxy-sdk/pull/7
+Head: task/7-task
+Base: dev
+First candidate: 733b02b9d3236495c36fa54c12dedd2729af8f9c
+Final commit: 1136014e45ef1a81baf5a4da2594a280d67d0431

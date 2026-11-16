@@ -6,6 +6,7 @@
     "art-c-ts-swift-kotlin-proof-0217",
     "art-go-proof-f2db",
     "art-planner-proof-bc3f",
+    "art-proof-2982",
     "art-rust-proof-f00a",
     "art-sdk-proof-c66c",
     "art-sdk-proof-c66c--v1",
@@ -3425,6 +3426,54 @@
     },
     "mods/art-planner-proof-bc3f/static-audit.txt": {
       "sha256": "51b0ca634b0427fa84e6b7751f618786addc38cb3d670f17fca28ea50f610c5e"
+    },
+    "mods/art-proof-2982/artifact-main.js": {
+      "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
+    },
+    "mods/art-proof-2982/artifact-markup.js": {
+      "sha256": "146fca169dc1a80cf173e77b16db5b2a9d95719dd2e817d310cc4c02918c9bd1"
+    },
+    "mods/art-proof-2982/artifact.js": {
+      "sha256": "3777c5378c4a04dda4cd68d0511746c3426936f816d0534312eee9ef296c7504"
+    },
+    "mods/art-proof-2982/cargo-check-default.txt": {
+      "sha256": "57b2f3d69331e3172193c6831eaa336d7b8efc6311a26b901e2a686d45538125"
+    },
+    "mods/art-proof-2982/cargo-check-tunnels.txt": {
+      "sha256": "21479fb0d14477adbfdd2395d0f33e8d269b965c52700ed34dec557e98b1245c"
+    },
+    "mods/art-proof-2982/core/paths.js": {
+      "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
+    },
+    "mods/art-proof-2982/diff-check.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mods/art-proof-2982/dirs.js": {
+      "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
+    },
+    "mods/art-proof-2982/format.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mods/art-proof-2982/ledger.md": {
+      "sha256": "92e1757f40b90df2cb1542a8ea22a1071e72f6865f44e88534d4b25c4e4495dd"
+    },
+    "mods/art-proof-2982/main.js": {
+      "sha256": "374be9b5cce5935607c81391521342fab467e96c9ab4daae69dc64870b148f2a"
+    },
+    "mods/art-proof-2982/mod.json": {
+      "sha256": "7f3d7fa21806bc6e8a01445cc03378d7a5425b29fa948a8bbd4e35e8b5828268"
+    },
+    "mods/art-proof-2982/pr.txt": {
+      "sha256": "85c14e0915cc65b9cb1fb07a369d8ea627f4498a8fe4b810273b08b3cf9dda43"
+    },
+    "mods/art-proof-2982/recipe-data.js": {
+      "sha256": "dbdd8d82460bed0936f86c9fd42f087bad69376e1757fd3f420043cad3b10c5f"
+    },
+    "mods/art-proof-2982/recipe-view.js": {
+      "sha256": "5db98a2f3b33f9735415f74fcb61ae4e8a5d863b7995c82224b3aa7b0d41b4c8"
+    },
+    "mods/art-proof-2982/recipe.js": {
+      "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
     },
     "mods/art-rust-proof-f00a/artifact-main.js": {
       "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
