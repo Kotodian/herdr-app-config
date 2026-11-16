@@ -5,12 +5,12 @@
 在已经安装 Herdr、Git，并具备此私仓访问权限的新 Mac 上，**在首次启动 Herdr App 前**执行：
 
 ```sh
-git clone --branch dev git@github.com:Kotodian/herdr-app-config.git ~/.config/herdr-app
+git clone --branch main git@github.com:Kotodian/herdr-app-config.git ~/.config/herdr-app
 ```
 
 然后正常打开 Herdr App。无需运行恢复、runtime、doctor 或 enable-auto 命令。
 
-Shepherdr 的 Assistant、Worker、Reviewer 指令已配置 `gamehub-git-release`：普通开发从 `dev` 创建分支，PR/合并到 `dev`；明确修复 `main` 上已有 bug 时从 `main` 创建修复分支并合并回 `main`。只有用户明确说“上线”，才允许已验证的 `dev` 到 `main`、tag 或生产部署。决策模型在 Settings → Agents → Decision model · 决策模型 独立选择，分类及理由会保存在任务中。提交、评审、接口及迁移验证继续遵守团队规范；规则和模板随配置同步安装。
+Shepherdr 的 Assistant、Worker、Reviewer 指令已配置 `gamehub-git-release`，用于任务操作的业务代码仓库：普通开发从 `dev` 创建分支，PR/合并到 `dev`；明确修复 `main` 上已有 bug 时从 `main` 创建修复分支并合并回 `main`。只有用户明确说“上线”，才允许已验证的 `dev` 到 `main`、tag 或生产部署。决策模型在 Settings → Agents → Decision model · 决策模型 独立选择，分类及理由会保存在任务中。提交、评审、接口及迁移验证继续遵守团队规范；规则和模板随配置同步安装。
 
 首次打开时，原生引导模块会自动：
 
@@ -33,7 +33,7 @@ Magpie、Cloudflare、TAPD 的账号凭据不会进入 Git。已有本机连接�
 ## 自动同步规则
 
 - 新增、修改的布局、主题、键位和自定义面板源码自动同步。
-- 配置同步只读写同步仓库的 `dev` 分支，自动同步不会更新 `main`；首次切换会保留原 `main`，从现有版本建立或跟踪 `dev`。
+- 本配置仓库只使用 `main` 自动双向同步；原 `dev` 已按用户要求合并后删除，自动同步不会重建 `dev`。
 - Shepherdr 的完整发行源码与 Web 构建资源位于 `integrations/shepherdr/`，随配置同步；安装出的 mods 由接收端安装器生成，不重复同步半套安装文件。
 - 已修复 Shepherdr 对 Codex 自定义模型目录的读取：优先读取本机 `config.toml` 的 `model_catalog_json`，支持 `CODEX_HOME`；各台机器沿用自己的 Codex 配置与模型目录。
 - Shepherdr 的任务、聊天、令牌、worktree、浏览器登录和本机服务注册不进入 Git。每台机器保留自己的运行数据。

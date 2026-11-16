@@ -12,15 +12,96 @@ sync = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(sync)
 
 
+class MainCheckoutMigrationTests(unittest.TestCase):
+    def git(self, *args, cwd):
+        result = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout.strip()
+
+    def prepare(self, root, merged):
+        origin = root / "origin.git"
+        repo = root / "repo"
+        app = root / "app"
+        for name in ("mods", "layouts", "themes"):
+            (app / name).mkdir(parents=True)
+        self.git("init", "--bare", "-q", str(origin), cwd=root)
+        self.git("init", "-q", "-b", "main", str(repo), cwd=root)
+        for key, value in (("user.name", "Sync test"), ("user.email", "sync@example.invalid"),
+                           ("commit.gpgsign", "false")):
+            self.git("config", key, value, cwd=repo)
+        self.git("remote", "add", "origin", str(origin), cwd=repo)
+        original = {"settings.json": b'{"font_size":14}\n'}
+        updated = {"settings.json": b'{"font_size":16}\n'}
+        with patch.object(sync, "ROOT", repo), patch.object(sync, "STATE", root / "state.json"):
+            sync.snapshot(original, [])
+            sync.save_state(original)
+            self.git("add", ".", cwd=repo)
+            self.git("commit", "-qm", "original main", cwd=repo)
+            self.git("push", "-q", "origin", "main", cwd=repo)
+            self.git("switch", "-qc", "dev", cwd=repo)
+            sync.snapshot(updated, [])
+            self.git("add", ".", cwd=repo)
+            self.git("commit", "-qm", "configuration on dev", cwd=repo)
+            self.git("push", "-q", "origin", "dev", cwd=repo)
+            if merged:
+                self.git("push", "-q", "origin", "dev:main", ":dev", cwd=repo)
+        (app / "settings.json").write_bytes(updated["settings.json"])
+        expected = "https://github.com/" + sync.REPO + ".git"
+        self.git("remote", "set-url", "origin", expected, cwd=repo)
+        self.git("config", "url." + str(origin) + ".insteadOf", expected, cwd=repo)
+        return repo, app
+
+    def test_old_dev_checkout_switches_and_syncs_without_recreating_dev(self):
+        for main_exists in (True, False):
+            with self.subTest(main_exists=main_exists), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                repo, app = self.prepare(root, merged=True)
+                previous_dev = self.git("rev-parse", "dev", cwd=repo)
+                if not main_exists:
+                    self.git("branch", "-D", "main", cwd=repo)
+                with patch.object(sync, "ROOT", repo), patch.object(sync, "STATE", root / "state.json"):
+                    sync.ensure_repo(app)
+                    sync.auto_sync(app)
+                self.assertEqual(self.git("branch", "--show-current", cwd=repo), "main")
+                self.assertEqual(self.git("rev-parse", "HEAD", cwd=repo), previous_dev)
+                self.assertEqual(self.git("ls-remote", "origin", "refs/heads/dev", cwd=repo), "")
+                self.assertEqual(json.loads((root / "native-status.json").read_text())["status"], "ok")
+
+    def test_unmerged_dev_commits_stop_migration_without_switching(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            repo, app = self.prepare(root, merged=False)
+            previous_dev = self.git("rev-parse", "dev", cwd=repo)
+            with patch.object(sync, "ROOT", repo):
+                with self.assertRaisesRegex(RuntimeError, "commits not yet merged"):
+                    sync.ensure_repo(app)
+            self.assertEqual(self.git("branch", "--show-current", cwd=repo), "dev")
+            self.assertEqual(self.git("rev-parse", "HEAD", cwd=repo), previous_dev)
+
+    def test_uncommitted_edits_stop_migration_without_changing_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            repo, app = self.prepare(root, merged=True)
+            settings = repo / "settings.json"
+            pending = b'{"font_size":20}\n'
+            settings.write_bytes(pending)
+            with patch.object(sync, "ROOT", repo):
+                with self.assertRaisesRegex(RuntimeError, "clean configuration checkout"):
+                    sync.ensure_repo(app)
+            self.assertEqual(self.git("branch", "--show-current", cwd=repo), "dev")
+            self.assertEqual(settings.read_bytes(), pending)
+
+
 class PublishedBaselineTests(unittest.TestCase):
-    def test_automatic_sync_refuses_main_without_pushing(self):
+    def test_configuration_sync_uses_main_and_refuses_dev_without_pushing(self):
+        self.assertEqual(sync.SYNC_BRANCH, "main")
         with tempfile.TemporaryDirectory() as directory, \
              patch.object(sync, "STATE", Path(directory) / "state.json"), \
              patch.object(sync, "validate", return_value=({}, {})), \
              patch.object(sync, "save_state"), \
              patch.object(sync, "record_status"), \
-             patch.object(sync, "git", return_value="main") as git:
-            with self.assertRaisesRegex(RuntimeError, "main is reserved"):
+             patch.object(sync, "git", return_value="dev") as git:
+            with self.assertRaisesRegex(RuntimeError, "Expected main branch"):
                 sync.auto_sync(Path(directory))
             self.assertEqual(git.call_args_list, [unittest.mock.call("branch", "--show-current")])
 
@@ -35,7 +116,7 @@ class PublishedBaselineTests(unittest.TestCase):
                 self.assertEqual(result.returncode,0,result.stderr)
                 return result.stdout.strip()
             git("init","--bare","-q",str(origin))
-            git("init","-q","-b","dev",str(repo))
+            git("init","-q","-b","main",str(repo))
             for key,value in (("user.name","Sync test"),("user.email","sync@example.invalid"),("commit.gpgsign","false")):
                 git("config",key,value,cwd=repo)
             git("remote","add","origin",str(origin),cwd=repo)
@@ -45,8 +126,8 @@ class PublishedBaselineTests(unittest.TestCase):
             with patch.object(sync,"ROOT",repo),patch.object(sync,"STATE",root/"state.json"):
                 sync.snapshot(original,[])
                 git("add",".",cwd=repo);git("commit","-qm","base",cwd=repo)
-                git("push","-qu","origin","dev",cwd=repo)
-                git("clone","-q","-b","dev",str(origin),str(other))
+                git("push","-qu","origin","main",cwd=repo)
+                git("clone","-q","-b","main",str(origin),str(other))
                 for key,value in (("user.name","Sync test"),("user.email","sync@example.invalid"),("commit.gpgsign","false")):
                     git("config",key,value,cwd=other)
                 sync.save_state(original)
@@ -54,12 +135,12 @@ class PublishedBaselineTests(unittest.TestCase):
                 git("add",".",cwd=repo);git("commit","-qm","local font change",cwd=repo)
                 with patch.object(sync,"ROOT",other):sync.snapshot(remote,[])
                 git("add",".",cwd=other);git("commit","-qm","remote theme change",cwd=other)
-                git("push","-q","origin","dev",cwd=other)
+                git("push","-q","origin","main",cwd=other)
                 (app/"settings.json").write_bytes(local["settings.json"])
                 sync.auto_sync(app)
                 self.assertEqual(json.loads((app/"settings.json").read_text()),{"font":16,"theme":"light"})
                 self.assertEqual(len(git("rev-list","--parents","-n","1","HEAD",cwd=repo).split()),3)
-                self.assertEqual(git("rev-parse","HEAD",cwd=repo),git("rev-parse","origin/dev",cwd=repo))
+                self.assertEqual(git("rev-parse","HEAD",cwd=repo),git("rev-parse","origin/main",cwd=repo))
                 status=json.loads((root/"native-status.json").read_text())
                 self.assertEqual(status["status"],"ok")
                 self.assertEqual(status["auto_merged"],["settings.json"])
@@ -185,7 +266,7 @@ class PublishedBaselineTests(unittest.TestCase):
                 sync.save_state(original)
                 def git(*args):
                     if args[:2] == ("branch", "--show-current"):
-                        return "dev"
+                        return sync.SYNC_BRANCH
                     if args[0] == "rev-list":
                         return "0 0"
                     if args[0] == "rev-parse":
@@ -215,7 +296,7 @@ class PublishedBaselineTests(unittest.TestCase):
                 sync.save_state(original)
                 def git(*args):
                     if args[:2] == ("branch", "--show-current"):
-                        return "dev"
+                        return sync.SYNC_BRANCH
                     if args[0] == "rev-list":
                         return "0 0"
                     if args[0] == "push":

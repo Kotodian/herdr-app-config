@@ -55,7 +55,7 @@
       "sha256": "846a1a542a6272b6cd595276f0c94ec7c7aa89eabc283afa42636c8ffae977d3"
     },
     "README.md": {
-      "sha256": "4b3dc5dbb6c10c8a4497aeec622aa6d595436129fafe891c6c8ab68a3c436667"
+      "sha256": "d2bce1f11623eca9b3da84038295447819ce2c51ca53642f5a346050a700d0ec"
     },
     "git-workflow.json": {
       "sha256": "a3ca0e565cc9e0a09637a3cfdbe755582e7672d39cadaf34a1e12b69d15d8b3a"
@@ -5287,10 +5287,10 @@
       "sha256": "f1eff3f96a1da7434fb2fb235f22bdbce3d1ba4d68addd57af43aa5bcd32f7d3"
     },
     "sync-app.py": {
-      "sha256": "57bc378a5fa6843d0ec26d91c8d4f3d75a0b196ca536d460dcb826b895333d2c"
+      "sha256": "0146652b2f01afce71d3feca29f36518ee6c6d4fc40885eeb10e873816c1b31a"
     },
     "tests/test_sync_app.py": {
-      "sha256": "a9c5a33d6589fefcc8c20059e7b5ec85dbd92f260517c01773b6e37e55d4b081"
+      "sha256": "668bb483394c7fc3bb55887a6ca487c4fa9a1ced132f40249746a790d6ad593a"
     },
     "themes/kanso-day.json": {
       "sha256": "47149b8493a16c92872653f5e72f49bfd680e4a5d5926694cea0806528a5233c"

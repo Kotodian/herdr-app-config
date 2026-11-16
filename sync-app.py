@@ -18,7 +18,7 @@ import urllib.request
 from pathlib import Path, PurePosixPath
 
 REPO='Kotodian/herdr-app-config'
-SYNC_BRANCH='dev'
+SYNC_BRANCH='main'
 SOURCE=Path(__file__).resolve().parent
 APP=Path.home()/'.config/herdr-app'
 STATE=Path.home()/'.config/herdr-app-sync/native-state.json'
@@ -481,7 +481,7 @@ def auto_sync(app):
     try:
         if not STATE.exists():
             _,initial=validate();save_state(initial)
-        if git('branch','--show-current')!=SYNC_BRANCH:raise RuntimeError('Expected '+SYNC_BRANCH+' branch; main is reserved for an explicit release')
+        if git('branch','--show-current')!=SYNC_BRANCH:raise RuntimeError('Expected '+SYNC_BRANCH+' branch for configuration synchronization')
         if git('status','--porcelain','--untracked-files=no'):raise RuntimeError('Repository has pending edits; automatic sync paused')
         git('fetch','origin',SYNC_BRANCH)
         remote_ref='origin/'+SYNC_BRANCH
@@ -555,15 +555,16 @@ def ensure_repo(app):
             git('config','credential.helper','');git('config','--add','credential.helper','!'+gh+' auth git-credential')
     if git('config','--get','remote.origin.url') not in expected:raise RuntimeError('Unexpected configuration repository')
     if git('branch','--show-current')!=SYNC_BRANCH:
-        if git('branch','--show-current')!='main' or git('status','--porcelain'):
+        if git('branch','--show-current')!='dev' or git('status','--porcelain'):
             raise RuntimeError('Switch the clean configuration checkout to '+SYNC_BRANCH+' before syncing')
-        git('fetch','origin')
+        git('fetch','origin',SYNC_BRANCH)
+        if git('rev-list','--count','origin/'+SYNC_BRANCH+'..HEAD')!='0':
+            raise RuntimeError('The old dev checkout has commits not yet merged into main; merge them before switching configuration sync')
         refs=set(git('for-each-ref','--format=%(refname)','refs/heads/'+SYNC_BRANCH,'refs/remotes/origin/'+SYNC_BRANCH).splitlines())
         if 'refs/heads/'+SYNC_BRANCH in refs:git('switch',SYNC_BRANCH)
         elif 'refs/remotes/origin/'+SYNC_BRANCH in refs:git('switch','--track','-c',SYNC_BRANCH,'origin/'+SYNC_BRANCH)
         else:
-            git('switch','-c',SYNC_BRANCH)
-            git('push','--set-upstream','origin','HEAD:refs/heads/'+SYNC_BRANCH)
+            raise RuntimeError('The configuration main branch is missing; restore it before syncing')
 
 def register_agent(app):
     import plistlib,sys
