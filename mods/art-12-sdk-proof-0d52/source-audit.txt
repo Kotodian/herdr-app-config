@@ -1,0 +1,32 @@
+Existing inline tests: 92 before / 92 after.
+All existing inline test bodies match, allowing whitespace and moved internal paths only.
+Public configuration, mode types and lifecycle implementation are unchanged.
+All 18 required module files exist; flat-file conflicts are absent; mod.rs files stay small.
+Probe sources do not reference business Route, Backend or Outbound types.
+Tracked changes are restricted to Rust src/**.
+
+Actual directory tree:
+src/routing/
+  attempt.rs (84 lines)
+  classify.rs (22 lines)
+  config.rs (139 lines)
+  filter.rs (17 lines)
+  mod.rs (13 lines)
+  select.rs (86 lines)
+  tests.rs (337 lines)
+src/outbound/
+  direct.rs (133 lines)
+  mod.rs (12 lines)
+  registry.rs (232 lines)
+  reverse.rs (92 lines)
+  tunnel.rs (1038 lines)
+src/health/
+  mod.rs (7 lines)
+  outcome.rs (89 lines)
+  state.rs (136 lines)
+src/probe/
+  mod.rs (32 lines)
+  runner.rs (30 lines)
+  scheduler.rs (81 lines)
+  tcp.rs (19 lines)
+  tests.rs (145 lines)

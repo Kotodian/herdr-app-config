@@ -2,6 +2,7 @@
   "schema": 1,
   "mods": [
     "agenttrail",
+    "art-12-sdk-proof-0d52",
     "art-c-ts-swift-kotlin-proof-0217",
     "art-go-proof-f2db",
     "art-rust-proof-f00a",
@@ -3219,6 +3220,48 @@
     },
     "mods/agenttrail/mod.json": {
       "sha256": "f883c583cbc0d16a697089cbeb232a92a16d67ca09e3f466c953bfd7913acab2"
+    },
+    "mods/art-12-sdk-proof-0d52/artifact-main.js": {
+      "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
+    },
+    "mods/art-12-sdk-proof-0d52/artifact-markup.js": {
+      "sha256": "146fca169dc1a80cf173e77b16db5b2a9d95719dd2e817d310cc4c02918c9bd1"
+    },
+    "mods/art-12-sdk-proof-0d52/artifact.js": {
+      "sha256": "fddbd1d1897876396fcd21fd13d1d1fefd8189e5d2fe67ab4e3cc34e9f56efe4"
+    },
+    "mods/art-12-sdk-proof-0d52/cargo-check.txt": {
+      "sha256": "65bdb1df2d10b9ae5778b393c45c84dcf7666de2c612ed8adca811ebaf208d6c"
+    },
+    "mods/art-12-sdk-proof-0d52/core/paths.js": {
+      "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
+    },
+    "mods/art-12-sdk-proof-0d52/dirs.js": {
+      "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
+    },
+    "mods/art-12-sdk-proof-0d52/main.js": {
+      "sha256": "374be9b5cce5935607c81391521342fab467e96c9ab4daae69dc64870b148f2a"
+    },
+    "mods/art-12-sdk-proof-0d52/mod.json": {
+      "sha256": "7f3d7fa21806bc6e8a01445cc03378d7a5425b29fa948a8bbd4e35e8b5828268"
+    },
+    "mods/art-12-sdk-proof-0d52/recipe-data.js": {
+      "sha256": "9d6bee78841cd384378d27f93bfd6504d45b6cf3f14ee37393695ee535ffc1de"
+    },
+    "mods/art-12-sdk-proof-0d52/recipe-view.js": {
+      "sha256": "5db98a2f3b33f9735415f74fcb61ae4e8a5d863b7995c82224b3aa7b0d41b4c8"
+    },
+    "mods/art-12-sdk-proof-0d52/recipe.js": {
+      "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
+    },
+    "mods/art-12-sdk-proof-0d52/review.txt": {
+      "sha256": "6a09d09344cedda8fc8e809425409360b35856230d6a03d54828bc80b33a6b41"
+    },
+    "mods/art-12-sdk-proof-0d52/source-audit.txt": {
+      "sha256": "1191f23907f7677c325e65bc64e76eb7d463a32c6a5f18c92d9db1118b21cb1c"
+    },
+    "mods/art-12-sdk-proof-0d52/static-checks.txt": {
+      "sha256": "21d499e88377fc975d0dd9d0cff002a6f351046af8f8d07f1dc94a3a86e79b8e"
     },
     "mods/art-c-ts-swift-kotlin-proof-0217/artifact-main.js": {
       "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
