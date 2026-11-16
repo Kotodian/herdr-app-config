@@ -4,6 +4,7 @@
     "agenttrail",
     "art-12-sdk-proof-0d52",
     "art-c-ts-swift-kotlin-proof-0217",
+    "art-go-proof-81f9",
     "art-go-proof-f2db",
     "art-planner-proof-bc3f",
     "art-proof-2982",
@@ -3294,6 +3295,60 @@
     },
     "mods/art-c-ts-swift-kotlin-proof-0217/recipe.js": {
       "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
+    },
+    "mods/art-go-proof-81f9/artifact-main.js": {
+      "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
+    },
+    "mods/art-go-proof-81f9/artifact-markup.js": {
+      "sha256": "146fca169dc1a80cf173e77b16db5b2a9d95719dd2e817d310cc4c02918c9bd1"
+    },
+    "mods/art-go-proof-81f9/artifact.js": {
+      "sha256": "d3b0b3186d7424048d7aa7ec772c387ac156607a7c4409b0b4a60e25b5f92bc7"
+    },
+    "mods/art-go-proof-81f9/cargo-check.txt": {
+      "sha256": "9ad40f79a2f9e8ddbcaead523ea67e3ee8a672b31c96686a65b4e87dcebe017f"
+    },
+    "mods/art-go-proof-81f9/core/paths.js": {
+      "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
+    },
+    "mods/art-go-proof-81f9/diff-check.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mods/art-go-proof-81f9/dirs.js": {
+      "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
+    },
+    "mods/art-go-proof-81f9/final-patch.txt": {
+      "sha256": "cfc434f0b05ee0e0f40008278ecdef302ffde9660304de4f3e0825b5ae03ec2a"
+    },
+    "mods/art-go-proof-81f9/format.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mods/art-go-proof-81f9/go-compile.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mods/art-go-proof-81f9/go-format.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mods/art-go-proof-81f9/ledger.md": {
+      "sha256": "26a6e61a1ba2c8e3019d17d2a3cbe3e0d0626611204a14fc8119980cf914e154"
+    },
+    "mods/art-go-proof-81f9/main.js": {
+      "sha256": "374be9b5cce5935607c81391521342fab467e96c9ab4daae69dc64870b148f2a"
+    },
+    "mods/art-go-proof-81f9/mod.json": {
+      "sha256": "7f3d7fa21806bc6e8a01445cc03378d7a5425b29fa948a8bbd4e35e8b5828268"
+    },
+    "mods/art-go-proof-81f9/recipe-data.js": {
+      "sha256": "3d78217088c0bd85f5ee52db71a689b4313860e4549b4f4aa2346d5c039da2d2"
+    },
+    "mods/art-go-proof-81f9/recipe-view.js": {
+      "sha256": "5db98a2f3b33f9735415f74fcb61ae4e8a5d863b7995c82224b3aa7b0d41b4c8"
+    },
+    "mods/art-go-proof-81f9/recipe.js": {
+      "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
+    },
+    "mods/art-go-proof-81f9/review.txt": {
+      "sha256": "b73d32a7ae9e29b215ab5b372ebe73a264245267b8ec6950af1889500fef0412"
     },
     "mods/art-go-proof-f2db/after.txt": {
       "sha256": "4a9799997645efa8d2bc97faf547ba50e847d47058ef88d2b0ae9104d7ad48db"

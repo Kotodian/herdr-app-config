@@ -1,0 +1,33 @@
+• Same formal review round 1 of 1, verified against final SHA 67145a825b263e47a2953c2e94d7fb65bed62fb2 and dev 24707aed99ac5fc14cd0e8558c73602dc9516400.
+
+  No blocker or major findings remain in the reviewed source. All previously reported code findings are resolved at this SHA. One minor proof-artifact issue remains.
+
+  • Rust startup deadline blocker — resolved. The shared absolute deadline reaches the probe scheduler, and budget exhaustion aggregates completed qualifications instead of unconditionally returning
+    cancellation. The C-plus-sixteen-slow-remotes test source remains present.
+
+  • Go HTTP commitment race — resolved. commitRequest orders commitment against generation invalidation under the same short health lock and disarms network cancellation before possible transmission.
+
+  • Rust retired-generation accumulation — resolved. Inactive generations are reaped at the beginning of every maintenance iteration, including successive network-change iterations.
+
+  • Go H2 write-mutex blocker — resolved. pool.go:38 (bindings/go/pool.go:38) uses cancelable admission and CanTakeNewRequest; production pool/admission code contains no ClientConn.State() calls. The
+    pinned CanTakeNewRequest implementation uses the state mutex rather than the write mutex. Pool acquisition increments SDK-owned request counts before returning a connection, and initial H2
+    connections acquire ownership before pool admission. http.go:115 (bindings/go/http.go:115) releases ownership exactly once through error cleanup or response-body closure. Pool retirement and
+    expiry use those counts. The new held-DATA-write test source requires cancellation, requalification, and a successful new-generation request before releasing the old write.
+
+  Minor — the supplied “full final diff” artifact contains only a diffstat.
+  Location: sps8-review-final.diff:1 (/private/tmp/sps8-review-final.diff:1). Its contents match git diff --stat dev...HEAD, not the full patch. Likewise, sps8-review-data-fix.diff contains the
+  incremental diffstat. Replace these with complete patch output, or label them as statistics and supply the actual patches. This did not block verification: I inspected the actual incremental Git
+  patch and carried forward the complete source review from this same round.
+
+  All 25 refreshed source hashes match the checkout. Final HEAD remains the specified SHA, and the working tree is clean. Independent cargo fmt --all -- --check, changed-file gofmt -l, and git diff
+  --check dev...HEAD passed. I inspected the refreshed summary and all named logs; they report successful compile-only checks for this candidate.
+
+  Not run in my sandbox: Rust/Go compilation, which requires writable build outputs and caches. No tests, application binaries/init, race checks, feature matrices, dependency downloads/upgrades,
+  traffic, or other agents were run.
+
+  These dispositions establish source-level correction only. Runtime concurrency, platform network observation, committed-flow continuity, and shutdown behavior remain unexecuted acceptance work as
+  recorded in the ledger.
+
+Worker evidence-only disposition after report: the minor diffstat issue was corrected using uncondensed Git output. No source or commit changed after review.
+/private/tmp/sps8-review-final.diff: complete patch independently matches Git; sha256=cfc434f0b05ee0e0f40008278ecdef302ffde9660304de4f3e0825b5ae03ec2a
+/private/tmp/sps8-review-data-fix.diff: complete patch independently matches Git; sha256=6db2bcb4dcf0fe0b5eef015ad4079d6573f8f290e1cc00de47ff1b88d4fe7b98

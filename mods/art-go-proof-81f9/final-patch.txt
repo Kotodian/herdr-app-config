@@ -1,0 +1,3114 @@
+diff --git a/README.md b/README.md
+index cd98616..cfa88ec 100644
+--- a/README.md
++++ b/README.md
+@@ -199,7 +199,7 @@ HTTP 经隧道出口时，SDK 在隧道内为映射后的真实目标建立独
+ 已知下载域名、`/depot/`、`/client/` 和下载文件后缀在发送前分类；
+ Cloudflare Worker 与普通 EdgeOne HTTP CDN 不承载这类已识别下载。
+ HTTP 请求可能开始发送后不跨候选重放，包括 GET、429、403、404 和服务器错误。
+-同一个下游 H2 连接内的请求分别选路；上游池按出口、实例 generation、TLS 身份、
++同一个下游 H2 连接内的请求分别选路；上游池按出口、网络 generation、TLS 身份、
+ authority、端口、ALPN 和 connector 隔离。
+ 当前 Pingora 版本的池复用要求真实 socket 描述符，因此 HTTP 直连和 HTTP 隧道在
+ 首次业务连接时创建实例私有的回环 socket 桥接，TLS 仍以映射后的原站域名验证。
+@@ -213,8 +213,24 @@ authority、端口、ALPN 和 connector 隔离。
+ 后台探测约每 15 秒进行一次，带 ±20% 抖动，连续三次接入失败后隔离；
+ 不可用候选按 15/30/60/120 秒退避，连续两次成功恢复，接入证据超过 60 秒不再使用。
+ TCP 探测不会清除证书、凭据隔离或目标冷却。
+-没有新增网络变化控制 API；generation 以实例重建为边界，宿主在网络切换后可使用
+-`restart` 重建。关闭会取消探测并收敛任务、连接和池。
++实例在启动和运行中观察本机网络身份，变化后取消并等待旧探测，推进 generation，
++重建出口与直连地址历史，重新检查接入点和 C 的本地准备。新操作不复用旧代池或 DNS
++结果；尚未提交的获取和排队会取消，已提交的流继续使用原出口，不迁移或重放。
++证书/凭据隔离及尚未到期的目标冷却保留，TCP 成功不会清除它们。
++
++默认每秒读取本机快照，不连接任何检测目标：Linux 使用 `/proc/net` 路由、地址表及
++`/etc/resolv.conf`；macOS 使用本机 `route`、`ifconfig` 的网关、接口和地址信息。
++这能观察这些字段的变化，不能保证检测同网关同地址的 Wi-Fi 切换、所有 VPN/DNS
++配置或短于轮询间隔的变化。其他平台默认未接入。宿主的 `TcpDialer` 可覆盖
++`network_revision()`，返回稳定身份或 `None`（暂不可读/不支持）；该方法必须可取消，
++不能访问业务目标。身份只在内存比较，不对外输出。没有新增切线控制 API，公开配置
++和 `start` / `serve_connection` / `close` / `restart` 签名不变。
++关闭/重启会取消并等待观察、探测及资源回收任务。旧代活动资源随流结束回收；
++关闭实例则统一终止所有流并释放池。
++
++Rust 与独立 Go 的内部接入健康均维护最多 256 个、最近 60 秒的探测完成/成功样本，
++取消单独计数；业务接入反馈不进入探测成功率。`dial_elapsed` 是拨号总成本而非 RTT
++或丢包率。当前这些窗口供内部状态使用，未接入公开状态或诊断导出接口。
+ 
+ `restart` 先离线校验新配置，失败时旧实例继续运行；旧实例关闭失败时保留旧句柄。
+ 关闭成功后替换为新的实例再启动，新启动失败会返回错误并保留新实例的清理状态，
+diff --git a/bindings/go/README.md b/bindings/go/README.md
+index 8dd50d3..6c02f5a 100644
+--- a/bindings/go/README.md
++++ b/bindings/go/README.md
+@@ -58,7 +58,7 @@ sdk, err := steamproxy.NewFactory(steamproxy.Dependencies{
+ 
+ Relay 固定属于 A，其他 HTTP 反代 backend 属于 B；然后是 C 直连和 D 隧道。A/B 使用同一个反代协议流程，不按域名猜测 backend。原始 TCP 会过滤 HTTP 反代；HTTP 可经 C 或 D，D 复用已有 WSS、VLESS/XHTTP、SS 实现。此 Go 版本尚无 `EdgeOneWebSocket` 反代 backend，不把它冒充为 HTTP backend；WebSocket 隧道仍通过 `wss://` 节点配置。
+ 
+-每个实际 HTTP 请求独立选路，下游 H2 或 keepalive 不会固定整条连接的出口。同层优先连续接入失败最少的候选，比较探测 `dial_elapsed` 的 EWMA（新样本 0.2、旧值 0.8），在最快值的 120% 内按目标域名和会话稳定哈希。连接失败先遍历剩余同层候选，再降层；B 再快也不会越过可用 A。已知下载（Steam content/steampipe 域名、`/depot/`、`/steamcontent/` 或 Range 请求）在提交前跳过 CDN 层，响应状态不重新解释本次路由。
++每个实际 HTTP 请求独立选路，下游 H2 或 keepalive 不会固定整条连接的出口。同层优先连续接入失败最少的候选，比较探测 `dial_elapsed` 的 EWMA（新样本 0.2、旧值 0.8），在最快值的 120% 内按目标域名和会话稳定哈希。连接失败先遍历剩余同层候选，再降层；B 再快也不会越过可用 A。已知下载（Steam content/steampipe 域名、`/depot/`、`/steamcontent/` 或 Range 请求）在提交前跳过 CloudflareWorker 和 EdgeOne；EdgeOneOrigin、Relay、C 和 D 保留实际载荷资格，响应状态不重新解释本次路由。
+ 
+ `Runtime.ConnectTimeout` 是一次 Attempt 的共同预算：DNS、地址轮换、TCP、TLS、隧道握手、候选回退和响应头都使用剩余时间。只有业务提交前可以换候选。开始 HTTP 交换后不会重试，即使 GET、幂等键、H2 reset、GOAWAY 或已复用连接突然关闭，也直接返回结果；429 原样返回。HTTP/1 使用固定连接执行一次写入/读取；H2 直接调用选中连接的 `ClientConn.RoundTrip`，避开 `http.Transport` 的请求重试循环。XHTTP 数据上传禁用 `GetBody` 重建，已有流和升级不会跨出口重放。
+ 
+@@ -72,7 +72,13 @@ C 不会在启动或后台连接原站。实际请求才解析白名单映射后
+ 
+ `Start` 收齐资格前不接收业务。启动总预算 15 秒，独立 probe 单次 3 秒、最多并发 3。它只通过宿主 `Dialer.DialContext` 连接配置接入地址并立即关闭，不经反代或隧道，不发 GET/HEAD，不携带 Steam 目标。相同接入点共享可达性证据，凭据和目标冷却仍按出口隔离。部分节点失败不影响其他可用候选；只有 C 的合法配置可以零原站连接启动；所有兼容候选不可用时返回 `ErrNoAvailableRoute` 并清理。
+ 
+-后台正常约每 15 秒、±20% 抖动探测；每接入点最多一个在途任务。连续三次接入失败隔离，退避约 15/30/60/120 秒，连续两次成功恢复；超过 60 秒没有有效接入证据会失去资格。资格只有 Available/Unavailable。TCP 成功不会清除确定的外层 TLS/凭据错误或目标冷却；业务 HTTP 状态不会算作接入失败。取消和关闭不计故障，迟到反馈会校验 generation。`dial_elapsed` 包含 DNS 等成本，不称为 TCP RTT。更换网络时调用方可通过 Restart 创建新的 generation，旧证据和旧池随旧会话关闭。
++后台正常约每 15 秒、±20% 抖动探测；每接入点最多一个在途任务。连续三次接入失败隔离，退避约 15/30/60/120 秒，连续两次成功恢复；超过 60 秒没有有效接入证据会失去资格。资格只有 Available/Unavailable。TCP 成功不会清除确定的外层 TLS/凭据错误或目标冷却；业务 HTTP 状态不会算作接入失败。取消和关闭不计故障，迟到反馈会校验 generation。`dial_elapsed` 包含 DNS 等成本，不称为 TCP RTT。
++
++同一会话在启动和运行中每秒观察本机网络身份。Linux 读取本机接口/地址、`/proc/net/route`、`ipv6_route` 和 `resolv.conf`；macOS 读取接口/地址及本机 `route` 的默认网关。变化会取消并等待旧探测、取消未提交获取/排队，创建新 generation 的出口、本地 C 与接入记录，清空直连地址历史，隔离并回收旧池。已提交的 TCP/HTTP 流保留，不迁移或重放；旧 H2 连接只有活动流结束后才回收。证书/凭据隔离和未过期的目标冷却跨网络保留。
++
++自定义 `Dependencies.Dialer` 可实现 `NetworkObserver.NetworkRevision(ctx)`，交付稳定的本机网络身份；必须遵守 ctx，不能主动连接业务目标。返回错误表示本次不可读，保留上次身份。未实现时使用上述本机默认观察。其他平台默认未接入；同地址/同网关切换、所有 VPN/DNS 变化和短于轮询周期的变化不保证检测。身份只在内存比较，不输出网络详情。公开配置和 Start/ServeConnection/Close/Restart 不变；Close/Restart 取消并等待观察、探测、排队与旧代出口回收。
++
++实际探测记录维护每接入点/当前 generation 最近 60 秒的 completed/success 样本，最多 256 条；取消单列，失败和超时才进入完成分母，业务接入反馈不混入探测比例。样本随时间过期、网络变化重置，EWMA 只使用成功探测的真实拨号耗时。这些统计与 Rust 一样仍在内部健康存储，未接入公开 Status/诊断导出，不表示 RTT、丢包率或业务成功率。
+ 
+ 后台按最早到期顺序公平调度，最多三个接入点同时探测；每次完成立即补充已到期任务，隔离节点的恢复不会被健康节点持续挤出。SDK 自有连接预算耗尽属于接入失败，调用方取消、调用方 deadline 或会话关闭不算接入故障。WSS/VLESS 的底层物理拨号与 TLS 握手显式保留 Attempt 的取消和 deadline，不依赖 HTTP transport 的分离拨号 context；Close 会等待这些拨号退出。VLESS 下载和上传路径上的外层 TLS、401/403 错误都会隔离对应出口。
+ 
+diff --git a/bindings/go/http.go b/bindings/go/http.go
+index a866b14..53b145f 100644
+--- a/bindings/go/http.go
++++ b/bindings/go/http.go
+@@ -7,6 +7,7 @@ import (
+ 	"io"
+ 	"net"
+ 	"net/http"
++	"net/http/httptrace"
+ 	"net/http/httputil"
+ 	"strconv"
+ 	"strings"
+@@ -111,6 +112,19 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+ 		return nil, err
+ 	}
+ 	requestCtx, cancelRequest := context.WithCancel(ctx)
++	var releaseOnce sync.Once
++	releaseConnection := func() {
++		releaseOnce.Do(func() {
++			if conn.client != nil {
++				conn.users.Add(-1)
++			}
++		})
++	}
++	stopNetwork := func() bool { return true }
++	if selected.ctx != nil {
++		stopNetwork = context.AfterFunc(selected.ctx, cancelRequest)
++	}
++	defer stopNetwork()
+ 	stop := context.AfterFunc(ctx, func() {
+ 		cancelRequest()
+ 		if conn.client == nil || !conn.retained {
+@@ -121,6 +135,7 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+ 	var writer *http1Writer
+ 	var requestBody io.ReadCloser
+ 	cleanup := func() {
++		defer releaseConnection()
+ 		stop()
+ 		stopBody()
+ 		cancelRequest()
+@@ -182,8 +197,29 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+ 		out.Host = out.URL.Host
+ 	}
+ 	var response *http.Response
++	releaseHeaders := func() {}
++	if conn.client != nil {
++		releaseHeaders, err = conn.acquireHeaders(requestCtx)
++		if err != nil {
++			if attempt.Err() != nil {
++				err = attempt.Err()
++			}
++			cleanup()
++			return nil, err
++		}
++		defer releaseHeaders()
++	}
++	if err := m.commitRequest(requestCtx, selected, stopNetwork); err != nil {
++		releaseHeaders()
++		cleanup()
++		return nil, err
++	}
+ 	if conn.client != nil {
++		out = out.WithContext(httptrace.WithClientTrace(out.Context(), &httptrace.ClientTrace{
++			WroteHeaders: releaseHeaders,
++		}))
+ 		response, err = conn.client.RoundTrip(out)
++		releaseHeaders()
+ 	} else {
+ 		writer = &http1Writer{done: make(chan struct{})}
+ 		go func() {
+@@ -210,7 +246,8 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+ 	}
+ 	if err != nil {
+ 		m.healthMu.Lock()
+-		if ctx.Err() == nil && attempt.Err() == nil && conn.key.generation == m.generation {
++		if ctx.Err() == nil && requestCtx.Err() == nil && attempt.Err() == nil && conn.key.generation == m.generation &&
++			(selected.ctx == nil || selected.ctx.Err() == nil) {
+ 			if errors.Is(err, errExitIdentity) {
+ 				selected.blocked = true
+ 			} else {
+@@ -221,6 +258,8 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+ 		var result error = errors.New("steamproxy: HTTP exchange failed after route commitment")
+ 		if ctx.Err() != nil {
+ 			result = ctx.Err()
++		} else if requestCtx.Err() != nil {
++			result = requestCtx.Err()
+ 		} else if attempt.Err() != nil {
+ 			result = attempt.Err()
+ 		}
+@@ -251,6 +290,7 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+ 		}
+ 	}
+ 	body.done = func() {
++		defer releaseConnection()
+ 		stopped := stop()
+ 		stopBody()
+ 		active := ctx.Err() == nil
+diff --git a/bindings/go/mode.go b/bindings/go/mode.go
+index 8670101..7d6521a 100644
+--- a/bindings/go/mode.go
++++ b/bindings/go/mode.go
+@@ -202,24 +202,29 @@ type Mode struct {
+ }
+ 
+ type session struct {
+-	operation    sync.Mutex
+-	mu           sync.Mutex
+-	config       Config
+-	dependencies Dependencies
+-	state        State
+-	ctx          context.Context
+-	cancel       context.CancelFunc
+-	stopOnCancel func() bool
+-	identities   *identityCache
+-	resources    map[io.Closer]struct{}
+-	work         sync.WaitGroup
+-	routes       []*route
+-	healthMu     sync.Mutex
+-	generation   uint64
+-	seed         uint64
+-	probes       *probeRunner
+-	pool         connectionPool
+-	stopping     bool
++	operation            sync.Mutex
++	mu                   sync.Mutex
++	config               Config
++	dependencies         Dependencies
++	state                State
++	ctx                  context.Context
++	cancel               context.CancelFunc
++	stopOnCancel         func() bool
++	identities           *identityCache
++	resources            map[io.Closer]struct{}
++	work                 sync.WaitGroup
++	routes               []*route
++	healthMu             sync.Mutex
++	generation           uint64
++	seed                 uint64
++	probes               *probeRunner
++	pool                 connectionPool
++	stopping             bool
++	networkCtx           context.Context
++	networkCancel        context.CancelFunc
++	networkRevisionValue string
++	changes              chan string
++	retired              []*route
+ }
+ 
+ // Start prepares protocol clients. It creates no listener, device or CA files.
+@@ -243,12 +248,42 @@ func (m *session) Start(ctx context.Context) error {
+ 	}
+ 	m.state = Starting
+ 	m.ctx, m.cancel = context.WithCancel(ctx)
++	m.networkCtx, m.networkCancel = context.WithCancel(m.ctx)
++	for _, candidate := range m.routes {
++		candidate.ctx = m.networkCtx
++	}
++	m.changes = make(chan string, 1)
+ 	if m.config.payload() == PayloadHTTP {
+ 		m.identities = newIdentityCache(m.ctx, m.dependencies)
+ 	}
+ 	m.mu.Unlock()
+ 	startup, cancel := context.WithTimeout(m.ctx, 15*time.Second)
+-	m.probeBatch(startup, true)
++	observe, stopObserve := context.WithTimeout(startup, 4*time.Second)
++	m.networkRevisionValue, _ = m.networkRevision(observe)
++	stopObserve()
++	m.work.Add(1)
++	go func() { defer m.work.Done(); m.watchNetwork() }()
++	for {
++		batch, stopBatch := context.WithCancel(startup)
++		finished := make(chan struct{})
++		go func() { defer close(finished); m.probeBatch(batch, true) }()
++		changed := false
++		select {
++		case <-finished:
++		case <-m.changes:
++			changed = true
++		case <-startup.Done():
++		}
++		stopBatch()
++		<-finished
++		if !changed || startup.Err() != nil {
++			break
++		}
++		if err := m.resetNetwork(); err != nil {
++			cancel()
++			return m.failStart(err)
++		}
++	}
+ 	cancel()
+ 	if err := m.ctx.Err(); err != nil {
+ 		return m.failStart(err)
+@@ -366,7 +401,7 @@ func (m *session) Connect(ctx context.Context, host string, port uint16) (net.Co
+ 		return nil, err
+ 	}
+ 	m.healthMu.Lock()
+-	generation := m.generation
++	generation := selected.generation
+ 	m.healthMu.Unlock()
+ 	return m.track(&businessConnection{Conn: conn, session: m, route: selected,
+ 		target: host, generation: generation})
+@@ -402,8 +437,9 @@ func (m *session) Close() error {
+ 		}
+ 	}
+ 	m.pool.close()
+-	err = errors.Join(err, m.closeRoutes())
+ 	m.work.Wait()
++	err = errors.Join(err, m.closeRoutes())
++	err = errors.Join(err, m.reapRoutes(true))
+ 	if m.identities != nil {
+ 		m.identities.clear()
+ 	}
+diff --git a/bindings/go/network_change.go b/bindings/go/network_change.go
+new file mode 100644
+index 0000000..48fbf55
+--- /dev/null
++++ b/bindings/go/network_change.go
+@@ -0,0 +1,178 @@
++package steamproxy
++
++import (
++	"context"
++	"errors"
++	"net"
++	"os"
++	"os/exec"
++	"runtime"
++	"slices"
++	"strings"
++	"time"
++)
++
++// NetworkObserver may be implemented by a host Dialer to supply a stable local
++// network revision. It must honor ctx and must not probe business destinations.
++type NetworkObserver interface {
++	NetworkRevision(context.Context) (string, error)
++}
++
++func localNetworkRevision(ctx context.Context) (string, error) {
++	var snapshot []string
++	interfaces, err := net.Interfaces()
++	if err != nil {
++		return "", err
++	}
++	for _, link := range interfaces {
++		addresses, err := link.Addrs()
++		if err != nil {
++			return "", err
++		}
++		snapshot = append(snapshot, link.Name+":"+link.Flags.String())
++		for _, address := range addresses {
++			snapshot = append(snapshot, link.Name+":"+address.String())
++		}
++	}
++	switch runtime.GOOS {
++	case "linux":
++		for _, path := range []string{"/proc/net/route", "/proc/net/ipv6_route", "/etc/resolv.conf"} {
++			data, err := os.ReadFile(path)
++			if err != nil {
++				return "", err
++			}
++			for _, line := range strings.Split(string(data), "\n") {
++				fields := strings.Fields(line)
++				if path == "/proc/net/route" && len(fields) >= 8 {
++					line = strings.Join([]string{fields[0], fields[1], fields[2], fields[3], fields[6], fields[7]}, " ")
++				}
++				if path == "/proc/net/ipv6_route" && len(fields) >= 10 {
++					line = strings.Join(append(fields[:6:6], fields[8:]...), " ")
++				}
++				snapshot = append(snapshot, line)
++			}
++		}
++	case "darwin":
++		for _, args := range [][]string{{"-n", "get", "default"}, {"-n", "get", "-inet6", "default"}} {
++			data, err := exec.CommandContext(ctx, "/sbin/route", args...).Output()
++			if err != nil && ctx.Err() != nil {
++				return "", ctx.Err()
++			}
++			for _, line := range strings.Split(string(data), "\n") {
++				line = strings.TrimSpace(line)
++				if strings.HasPrefix(line, "gateway:") || strings.HasPrefix(line, "interface:") {
++					snapshot = append(snapshot, line)
++				}
++			}
++		}
++	default:
++		return "", errors.New("steamproxy: local network observer unavailable")
++	}
++	slices.Sort(snapshot)
++	return strings.Join(snapshot, "\n"), ctx.Err()
++}
++
++func (m *session) networkRevision(ctx context.Context) (string, error) {
++	if source, ok := m.dependencies.Dialer.(NetworkObserver); ok {
++		return source.NetworkRevision(ctx)
++	}
++	return localNetworkRevision(ctx)
++}
++
++func (m *session) watchNetwork() {
++	ticker := time.NewTicker(time.Second)
++	defer ticker.Stop()
++	previous := m.networkRevisionValue
++	for {
++		select {
++		case <-m.ctx.Done():
++			return
++		case <-ticker.C:
++		}
++		ctx, cancel := context.WithTimeout(m.ctx, 4*time.Second)
++		revision, err := m.networkRevision(ctx)
++		cancel()
++		if err != nil || revision == previous {
++			continue
++		}
++		previous = revision
++		select {
++		case <-m.changes:
++		default:
++		}
++		select {
++		case m.changes <- revision:
++		case <-m.ctx.Done():
++			return
++		}
++	}
++}
++
++func (m *session) resetNetwork() error {
++	m.healthMu.Lock()
++	m.networkCancel()
++	m.healthMu.Unlock()
++	next := &session{config: m.config, dependencies: m.dependencies}
++	if err := next.prepareRoutes(); err != nil {
++		return errors.Join(err, next.closeRoutes())
++	}
++	m.healthMu.Lock()
++	m.networkCtx, m.networkCancel = context.WithCancel(m.ctx)
++	for index, replacement := range next.routes {
++		replacement.ctx = m.networkCtx
++		replacement.blocked = m.routes[index].blocked
++		for host, until := range m.routes[index].cooldowns {
++			if time.Now().Before(until) {
++				replacement.cooldowns[host] = until
++			}
++		}
++	}
++	m.retired = append(m.retired, m.routes...)
++	m.routes, m.generation = next.routes, next.generation
++	m.healthMu.Unlock()
++	m.pool.advance(next.generation)
++	m.reapRoutes(false)
++	return nil
++}
++
++func (m *session) commitRequest(ctx context.Context, candidate *route, stopNetwork func() bool) error {
++	m.healthMu.Lock()
++	defer m.healthMu.Unlock()
++	if candidate.generation != m.generation || (candidate.ctx != nil && candidate.ctx.Err() != nil) {
++		return context.Canceled
++	}
++	if err := ctx.Err(); err != nil {
++		return err
++	}
++	if !stopNetwork() {
++		return context.Canceled
++	}
++	return nil
++}
++
++func (m *session) reapRoutes(all bool) error {
++	m.healthMu.Lock()
++	var closing []*route
++	retained := m.retired[:0]
++	for _, candidate := range m.retired {
++		if all || candidate.users.Load() == 0 {
++			closing = append(closing, candidate)
++		} else {
++			retained = append(retained, candidate)
++		}
++	}
++	m.retired = retained
++	m.healthMu.Unlock()
++	var result error
++	for _, candidate := range closing {
++		if candidate.tunnel != nil {
++			if err := candidate.tunnel.Close(); err != nil {
++				result = errors.Join(result, err)
++				m.healthMu.Lock()
++				m.retired = append(m.retired, candidate)
++				m.healthMu.Unlock()
++			}
++		}
++	}
++	return result
++}
+diff --git a/bindings/go/network_change_test.go b/bindings/go/network_change_test.go
+new file mode 100644
+index 0000000..5aade5e
+--- /dev/null
++++ b/bindings/go/network_change_test.go
+@@ -0,0 +1,212 @@
++package steamproxy
++
++import (
++	"context"
++	"errors"
++	"io"
++	"net"
++	"net/netip"
++	"sync/atomic"
++	"testing"
++	"testing/synctest"
++	"time"
++)
++
++type networkDialer struct {
++	revision atomic.Uint64
++	reads    atomic.Uint64
++	dial     Dialer
++}
++
++func (d *networkDialer) NetworkRevision(ctx context.Context) (string, error) {
++	d.reads.Add(1)
++	return string(rune('a' + d.revision.Load())), ctx.Err()
++}
++
++func (d *networkDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
++	return d.dial.DialContext(ctx, network, address)
++}
++
++func TestNetworkChangeDirectOnlyKeepsStreamAndClearsHistoryAndStopsObserver(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		var calls atomic.Uint64
++		var peer net.Conn
++		source := &networkDialer{dial: testDialer(func(_ context.Context, _, address string) (net.Conn, error) {
++			if address != "192.0.2.1:443" {
++				t.Errorf("unexpected active probe: %s", address)
++			}
++			calls.Add(1)
++			client, remote := net.Pipe()
++			peer = remote
++			return client, nil
++		})}
++		mode, err := NewFactory(Dependencies{Dialer: source, Resolver: testResolver(
++			func(context.Context, string, string) ([]netip.Addr, error) {
++				return []netip.Addr{netip.MustParseAddr("192.0.2.1")}, nil
++			})}).Create(directConfig(PayloadTCP))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err := mode.Start(t.Context()); err != nil {
++			t.Fatal(err)
++		}
++		old := mode.routes[0]
++		stream, err := mode.Connect(t.Context(), "example.test", 443)
++		if err != nil {
++			t.Fatal(err)
++		}
++		defer peer.Close()
++		generation := mode.generation
++		mode.healthMu.Lock()
++		old.cooldowns["other.test"] = time.Now().Add(time.Minute)
++		mode.healthMu.Unlock()
++		source.revision.Store(1)
++		time.Sleep(2 * time.Second)
++		synctest.Wait()
++		mode.healthMu.Lock()
++		if mode.generation == generation || len(mode.routes[0].direct) != 0 ||
++			mode.routes[0].cooldowns["other.test"].IsZero() || old.ctx.Err() == nil {
++			t.Error("network did not reset only network evidence")
++		}
++		next := mode.generation
++		mode.healthMu.Unlock()
++		written := make(chan error, 1)
++		go func() { _, err := peer.Write([]byte("ok")); written <- err }()
++		buffer := make([]byte, 2)
++		if _, err := io.ReadFull(stream, buffer); err != nil || string(buffer) != "ok" {
++			t.Fatalf("old stream migrated or stopped: %v", err)
++		}
++		if err := <-written; err != nil {
++			t.Fatal(err)
++		}
++		time.Sleep(2 * time.Second)
++		synctest.Wait()
++		if mode.generation != next || calls.Load() != 1 {
++			t.Fatal("duplicate event or C actively probed origin")
++		}
++		mode.businessFailure(old, "example.test", generation, errExitIdentity)
++		if mode.routes[0].blocked {
++			t.Fatal("old feedback isolated current generation")
++		}
++		if err := mode.Close(); err != nil {
++			t.Fatal(err)
++		}
++		reads := source.reads.Load()
++		time.Sleep(2 * time.Second)
++		synctest.Wait()
++		if reads != source.reads.Load() || old.users.Load() != 0 {
++			t.Fatal("close retained observer or stream")
++		}
++	})
++}
++
++func TestNetworkChangeDuringStartDrainsOldProbeAndPreservesIsolation(t *testing.T) {
++	if !compiledReverse {
++		t.Skip("requires reverse_proxy")
++	}
++	synctest.Test(t, func(t *testing.T) {
++		var calls, active atomic.Int64
++		source := &networkDialer{}
++		source.dial = testDialer(func(ctx context.Context, _, address string) (net.Conn, error) {
++			if address != "relay.example.test:443" {
++				t.Errorf("probe escaped access endpoint: %s", address)
++			}
++			if calls.Add(1) == 1 {
++				active.Add(1)
++				defer active.Add(-1)
++				<-ctx.Done()
++				return nil, ctx.Err()
++			}
++			return probeOnlyDialer().DialContext(ctx, "tcp", address)
++		})
++		mode, err := NewFactory(Dependencies{Dialer: source}).Create(reverseConfig())
++		if err != nil {
++			t.Fatal(err)
++		}
++		old := mode.routes[0]
++		old.blocked = true
++		old.cooldowns["other.test"] = time.Now().Add(time.Minute)
++		started := make(chan error, 1)
++		go func() { started <- mode.Start(t.Context()) }()
++		synctest.Wait()
++		source.revision.Store(1)
++		time.Sleep(2 * time.Second)
++		synctest.Wait()
++		if err := <-started; !errors.Is(err, ErrNoAvailableRoute) {
++			t.Fatalf("credential isolation lost at startup: %v", err)
++		}
++		if active.Load() != 0 || calls.Load() != 2 || mode.routes[0].generation == old.generation ||
++			!mode.routes[0].blocked || mode.routes[0].cooldowns["other.test"].IsZero() {
++			t.Fatal("startup did not drain/recheck while retaining business isolation")
++		}
++		if err := mode.Close(); err != nil {
++			t.Fatal(err)
++		}
++	})
++}
++
++func TestRequestCommitOrdersNetworkInvalidationWithoutHoldingLockDuringWrite(t *testing.T) {
++	for _, before := range []bool{true, false} {
++		name := "after-commit"
++		if before {
++			name = "before-commit"
++		}
++		t.Run(name, func(t *testing.T) {
++			network, invalidate := context.WithCancel(t.Context())
++			defer invalidate()
++			ctx, cancel := context.WithCancel(t.Context())
++			defer cancel()
++			stop := context.AfterFunc(network, cancel)
++			defer stop()
++			candidate := &route{generation: 1, ctx: network}
++			session := &session{generation: 1}
++			if before {
++				invalidate()
++			}
++			err := session.commitRequest(ctx, candidate, stop)
++			if before {
++				if !errors.Is(err, context.Canceled) {
++					t.Fatalf("invalidated request could write: %v", err)
++				}
++				return
++			}
++			if err != nil {
++				t.Fatal(err)
++			}
++			session.healthMu.Lock()
++			invalidate()
++			session.healthMu.Unlock()
++			if ctx.Err() != nil {
++				t.Fatal("committed request canceled by network invalidation")
++			}
++			client, peer := net.Pipe()
++			defer client.Close()
++			defer peer.Close()
++			written := make(chan error, 1)
++			go func() { _, err := client.Write([]byte("sent")); written <- err }()
++			session.healthMu.Lock()
++			session.healthMu.Unlock()
++			buffer := make([]byte, 4)
++			if _, err := io.ReadFull(peer, buffer); err != nil {
++				t.Fatal(err)
++			}
++			if err := <-written; err != nil {
++				t.Fatal(err)
++			}
++		})
++	}
++}
++
++func TestHTTP2HeaderQueueCancellationDoesNotEnterCommit(t *testing.T) {
++	conn := &upstreamConnection{}
++	conn.headerOnce.Do(func() { conn.headerGate = make(chan struct{}, 1) })
++	conn.headerGate <- struct{}{}
++	ctx, cancel := context.WithCancel(t.Context())
++	finished := make(chan error, 1)
++	go func() { _, err := conn.acquireHeaders(ctx); finished <- err }()
++	cancel()
++	if err := <-finished; !errors.Is(err, context.Canceled) {
++		t.Fatalf("queue ignored cancellation: %v", err)
++	}
++	<-conn.headerGate
++}
+diff --git a/bindings/go/pool.go b/bindings/go/pool.go
+index 3e7c83c..7090286 100644
+--- a/bindings/go/pool.go
++++ b/bindings/go/pool.go
+@@ -6,6 +6,7 @@ import (
+ 	"crypto/tls"
+ 	"net"
+ 	"sync"
++	"sync/atomic"
+ 	"time"
+ 
+ 	"golang.org/x/net/http2"
+@@ -22,19 +23,48 @@ type poolKey struct {
+ 
+ type upstreamConnection struct {
+ 	net.Conn
+-	key      poolKey
+-	client   *http2.ClientConn
+-	reader   *bufio.Reader
+-	protocol string
+-	idle     time.Time
+-	retained bool
+-	tlsState *tls.ConnectionState
++	key        poolKey
++	client     *http2.ClientConn
++	reader     *bufio.Reader
++	protocol   string
++	idle       time.Time
++	retained   bool
++	tlsState   *tls.ConnectionState
++	headerGate chan struct{}
++	headerOnce sync.Once
++	users      atomic.Int64
++}
++
++func (c *upstreamConnection) acquireHeaders(ctx context.Context) (func(), error) {
++	c.headerOnce.Do(func() { c.headerGate = make(chan struct{}, 1) })
++	ticker := time.NewTicker(5 * time.Millisecond)
++	defer ticker.Stop()
++	for {
++		select {
++		case c.headerGate <- struct{}{}:
++		case <-ctx.Done():
++			return nil, ctx.Err()
++		}
++		var once sync.Once
++		release := func() { once.Do(func() { <-c.headerGate }) }
++		if c.client.CanTakeNewRequest() {
++			return release, nil
++		}
++		release()
++		select {
++		case <-ctx.Done():
++			return nil, ctx.Err()
++		case <-ticker.C:
++		}
++	}
+ }
+ 
+ type connectionPool struct {
+-	mu     sync.Mutex
+-	idle   map[poolKey][]*upstreamConnection
+-	closed bool
++	mu         sync.Mutex
++	idle       map[poolKey][]*upstreamConnection
++	closed     bool
++	generation uint64
++	retired    []*upstreamConnection
+ }
+ 
+ func (m *session) connectionKey(ctx context.Context, r *route, host string, port uint16, secure bool) poolKey {
+@@ -47,9 +77,7 @@ func (m *session) connectionKey(ctx context.Context, r *route, host string, port
+ 	if m.config.http1Only(host) || http1FromContext(ctx) {
+ 		alpn = "http/1.1"
+ 	}
+-	m.healthMu.Lock()
+-	generation := m.generation
+-	m.healthMu.Unlock()
++	generation := r.generation
+ 	return poolKey{route: r.id, generation: generation, tlsName: m.tlsName(r, host),
+ 		authority: authority, port: port, alpn: alpn, connector: r.mode.Kind.String(),
+ 		secure: secure || r.tier < 2}
+@@ -58,12 +86,16 @@ func (m *session) connectionKey(ctx context.Context, r *route, host string, port
+ func (p *connectionPool) take(key poolKey) *upstreamConnection {
+ 	p.mu.Lock()
+ 	defer p.mu.Unlock()
++	if p.closed || (p.generation != 0 && key.generation != p.generation) {
++		return nil
++	}
+ 	group := p.idle[key]
+ 	for index := len(group) - 1; index >= 0; index-- {
+ 		conn := group[index]
+-		if conn.client != nil && !conn.client.State().Closed {
++		if conn.client != nil {
+ 			if conn.client.CanTakeNewRequest() {
+ 				conn.idle = time.Now()
++				conn.users.Add(1)
+ 				return conn
+ 			}
+ 			continue
+@@ -84,14 +116,19 @@ func (p *connectionPool) take(key poolKey) *upstreamConnection {
+ func (p *connectionPool) expire(now time.Time) {
+ 	p.mu.Lock()
+ 	var expired []*upstreamConnection
++	retainedOld := p.retired[:0]
++	for _, conn := range p.retired {
++		if conn.users.Load() == 0 {
++			expired = append(expired, conn)
++		} else {
++			retainedOld = append(retainedOld, conn)
++		}
++	}
++	p.retired = retainedOld
+ 	for key, group := range p.idle {
+ 		var retained []*upstreamConnection
+ 		for _, conn := range group {
+-			active := false
+-			if conn.client != nil {
+-				state := conn.client.State()
+-				active = state.StreamsActive > 0 || state.StreamsPending > 0 || state.StreamsReserved > 0
+-			}
++			active := conn.users.Load() > 0
+ 			if now.Sub(conn.idle) >= 90*time.Second && !active {
+ 				expired = append(expired, conn)
+ 			} else {
+@@ -119,6 +156,16 @@ func (p *connectionPool) put(conn *upstreamConnection) {
+ func (p *connectionPool) admit(conn *upstreamConnection) bool {
+ 	p.mu.Lock()
+ 	defer p.mu.Unlock()
++	if !p.closed {
++		for _, retired := range p.retired {
++			if retired == conn {
++				return true
++			}
++		}
++	}
++	if p.closed || (p.generation != 0 && conn.key.generation != p.generation) {
++		return false
++	}
+ 	total := 0
+ 	for _, connections := range p.idle {
+ 		total += len(connections)
+@@ -147,8 +194,13 @@ func (p *connectionPool) close() {
+ 	p.mu.Lock()
+ 	p.closed = true
+ 	connections := p.idle
++	retired := p.retired
++	p.retired = nil
+ 	p.idle = nil
+ 	p.mu.Unlock()
++	for _, conn := range retired {
++		conn.Close()
++	}
+ 	for _, group := range connections {
+ 		for _, conn := range group {
+ 			conn.Close()
+@@ -156,6 +208,29 @@ func (p *connectionPool) close() {
+ 	}
+ }
+ 
++func (p *connectionPool) advance(generation uint64) {
++	p.mu.Lock()
++	p.generation = generation
++	var expired []*upstreamConnection
++	for key, group := range p.idle {
++		if key.generation == generation {
++			continue
++		}
++		delete(p.idle, key)
++		for _, conn := range group {
++			if conn.client != nil && conn.users.Load() > 0 {
++				p.retired = append(p.retired, conn)
++				continue
++			}
++			expired = append(expired, conn)
++		}
++	}
++	p.mu.Unlock()
++	for _, conn := range expired {
++		conn.Close()
++	}
++}
++
+ func (m *session) connectHTTP(ctx context.Context, host string, port uint16, useTLS, download bool) (*upstreamConnection, *route, error) {
+ 	conn, r, err := m.connectRoute(ctx, host, port, useTLS, download)
+ 	if err != nil {
+@@ -164,9 +239,21 @@ func (m *session) connectHTTP(ctx context.Context, host string, port uint16, use
+ 	if pooled, ok := conn.(*upstreamConnection); ok {
+ 		return pooled, r, nil
+ 	}
++	acquiring, cancelAcquiring := context.WithCancel(ctx)
++	stopNetwork := func() bool { return true }
++	if r.ctx != nil {
++		stopNetwork = context.AfterFunc(r.ctx, cancelAcquiring)
++	}
++	defer stopNetwork()
++	defer cancelAcquiring()
++	ctx = acquiring
+ 	protocol := ""
+ 	var tlsState *tls.ConnectionState
+-	if secure, ok := conn.(*tls.Conn); ok {
++	tlsConnection := conn
++	if owned, ok := conn.(*routeConnection); ok {
++		tlsConnection = owned.Conn
++	}
++	if secure, ok := tlsConnection.(*tls.Conn); ok {
+ 		state := secure.ConnectionState()
+ 		tlsState = &state
+ 		protocol = state.NegotiatedProtocol
+@@ -185,7 +272,7 @@ func (m *session) connectHTTP(ctx context.Context, host string, port uint16, use
+ 				return nil, nil, err
+ 			}
+ 		}
+-		pooled.client, err = (&http2.Transport{DisableCompression: true, StrictMaxConcurrentStreams: true}).NewClientConn(conn)
++		pooled.client, err = (&http2.Transport{DisableCompression: true}).NewClientConn(conn)
+ 		if !stop() || ctx.Err() != nil || err != nil {
+ 			conn.Close()
+ 			if ctx.Err() != nil {
+@@ -197,6 +284,7 @@ func (m *session) connectHTTP(ctx context.Context, host string, port uint16, use
+ 			conn.Close()
+ 			return nil, nil, err
+ 		}
++		pooled.users.Add(1)
+ 		m.pool.admit(pooled)
+ 	} else {
+ 		pooled.reader = bufio.NewReader(conn)
+diff --git a/bindings/go/pool_concurrency_test.go b/bindings/go/pool_concurrency_test.go
+index 8d4e40a..9b6459f 100644
+--- a/bindings/go/pool_concurrency_test.go
++++ b/bindings/go/pool_concurrency_test.go
+@@ -6,15 +6,110 @@ import (
+ 	"context"
+ 	"crypto/tls"
+ 	"io"
++	"net"
+ 	"net/http"
+ 	"net/http/httptest"
++	"net/http/httptrace"
+ 	"sync"
++	"sync/atomic"
+ 	"testing"
+ 	"time"
+ 
+ 	"golang.org/x/net/http2"
+ )
+ 
++type headerWriteBlock struct {
++	armed   atomic.Bool
++	entered chan struct{}
++	release chan struct{}
++	once    sync.Once
++}
++
++type heldHeaderConn struct {
++	net.Conn
++	block  *headerWriteBlock
++	closed chan struct{}
++	once   sync.Once
++}
++
++func (c *heldHeaderConn) Write(buffer []byte) (int, error) {
++	if c.block.armed.CompareAndSwap(true, false) {
++		c.block.once.Do(func() { close(c.block.entered) })
++		select {
++		case <-c.block.release:
++		case <-c.closed:
++			return 0, net.ErrClosed
++		}
++	}
++	return c.Conn.Write(buffer)
++}
++
++func (c *heldHeaderConn) Close() error {
++	c.once.Do(func() { close(c.closed) })
++	return c.Conn.Close()
++}
++
++func TestNetworkInvalidationDuringCommittedHTTP2HeaderWriteDoesNotCancelStream(t *testing.T) {
++	ca := newTestCA(t)
++	server := namedRelay(t, ca, "relay.example.test", true, http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
++		io.WriteString(writer, "ok")
++	}))
++	block := &headerWriteBlock{entered: make(chan struct{}), release: make(chan struct{})}
++	var release sync.Once
++	defer release.Do(func() { close(block.release) })
++	physical := relayDialer(t, server)
++	source := &networkDialer{dial: testDialer(func(ctx context.Context, network, address string) (net.Conn, error) {
++		conn, err := physical.DialContext(ctx, network, address)
++		if err != nil {
++			return nil, err
++		}
++		return &heldHeaderConn{Conn: conn, block: block, closed: make(chan struct{})}, nil
++	})}
++	mode := startMode(t, reverseConfig(), Dependencies{TLSClientConfig: &tls.Config{RootCAs: ca.roots}, Dialer: source})
++	if _, _, err := readResponse(t, mode, "GET", "https://a.example.test/warm"); err != nil {
++		t.Fatal(err)
++	}
++	trace := &httptrace.ClientTrace{WroteHeaderField: func(string, []string) { block.armed.Store(true) }}
++	ctx := httptrace.WithClientTrace(t.Context(), trace)
++	request, _ := http.NewRequestWithContext(ctx, "GET", "https://a.example.test/held-headers", nil)
++	finished := make(chan error, 1)
++	go func() {
++		response, err := mode.Request(request)
++		if response != nil {
++			_, readErr := io.ReadAll(response.Body)
++			response.Body.Close()
++			if err == nil {
++				err = readErr
++			}
++		}
++		finished <- err
++	}()
++	select {
++	case <-block.entered:
++	case <-time.After(2 * time.Second):
++		t.Fatal("fixture did not hold the HTTP2 header write")
++	}
++	generation := mode.generation
++	source.revision.Store(1)
++	deadline := time.Now().Add(4 * time.Second)
++	for {
++		mode.healthMu.Lock()
++		changed := mode.generation != generation
++		mode.healthMu.Unlock()
++		if changed {
++			break
++		}
++		if time.Now().After(deadline) {
++			t.Fatal("network handler blocked behind old header I/O")
++		}
++		time.Sleep(10 * time.Millisecond)
++	}
++	release.Do(func() { close(block.release) })
++	if err := <-finished; err != nil {
++		t.Fatalf("network canceled a potentially transmitted request: %v", err)
++	}
++}
++
+ func TestHTTP2AcquisitionsQueueAtSingleStreamLimit(t *testing.T) {
+ 	ca := newTestCA(t)
+ 	identity, err := ca.issue(t.Context(), "relay.example.test")
+@@ -66,7 +161,15 @@ func TestHTTP2AcquisitionsQueueAtSingleStreamLimit(t *testing.T) {
+ 	}
+ 	results := make(chan error, 2)
+ 	request := func(conn *upstreamConnection) {
++		defer conn.users.Add(-1)
++		releaseHeaders, err := conn.acquireHeaders(ctx)
++		if err != nil {
++			results <- err
++			return
++		}
++		defer releaseHeaders()
+ 		out, _ := http.NewRequestWithContext(ctx, "GET", "https://relay.example.test/work", nil)
++		out = out.WithContext(httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{WroteHeaders: releaseHeaders}))
+ 		response, err := conn.client.RoundTrip(out)
+ 		if response != nil {
+ 			response.Body.Close()
+@@ -90,6 +193,124 @@ func TestHTTP2AcquisitionsQueueAtSingleStreamLimit(t *testing.T) {
+ 	}
+ }
+ 
++type armedUploadBody struct {
++	block *headerWriteBlock
++	sent  bool
++}
++
++func (b *armedUploadBody) Read(buffer []byte) (int, error) {
++	if b.sent {
++		return 0, io.EOF
++	}
++	b.sent = true
++	b.block.armed.Store(true)
++	return copy(buffer, "upload"), nil
++}
++
++func TestHeldHTTP2DataWriteDoesNotBlockCanceledAdmissionOrNetworkRequalification(t *testing.T) {
++	ca := newTestCA(t)
++	server := namedRelay(t, ca, "relay.example.test", true, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
++		io.Copy(io.Discard, request.Body)
++		io.WriteString(writer, "ok")
++	}))
++	block := &headerWriteBlock{entered: make(chan struct{}), release: make(chan struct{})}
++	var release sync.Once
++	defer release.Do(func() { close(block.release) })
++	physical := relayDialer(t, server)
++	source := &networkDialer{dial: testDialer(func(ctx context.Context, network, address string) (net.Conn, error) {
++		conn, err := physical.DialContext(ctx, network, address)
++		if err != nil {
++			return nil, err
++		}
++		return &heldHeaderConn{Conn: conn, block: block, closed: make(chan struct{})}, nil
++	})}
++	mode := startMode(t, reverseConfig(), Dependencies{TLSClientConfig: &tls.Config{RootCAs: ca.roots}, Dialer: source})
++	if _, _, err := readResponse(t, mode, "GET", "https://a.example.test/warm"); err != nil {
++		t.Fatal(err)
++	}
++	var old *upstreamConnection
++	mode.pool.mu.Lock()
++	for _, group := range mode.pool.idle {
++		old = group[0]
++	}
++	mode.pool.mu.Unlock()
++	request, _ := http.NewRequestWithContext(t.Context(), "POST", "https://a.example.test/upload", &armedUploadBody{block: block})
++	finished := make(chan error, 1)
++	go func() {
++		response, err := mode.Request(request)
++		if response != nil {
++			_, readErr := io.ReadAll(response.Body)
++			response.Body.Close()
++			if err == nil {
++				err = readErr
++			}
++		}
++		finished <- err
++	}()
++	select {
++	case <-block.entered:
++	case <-time.After(2 * time.Second):
++		t.Fatal("fixture did not hold the DATA write")
++	}
++	admissionCtx, cancel := context.WithCancel(t.Context())
++	admitted := make(chan error, 1)
++	old.headerGate <- struct{}{}
++	go func() {
++		releaseHeaders, err := old.acquireHeaders(admissionCtx)
++		if releaseHeaders != nil {
++			releaseHeaders()
++		}
++		admitted <- err
++	}()
++	cancel()
++	select {
++	case err := <-admitted:
++		if err != context.Canceled {
++			t.Fatalf("uncommitted admission ignored cancellation: %v", err)
++		}
++	case <-time.After(time.Second):
++		t.Fatal("admission blocked behind DATA write")
++	}
++	<-old.headerGate
++	capacityCtx, cancelCapacity := context.WithTimeout(t.Context(), time.Second)
++	capacity := make(chan error, 1)
++	go func() {
++		releaseHeaders, err := old.acquireHeaders(capacityCtx)
++		if releaseHeaders != nil {
++			releaseHeaders()
++		}
++		capacity <- err
++	}()
++	select {
++	case <-capacity:
++	case <-time.After(2 * time.Second):
++		t.Fatal("capacity inspection waited on DATA write mutex")
++	}
++	cancelCapacity()
++	generation := old.key.generation
++	source.revision.Store(1)
++	deadline := time.Now().Add(4 * time.Second)
++	for {
++		mode.healthMu.Lock()
++		changed := mode.generation != generation
++		mode.healthMu.Unlock()
++		if changed && mode.anyAvailable() {
++			break
++		}
++		if time.Now().After(deadline) {
++			t.Fatal("new probes blocked behind old DATA write")
++		}
++		time.Sleep(10 * time.Millisecond)
++	}
++	if _, body, err := readResponse(t, mode, "GET", "https://a.example.test/new"); err != nil || body != "ok" {
++		t.Fatalf("new generation request blocked behind old DATA write: %q %v", body, err)
++	}
++	release.Do(func() { close(block.release) })
++	if err := <-finished; err != nil {
++		t.Fatalf("committed upload canceled: %v", err)
++	}
++}
++
+ func TestHTTP2ConcurrentFirstUseAndCancellation(t *testing.T) {
+ 	ca := newTestCA(t)
+ 	server := namedRelay(t, ca, "relay.example.test", true, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+@@ -134,3 +355,64 @@ func TestHTTP2ConcurrentFirstUseAndCancellation(t *testing.T) {
+ 	close(start)
+ 	workers.Wait()
+ }
++
++func TestNetworkChangePreservesCommittedHTTP2BodyAndSeparatesNewPool(t *testing.T) {
++	ca := newTestCA(t)
++	release := make(chan struct{})
++	defer close(release)
++	server := namedRelay(t, ca, "relay.example.test", true, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
++		if request.URL.Path == "/old" {
++			io.WriteString(writer, "old")
++			writer.(http.Flusher).Flush()
++			select {
++			case <-release:
++				io.WriteString(writer, "end")
++			case <-request.Context().Done():
++			}
++			return
++		}
++		io.WriteString(writer, "new")
++	}))
++	source := &networkDialer{dial: relayDialer(t, server)}
++	mode := startMode(t, reverseConfig(), Dependencies{TLSClientConfig: &tls.Config{RootCAs: ca.roots}, Dialer: source})
++	request, _ := http.NewRequestWithContext(t.Context(), "GET", "https://a.example.test/old", nil)
++	response, err := mode.Request(request)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer response.Body.Close()
++	prefix := make([]byte, 3)
++	if _, err := io.ReadFull(response.Body, prefix); err != nil {
++		t.Fatal(err)
++	}
++	generation := mode.generation
++	source.revision.Store(1)
++	deadline := time.Now().Add(4 * time.Second)
++	for {
++		mode.healthMu.Lock()
++		changed := mode.generation != generation
++		mode.healthMu.Unlock()
++		if changed && mode.anyAvailable() {
++			break
++		}
++		if time.Now().After(deadline) {
++			t.Fatal("network event did not requalify access")
++		}
++		time.Sleep(10 * time.Millisecond)
++	}
++	if _, body, err := readResponse(t, mode, "GET", "https://a.example.test/new"); err != nil || string(body) != "new" {
++		t.Fatalf("new request failed: %q %v", body, err)
++	}
++	release <- struct{}{}
++	remainder, err := io.ReadAll(response.Body)
++	if err != nil || string(prefix)+string(remainder) != "oldend" {
++		t.Fatalf("committed stream stopped at network change: %q %v", remainder, err)
++	}
++	mode.pool.mu.Lock()
++	for key := range mode.pool.idle {
++		if key.generation == generation {
++			t.Error("new operations retained old pool key")
++		}
++	}
++	mode.pool.mu.Unlock()
++}
+diff --git a/bindings/go/pool_test.go b/bindings/go/pool_test.go
+index 3ab3954..d90a861 100644
+--- a/bindings/go/pool_test.go
++++ b/bindings/go/pool_test.go
+@@ -2,14 +2,44 @@ package steamproxy
+ 
+ import (
+ 	"context"
++	"net"
+ 	"testing"
+ )
+ 
++func TestNetworkPoolRejectsLateReturnsAndNewOperations(t *testing.T) {
++	var pool connectionPool
++	client, peer := net.Pipe()
++	defer peer.Close()
++	conn := &upstreamConnection{Conn: client, key: poolKey{generation: 1}}
++	pool.put(conn)
++	pool.advance(2)
++	if pool.take(conn.key) != nil {
++		t.Fatal("old idle connection reused")
++	}
++	late, latePeer := net.Pipe()
++	defer latePeer.Close()
++	pool.put(&upstreamConnection{Conn: late, key: conn.key})
++	if pool.take(conn.key) != nil {
++		t.Fatal("old late connection returned to new pool")
++	}
++	current, currentPeer := net.Pipe()
++	defer currentPeer.Close()
++	key := poolKey{generation: 2}
++	pool.put(&upstreamConnection{Conn: current, key: key})
++	if pooled := pool.take(key); pooled == nil {
++		t.Fatal("new pool unavailable")
++	} else {
++		pooled.Close()
++	}
++	pool.close()
++}
++
+ func TestConnectionPoolIdentityIsolation(t *testing.T) {
+ 	m := plannerFixture()
+ 	m.config.Whitelist = Whitelist{"example.test": "example.test"}
+ 	m.generation = 7
+ 	r := m.routes[0]
++	r.generation = 7
+ 	r.mode = ModeConfig{Kind: RemoteReverse, ServerName: "relay.example.test"}
+ 	base := m.connectionKey(t.Context(), r, "a.example.test", 443, true)
+ 	tests := []struct {
+diff --git a/bindings/go/probe.go b/bindings/go/probe.go
+index 7ae0e97..937fe32 100644
+--- a/bindings/go/probe.go
++++ b/bindings/go/probe.go
+@@ -32,8 +32,9 @@ func (p tcpProbe) probe(ctx context.Context, target socketEndpoint) (time.Durati
+ }
+ 
+ type probeResult struct {
+-	elapsed time.Duration
+-	err     error
++	elapsed   time.Duration
++	err       error
++	completed time.Time
+ }
+ 
+ type probeRunner struct {
+@@ -51,10 +52,12 @@ func (r *probeRunner) run(ctx context.Context, targets []socketEndpoint) []probe
+ 			for index := range jobs {
+ 				if err := ctx.Err(); err != nil {
+ 					results[index].err = err
++					results[index].completed = time.Now()
+ 					continue
+ 				}
+ 				probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+ 				results[index].elapsed, results[index].err = r.probe.probe(probeCtx, targets[index])
++				results[index].completed = time.Now()
+ 				cancel()
+ 			}
+ 		}()
+@@ -65,6 +68,7 @@ func (r *probeRunner) run(ctx context.Context, targets []socketEndpoint) []probe
+ 		case <-ctx.Done():
+ 			for remaining := index; remaining < len(targets); remaining++ {
+ 				results[remaining].err = ctx.Err()
++				results[remaining].completed = time.Now()
+ 			}
+ 			close(jobs)
+ 			workers.Wait()
+diff --git a/bindings/go/routing.go b/bindings/go/routing.go
+index ef18966..9c6545e 100644
+--- a/bindings/go/routing.go
++++ b/bindings/go/routing.go
+@@ -26,26 +26,37 @@ type Resolver interface {
+ }
+ 
+ type route struct {
+-	id        int
+-	tier      int
+-	mode      ModeConfig
+-	tunnel    tunnelDialer
+-	access    *accessHealth
+-	blocked   bool
+-	cooldowns map[string]time.Time
+-	direct    map[directKey]directEvidence
++	generation uint64
++	ctx        context.Context
++	users      atomic.Int64
++	id         int
++	tier       int
++	mode       ModeConfig
++	tunnel     tunnelDialer
++	access     *accessHealth
++	blocked    bool
++	cooldowns  map[string]time.Time
++	direct     map[directKey]directEvidence
+ }
+ 
+ type accessHealth struct {
+-	endpoint   socketEndpoint
+-	available  bool
+-	failures   int
+-	successes  int
+-	backoff    int
+-	evidence   time.Time
+-	next       time.Time
+-	elapsed    time.Duration
+-	generation uint64
++	endpoint      socketEndpoint
++	available     bool
++	failures      int
++	successes     int
++	backoff       int
++	evidence      time.Time
++	next          time.Time
++	elapsed       time.Duration
++	generation    uint64
++	samples       []probeSample
++	cancellations uint64
++	updated       time.Time
++}
++
++type probeSample struct {
++	completed time.Time
++	success   bool
+ }
+ 
+ type directKey struct {
+@@ -66,7 +77,8 @@ func (m *session) prepareRoutes() error {
+ 	access := make(map[string]*accessHealth)
+ 	add := func(tier int, mode ModeConfig, endpoint string) *route {
+ 		r := &route{id: len(m.routes), tier: tier, mode: mode,
+-			cooldowns: make(map[string]time.Time), direct: make(map[directKey]directEvidence)}
++			generation: m.generation,
++			cooldowns:  make(map[string]time.Time), direct: make(map[directKey]directEvidence)}
+ 		if endpoint != "" {
+ 			r.access = access[endpoint]
+ 			if r.access == nil {
+@@ -133,6 +145,8 @@ func (m *session) closeRoutes() error {
+ 
+ func (m *session) failStart(err error) error {
+ 	m.cancel()
++	m.work.Wait()
++	err = errors.Join(err, m.reapRoutes(true))
+ 	err = errors.Join(err, m.closeRoutes())
+ 	if m.identities != nil {
+ 		m.identities.clear()
+@@ -146,7 +160,9 @@ func (m *session) failStart(err error) error {
+ func (m *session) usable(r *route, host string, download bool, now time.Time) bool {
+ 	if r.blocked || now.Before(r.cooldowns[host]) ||
+ 		(m.config.payload() == PayloadTCP && r.tier < 2) ||
+-		(download && r.tier == 1) {
++		(download && r.mode.Kind == RemoteReverse &&
++			(r.mode.Backend == CloudflareWorker || r.mode.Backend == EdgeOne)) ||
++		(r.ctx != nil && r.ctx.Err() != nil) {
+ 		return false
+ 	}
+ 	return r.access == nil || (r.access.available && now.Sub(r.access.evidence) <= 60*time.Second)
+@@ -243,17 +259,39 @@ func (m *session) probeBatch(ctx context.Context, startup bool) {
+ 	defer m.healthMu.Unlock()
+ 	for index, result := range results {
+ 		h := records[index]
+-		if (ctx.Err() != nil && !startup) || generation != m.generation || h.generation != generation {
+-			continue
+-		}
+-		if errors.Is(result.err, context.Canceled) {
++		if generation != m.generation || h.generation != generation {
+ 			continue
+ 		}
+-		h.record(result.err == nil, result.elapsed, startup, true, time.Now())
++		h.recordProbe(result, startup, result.completed)
++	}
++}
++
++func (h *accessHealth) prune(now time.Time) {
++	expired := 0
++	for expired < len(h.samples) && now.Sub(h.samples[expired].completed) >= 60*time.Second {
++		expired++
++	}
++	h.samples = slices.Delete(h.samples, 0, expired)
++}
++
++func (h *accessHealth) recordProbe(result probeResult, startup bool, now time.Time) {
++	h.prune(now)
++	if errors.Is(result.err, context.Canceled) {
++		h.cancellations++
++		return
++	}
++	if len(h.samples) == 256 {
++		h.samples = slices.Delete(h.samples, 0, 1)
+ 	}
++	h.samples = append(h.samples, probeSample{now, result.err == nil})
++	h.record(result.err == nil, result.elapsed, startup, true, now)
+ }
+ 
+ func (h *accessHealth) record(success bool, elapsed time.Duration, startup, probe bool, now time.Time) {
++	if now.Before(h.updated) {
++		return
++	}
++	h.updated = now
+ 	if success {
+ 		h.evidence = now
+ 		h.failures = 0
+@@ -320,12 +358,16 @@ func (m *session) probeLoop() {
+ 			}
+ 			inflight[oldest] = true
+ 			workers.Add(1)
++			hContext := m.networkCtx
++			if hContext == nil {
++				hContext = m.ctx
++			}
+ 			go func(h *accessHealth) {
+ 				defer workers.Done()
+-				ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
++				ctx, cancel := context.WithTimeout(hContext, 3*time.Second)
+ 				elapsed, err := m.probes.probe.probe(ctx, h.endpoint)
+ 				cancel()
+-				results <- completion{h, probeResult{elapsed: elapsed, err: err}}
++				results <- completion{h, probeResult{elapsed: elapsed, err: err, completed: time.Now()}}
+ 			}(oldest)
+ 		}
+ 	}
+@@ -335,16 +377,38 @@ func (m *session) probeLoop() {
+ 			return
+ 		case <-ticker.C:
+ 			m.pool.expire(time.Now())
++			m.reapRoutes(false)
++			m.healthMu.Lock()
++			for _, candidate := range m.routes {
++				if candidate.access != nil {
++					candidate.access.prune(time.Now())
++				}
++			}
++			m.healthMu.Unlock()
++			dispatch()
++		case <-m.changes:
++			m.healthMu.Lock()
++			m.networkCancel()
++			m.healthMu.Unlock()
++			workers.Wait()
++			for len(results) > 0 {
++				<-results
++			}
++			clear(inflight)
++			if err := m.resetNetwork(); err != nil {
++				m.cancel()
++				return
++			}
+ 			dispatch()
+ 		case result := <-results:
+ 			delete(inflight, result.health)
+ 			m.healthMu.Lock()
+ 			h := result.health
+-			if m.ctx.Err() == nil && h.generation == m.generation && !errors.Is(result.result.err, context.Canceled) {
++			if m.ctx.Err() == nil && h.generation == m.generation {
+ 				if h.available && time.Since(h.evidence) > 60*time.Second {
+ 					h.available, h.successes = false, 0
+ 				}
+-				h.record(result.result.err == nil, result.result.elapsed, false, true, time.Now())
++				h.recordProbe(result.result, h.evidence.IsZero() && h.failures == 0, result.result.completed)
+ 			}
+ 			m.healthMu.Unlock()
+ 			dispatch()
+@@ -364,6 +428,9 @@ type observationKey struct{}
+ type callerContextKey struct{}
+ 
+ func (m *session) accessFeedbackAllowed(ctx context.Context) bool {
++	if errors.Is(ctx.Err(), context.Canceled) {
++		return false
++	}
+ 	if m.ctx != nil && m.ctx.Err() != nil {
+ 		return false
+ 	}
+@@ -402,22 +469,37 @@ func (m *session) connectRoute(ctx context.Context, host string, port uint16, us
+ 			return nil, nil, ErrNoAvailableRoute
+ 		}
+ 		tried[r.id] = true
++		m.healthMu.Lock()
++		if r.generation != m.generation || (r.ctx != nil && r.ctx.Err() != nil) {
++			m.healthMu.Unlock()
++			return nil, nil, context.Canceled
++		}
++		r.users.Add(1)
++		m.healthMu.Unlock()
++		defer r.users.Add(-1)
+ 		if ctx.Value(http1Key{}) != nil {
+ 			if conn := m.pool.take(m.connectionKey(ctx, r, host, port, useTLS)); conn != nil {
+ 				return conn, r, nil
+ 			}
+ 		}
+ 		m.healthMu.Lock()
+-		generation := m.generation
++		generation := r.generation
+ 		m.healthMu.Unlock()
++		acquiring, stopAcquiring := context.WithCancel(ctx)
++		stopNetwork := func() bool { return true }
++		if r.ctx != nil {
++			stopNetwork = context.AfterFunc(r.ctx, stopAcquiring)
++		}
++		defer stopNetwork()
++		defer stopAcquiring()
+ 		observation := &dialObservation{feedback: func(err error) {
+ 			m.healthMu.Lock()
+ 			defer m.healthMu.Unlock()
+-			if generation == m.generation && r.access != nil && m.accessFeedbackAllowed(ctx) {
++			if generation == m.generation && r.access != nil && (r.ctx == nil || r.ctx.Err() == nil) && m.accessFeedbackAllowed(acquiring) {
+ 				r.access.record(err == nil, 0, false, false, time.Now())
+ 			}
+ 		}}
+-		dial := context.WithValue(ctx, observationKey{}, observation)
++		dial := context.WithValue(acquiring, observationKey{}, observation)
+ 		conn, err := m.dialRoute(dial, r, host, port)
+ 		observation.mu.Lock()
+ 		accessFailed := observation.called && observation.err != nil
+@@ -430,20 +512,21 @@ func (m *session) connectRoute(ctx context.Context, host string, port uint16, us
+ 				identity.NextProtos = []string{"http/1.1"}
+ 			}
+ 			secure := tls.Client(conn, identity)
+-			err = secure.HandshakeContext(ctx)
++			err = secure.HandshakeContext(acquiring)
+ 			if err == nil {
+ 				conn = secure
+ 			}
+ 		}
+-		if err == nil && ctx.Err() == nil {
++		if err == nil && acquiring.Err() == nil {
+ 			m.healthMu.Lock()
+ 			eligible := generation == m.generation && m.usable(r, host, download, time.Now())
+ 			m.healthMu.Unlock()
+ 			if !eligible {
+ 				conn.Close()
+-				continue
++				return nil, nil, context.Canceled
+ 			}
+-			return conn, r, nil
++			r.users.Add(1)
++			return &routeConnection{Conn: conn, route: r}, r, nil
+ 		}
+ 		if conn != nil {
+ 			conn.Close()
+@@ -451,11 +534,16 @@ func (m *session) connectRoute(ctx context.Context, host string, port uint16, us
+ 		if ctx.Err() != nil {
+ 			return nil, nil, ctx.Err()
+ 		}
++		if acquiring.Err() != nil {
++			return nil, nil, acquiring.Err()
++		}
++		stopNetwork()
++		stopAcquiring()
+ 		if !accessFailed {
+ 			m.healthMu.Lock()
+ 			var certificate *tls.CertificateVerificationError
+ 			var unknownAuthority x509.UnknownAuthorityError
+-			if generation != m.generation {
++			if generation != m.generation || (r.ctx != nil && r.ctx.Err() != nil) {
+ 				m.healthMu.Unlock()
+ 				continue
+ 			}
+@@ -489,7 +577,7 @@ func (m *session) dialRoute(ctx context.Context, r *route, host string, port uin
+ 		return r.tunnel.DialContext(ctx, "tcp", address)
+ 	}
+ 	m.healthMu.Lock()
+-	generation := m.generation
++	generation := r.generation
+ 	m.healthMu.Unlock()
+ 	resolver := m.dependencies.Resolver
+ 	if resolver == nil {
+@@ -522,7 +610,7 @@ func (m *session) dialRoute(ctx context.Context, r *route, host string, port uin
+ 		m.healthMu.Lock()
+ 		key := directKey{host, ip, generation}
+ 		evidence := r.direct[key]
+-		if m.accessFeedbackAllowed(ctx) && generation == m.generation {
++		if m.accessFeedbackAllowed(ctx) && generation == m.generation && (r.ctx == nil || r.ctx.Err() == nil) {
+ 			if err == nil {
+ 				evidence = directEvidence{elapsed: time.Since(started)}
+ 			} else {
+@@ -544,6 +632,25 @@ func (m *session) dialRoute(ctx context.Context, r *route, host string, port uin
+ 	return nil, errors.New("steamproxy: direct connection failed")
+ }
+ 
++type routeConnection struct {
++	net.Conn
++	route *route
++	once  sync.Once
++}
++
++func (c *routeConnection) Close() error {
++	err := c.Conn.Close()
++	c.once.Do(func() { c.route.users.Add(-1) })
++	return err
++}
++
++func (c *routeConnection) CloseWrite() error {
++	if half, ok := c.Conn.(interface{ CloseWrite() error }); ok {
++		return half.CloseWrite()
++	}
++	return c.Close()
++}
++
+ func (m *session) businessFailure(r *route, target string, generation uint64, err error) {
+ 	if err == nil || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) ||
+ 		errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || m.ctx.Err() != nil {
+@@ -551,7 +658,7 @@ func (m *session) businessFailure(r *route, target string, generation uint64, er
+ 	}
+ 	m.healthMu.Lock()
+ 	defer m.healthMu.Unlock()
+-	if generation != m.generation {
++	if generation != m.generation || (r.ctx != nil && r.ctx.Err() != nil) {
+ 		return
+ 	}
+ 	if errors.Is(err, errExitIdentity) {
+diff --git a/bindings/go/routing_test.go b/bindings/go/routing_test.go
+index 0c40ffc..3541bf9 100644
+--- a/bindings/go/routing_test.go
++++ b/bindings/go/routing_test.go
+@@ -81,10 +81,64 @@ func TestRoutesConfiguration(t *testing.T) {
+ 	}
+ }
+ 
++func TestDownloadEligibilityUsesBackendCapability(t *testing.T) {
++	for _, test := range []struct {
++		name    string
++		tier    int
++		mode    ModeConfig
++		allowed bool
++	}{
++		{"relay", 0, ModeConfig{Kind: RemoteReverse, Backend: Relay}, true},
++		{"edgeone", 1, ModeConfig{Kind: RemoteReverse, Backend: EdgeOne}, false},
++		{"origin", 1, ModeConfig{Kind: RemoteReverse, Backend: EdgeOneOrigin}, true},
++		{"worker", 1, ModeConfig{Kind: RemoteReverse, Backend: CloudflareWorker}, false},
++		{"direct", 2, ModeConfig{}, true},
++		{"tunnel", 3, ModeConfig{Kind: ForwardProxy}, true},
++	} {
++		t.Run(test.name, func(t *testing.T) {
++			session := &session{config: directConfig(PayloadHTTP)}
++			candidate := &route{tier: test.tier, mode: test.mode}
++			if session.usable(candidate, "example.test", true, time.Now()) != test.allowed {
++				t.Fatal("download capability differs")
++			}
++			session.config.Routes.Payload = PayloadTCP
++			if session.usable(candidate, "example.test", false, time.Now()) != (test.tier >= 2) {
++				t.Fatal("HTTP backend admitted raw TCP")
++			}
++		})
++	}
++}
++
++func TestRecentProbeWindowCancellationAndBusinessSeparation(t *testing.T) {
++	now := time.Now()
++	health := &accessHealth{generation: 9}
++	health.recordProbe(probeResult{elapsed: 10 * time.Millisecond}, true, now)
++	health.recordProbe(probeResult{err: errors.New("refused")}, false, now.Add(time.Second))
++	health.recordProbe(probeResult{err: context.Canceled}, false, now.Add(2*time.Second))
++	health.record(true, 0, false, false, now.Add(3*time.Second))
++	if len(health.samples) != 2 || !health.samples[0].success || health.samples[1].success ||
++		health.cancellations != 1 || health.elapsed != 10*time.Millisecond {
++		t.Fatal("probe/business/cancel samples mixed")
++	}
++	for range 300 {
++		health.recordProbe(probeResult{}, false, now.Add(4*time.Second))
++	}
++	if len(health.samples) != 256 {
++		t.Fatal("probe samples unbounded")
++	}
++	health.prune(now.Add(65 * time.Second))
++	if len(health.samples) != 0 {
++		t.Fatal("expired samples retained")
++	}
++}
+ func plannerFixture() *session {
+ 	now := time.Now()
+ 	makeRoute := func(id, tier int, elapsed time.Duration) *route {
+-		return &route{id: id, tier: tier, access: &accessHealth{
++		backend := Relay
++		if tier == 1 {
++			backend = EdgeOne
++		}
++		return &route{id: id, tier: tier, mode: ModeConfig{Kind: RemoteReverse, Backend: backend}, access: &accessHealth{
+ 			available: true, evidence: now, elapsed: elapsed}, cooldowns: map[string]time.Time{}}
+ 	}
+ 	return &session{config: Config{}, seed: 42, routes: []*route{
+diff --git a/src/backend.rs b/src/backend.rs
+index 1828b0c..6cc2798 100644
+--- a/src/backend.rs
++++ b/src/backend.rs
+@@ -109,28 +109,38 @@ impl Backend {
+         context: &ObservationContext,
+     ) -> Result<BoxStream> {
+         if let Some(routes) = &self.routes {
++            let routes = routes.current();
++            let token = routes.active.token();
+             let mut attempt = crate::routing::Attempt::new(self.config.connect_timeout());
+             let traffic = crate::routing::Traffic {
+                 host,
+                 payload: crate::Payload::Tcp,
+                 download: crate::routing::download(host, ""),
+             };
+-            return crate::routing::AttemptLoop {
++            let executor = crate::routing::AttemptLoop {
+                 executor: routes.as_ref(),
+                 outcomes: crate::health::BeforeCommit,
+-            }
+-            .run(
+-                routes,
++            };
++            let request = crate::outbound::stream::StreamRequest {
++                host,
++                port,
++                observation: context,
++            };
++            let stream = tokio::select! {
++                biased;
++                _ = routes.acquisition.cancelled() => return Err(Error::Canceled),
++                result = executor.run(
++                &routes,
+                 &traffic,
+-                &crate::outbound::stream::StreamRequest {
+-                    host,
+-                    port,
+-                    observation: context,
+-                },
++                &request,
+                 &mut attempt,
+                 &self.cancel,
+-            )
+-            .await;
++                ) => result?,
++            };
++            return Ok(Box::new(crate::outbound::registry::GenerationStream {
++                stream,
++                _token: token,
++            }));
+         }
+         self.connect_until(
+             host,
+diff --git a/src/dialer.rs b/src/dialer.rs
+index 1ea1e3e..091a3d4 100644
+--- a/src/dialer.rs
++++ b/src/dialer.rs
+@@ -7,6 +7,12 @@ use tokio::net::TcpStream;
+ pub trait TcpDialer: Send + Sync {
+     async fn connect(&self, server: &str, port: u16) -> Result<BoxStream>;
+ 
++    /// Stable local network identity, without connecting to any target.
++    /// Hosts with virtual networking can override this with their own revision.
++    async fn network_revision(&self) -> Option<String> {
++        crate::network_change::revision().await
++    }
++
+     /// Resolve an HTTP peer before Pingora selects a pooled connection.
+     /// Override together with connect() when the host owns DNS or routing.
+     async fn resolve(&self, server: &str, port: u16) -> Result<Vec<SocketAddr>> {
+diff --git a/src/health/state.rs b/src/health/state.rs
+index 9afd00a..1fd91d6 100644
+--- a/src/health/state.rs
++++ b/src/health/state.rs
+@@ -41,8 +41,17 @@ impl Health {
+         error: &Error,
+         generation: u64,
+     ) {
++        if self.generation != generation {
++            return;
++        }
+         match outcome {
+-            Outcome::Access => self.record(&Err(error.clone()), false, generation),
++            Outcome::Access => self.update(
++                &Err(error.clone()),
++                false,
++                generation,
++                Instant::now(),
++                false,
++            ),
+             Outcome::Isolate => self.isolated = true,
+             Outcome::Target => {
+                 self.targets
+@@ -81,31 +90,54 @@ impl Health {
+         generation: u64,
+         now: Instant,
+     ) {
+-        if self.generation != generation || now < self.updated {
++        self.update(result, startup, generation, now, true);
++    }
++
++    pub(crate) fn prune(&mut self, now: Instant) {
++        while self.samples.front().is_some_and(|(time, _)| {
++            now.saturating_duration_since(*time) >= Duration::from_secs(60)
++        }) {
++            self.samples.pop_front();
++        }
++    }
++
++    fn update(
++        &mut self,
++        result: &Result<Duration>,
++        startup: bool,
++        generation: u64,
++        now: Instant,
++        probe: bool,
++    ) {
++        if self.generation != generation {
+             return;
+         }
++        self.prune(now);
+         if matches!(result, Err(Error::Canceled)) {
+             self.cancellations += 1;
+             return;
+         }
+-        self.updated = now;
+-        while self
+-            .samples
+-            .front()
+-            .is_some_and(|(time, _)| now.duration_since(*time) >= Duration::from_secs(60))
+-        {
+-            self.samples.pop_front();
++        if probe {
++            if self.samples.len() == 256 {
++                self.samples.pop_front();
++            }
++            self.samples.push_back((now, result.is_ok()));
+         }
+-        self.samples.push_back((now, result.is_ok()));
++        if now < self.updated {
++            return;
++        }
++        self.updated = now;
+         match result {
+             Ok(elapsed) => {
+                 self.failures = 0;
+                 self.successes += 1;
+                 self.evidence = now;
+-                self.dial_elapsed = Some(
+-                    self.dial_elapsed
+-                        .map_or(*elapsed, |old| old.mul_f64(0.8) + elapsed.mul_f64(0.2)),
+-                );
++                if probe {
++                    self.dial_elapsed = Some(
++                        self.dial_elapsed
++                            .map_or(*elapsed, |old| old.mul_f64(0.8) + elapsed.mul_f64(0.2)),
++                    );
++                }
+                 if startup || self.successes >= 2 {
+                     self.eligibility = Eligibility::Available;
+                     self.backoff = 0;
+@@ -134,3 +166,52 @@ impl Health {
+ fn jitter() -> Duration {
+     Duration::from_millis(12_000 + rand::random::<u64>() % 6_001)
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn recent_probe_window_excludes_business_cancellation_and_old_generation() {
++        let mut health = Health::new(7);
++        let now = Instant::now();
++        health.record_at(&Ok(Duration::from_millis(10)), true, 7, now);
++        health.record_at(
++            &Err(Error::Transport),
++            false,
++            7,
++            now + Duration::from_secs(1),
++        );
++        health.record_at(
++            &Err(Error::Canceled),
++            false,
++            7,
++            now + Duration::from_secs(2),
++        );
++        health.record_outcome(Outcome::Isolate, "origin.test", &Error::Transport, 6);
++        assert!(!health.isolated);
++        health.record_outcome(Outcome::Access, "origin.test", &Error::Transport, 7);
++        assert_eq!(health.samples.len(), 2);
++        assert_eq!(
++            health
++                .samples
++                .iter()
++                .filter(|(_, success)| *success)
++                .count(),
++            1
++        );
++        assert_eq!(health.cancellations, 1);
++        assert_eq!(health.dial_elapsed, Some(Duration::from_millis(10)));
++        for _ in 0..300 {
++            health.record_at(
++                &Ok(Duration::from_millis(10)),
++                false,
++                7,
++                now + Duration::from_secs(3),
++            );
++        }
++        assert_eq!(health.samples.len(), 256);
++        health.prune(now + Duration::from_secs(64));
++        assert!(health.samples.is_empty());
++    }
++}
+diff --git a/src/http_proxy.rs b/src/http_proxy.rs
+index 1b268bd..78ac743 100644
+--- a/src/http_proxy.rs
++++ b/src/http_proxy.rs
+@@ -146,6 +146,11 @@ impl HttpServerApp for BoundedProxy {
+                         },
+                         Acquisition::Connecting(deadline, target) => tokio::select! {
+                             biased;
++                            _ = async {
++                                if let Some(registry) = target.as_ref().and_then(|target| target.registry.upgrade()) {
++                                    registry.acquisition.cancelled().await;
++                                } else { std::future::pending::<()>().await; }
++                            } => return None,
+                             _ = tokio::time::sleep_until(deadline) => {
+                                 if let Some(target) = target {
+                                     target.expire();
+@@ -305,10 +310,13 @@ pub(crate) struct Proxy {
+ struct ResolvedPeer {
+     addresses: Vec<std::net::SocketAddr>,
+     expires: tokio::time::Instant,
++    generation: u64,
+ }
+ 
+ #[derive(Default)]
+ pub(crate) struct RequestContext {
++    registry: Option<Arc<crate::outbound::Registry>>,
++    generation_token: Option<tokio_util::task::task_tracker::TaskTrackerToken>,
+     selected: Option<(usize, Arc<Backend>)>,
+     acquisition: Option<AcquisitionTarget>,
+     acquisition_state: Option<tokio::sync::watch::Sender<Acquisition>>,
+@@ -578,13 +586,16 @@ impl ProxyHttp for Proxy {
+         ctx.connection_lease.take();
+         let root = self.backend()?;
+         let backend = if let Some(routes) = &root.routes {
++            let routes = routes.current();
++            ctx.generation_token = Some(routes.active.token());
++            ctx.registry = Some(routes.clone());
+             let traffic = crate::routing::Traffic {
+                 host: &ctx.host,
+                 payload: crate::Payload::Http,
+                 download: ctx.download,
+             };
+             let selected = crate::routing::select(
+-                routes,
++                &routes,
+                 &traffic,
+                 ctx.attempt.as_mut().expect("request filter"),
+             )
+@@ -592,7 +603,7 @@ impl ProxyHttp for Proxy {
+             let selected = (selected, routes.get(selected));
+             ctx.selected = Some(selected.clone());
+             let acquisition = AcquisitionTarget {
+-                registry: Arc::downgrade(routes),
++                registry: Arc::downgrade(&routes),
+                 index: selected.0,
+                 host: ctx.host.clone(),
+                 phase: Arc::new(parking_lot::Mutex::new(AcquisitionPhase::Resolve)),
+@@ -645,6 +656,10 @@ impl ProxyHttp for Proxy {
+                 let mut cache = self.peers.lock().await;
+                 if let Some(peer) = cache.get(&endpoints)
+                     && peer.expires > tokio::time::Instant::now()
++                    && ctx
++                        .registry
++                        .as_ref()
++                        .is_none_or(|routes| peer.generation == routes.generation)
+                 {
+                     return Ok(peer.addresses.clone());
+                 }
+@@ -668,6 +683,7 @@ impl ProxyHttp for Proxy {
+                         ResolvedPeer {
+                             addresses: addresses.clone(),
+                             expires: tokio::time::Instant::now() + Duration::from_secs(30),
++                            generation: ctx.registry.as_ref().map_or(0, |routes| routes.generation),
+                         },
+                     );
+                     Ok(addresses)
+@@ -707,7 +723,7 @@ impl ProxyHttp for Proxy {
+             use std::hash::{Hash, Hasher};
+             let mut hash = std::collections::hash_map::DefaultHasher::new();
+             (Arc::as_ptr(&backend) as usize).hash(&mut hash);
+-            root.routes
++            ctx.registry
+                 .as_ref()
+                 .map(|routes| routes.generation)
+                 .hash(&mut hash);
+@@ -788,7 +804,7 @@ impl ProxyHttp for Proxy {
+         if remaining.is_zero() {
+             return Err(proxy_error(timeout(Stage::Connect)));
+         }
+-        if let (Some(routes), Some((index, _))) = (&root.routes, &ctx.selected)
++        if let (Some(routes), Some((index, _))) = (&ctx.registry, &ctx.selected)
+             && !routes.usable(
+                 *index,
+                 &crate::routing::Traffic {
+@@ -816,12 +832,27 @@ impl ProxyHttp for Proxy {
+         request: &mut RequestHeader,
+         ctx: &mut Self::CTX,
+     ) -> pingora_error::Result<()> {
++        let health = ctx.registry.as_ref().map(|registry| registry.health.read());
++        if ctx
++            .registry
++            .as_ref()
++            .is_some_and(|routes| routes.acquisition.is_cancelled())
++        {
++            return Err(proxy_error(Error::Canceled));
++        }
+         if ctx
+             .deadline
+             .is_some_and(|deadline| tokio::time::Instant::now() >= deadline)
+         {
+             return Err(proxy_error(timeout(Stage::HttpHeaders)));
+         }
++        if let Some(attempt) = &mut ctx.attempt {
++            attempt.committed = true;
++        }
++        if let Some(state) = &ctx.acquisition_state {
++            state.send_replace(Acquisition::Ready);
++        }
++        drop(health);
+         #[cfg(feature = "http-cache")]
+         if ctx.cache_key.is_some() {
+             if let Some(range) = _session.req_header().headers.get(header::RANGE) {
+@@ -866,9 +897,6 @@ impl ProxyHttp for Proxy {
+             path.parse().map_err(|_| proxy_error(Error::Http))?
+         };
+         request.set_uri(uri);
+-        if let Some(attempt) = &mut ctx.attempt {
+-            attempt.committed = true;
+-        }
+         if ctx.target_headers.0 {
+             request.insert_header("x-steam-relay-host", ctx.host.as_str())?;
+             if ctx.target_headers.1 {
+@@ -913,11 +941,8 @@ impl ProxyHttp for Proxy {
+         ctx: &mut Self::CTX,
+     ) -> pingora_error::Result<()> {
+         ctx.connection_lease.take();
+-        if let Some(state) = &ctx.acquisition_state {
+-            state.send_replace(Acquisition::Ready);
+-        }
+         if !reused {
+-            if let (Some(routes), Some((index, _))) = (&self.backend()?.routes, &ctx.selected) {
++            if let (Some(routes), Some((index, _))) = (&ctx.registry, &ctx.selected) {
+                 routes.access_success(*index, &ctx.host);
+             }
+         }
+@@ -1160,8 +1185,8 @@ impl ProxyHttp for Proxy {
+         _client_reused: bool,
+     ) -> Box<ProxyError> {
+         if error.esource() == &pingora_error::ErrorSource::Upstream {
+-            if let Ok(root) = self.backend() {
+-                if let (Some(routes), Some((index, _))) = (&root.routes, &ctx.selected) {
++            if self.backend().is_ok() {
++                if let (Some(routes), Some((index, _))) = (&ctx.registry, &ctx.selected) {
+                     routes.failure(
+                         *index,
+                         &ctx.host,
+diff --git a/src/http_proxy_tests.rs b/src/http_proxy_tests.rs
+index 8d4a556..977b7a4 100644
+--- a/src/http_proxy_tests.rs
++++ b/src/http_proxy_tests.rs
+@@ -26,6 +26,7 @@ struct Dialer {
+ }
+ 
+ struct RouteDialer {
++    revision: Arc<AtomicUsize>,
+     address: SocketAddr,
+     calls: Arc<Mutex<Vec<String>>>,
+     first_ready: Arc<std::sync::atomic::AtomicBool>,
+@@ -34,6 +35,9 @@ struct RouteDialer {
+ 
+ #[async_trait]
+ impl TcpDialer for RouteDialer {
++    async fn network_revision(&self) -> Option<String> {
++        Some(self.revision.load(Ordering::SeqCst).to_string())
++    }
+     async fn resolve(&self, host: &str, _: u16) -> Result<Vec<SocketAddr>> {
+         let octet = match host {
+             "one.edge.test" => 1,
+@@ -178,6 +182,7 @@ enum ResponseMode {
+ }
+ 
+ struct Fixture {
++    network_revision: Arc<AtomicUsize>,
+     replaced_routes: Arc<AtomicUsize>,
+     replaced_connects: Arc<AtomicUsize>,
+     replacement_closed: Arc<AtomicUsize>,
+@@ -544,6 +549,7 @@ impl Fixture {
+         let route_calls = Arc::new(Mutex::new(Vec::new()));
+         let tasks = TaskTracker::new();
+         let route_first_ready = Arc::new(std::sync::atomic::AtomicBool::new(false));
++        let network_revision = Arc::new(AtomicUsize::new(0));
+         let mut prepared_backend = Backend::create(
+             &config,
+             Arc::new(Dialer {
+@@ -646,6 +652,7 @@ impl Fixture {
+         }
+         if matches!(mode, ResponseMode::Routes | ResponseMode::RoutesTimeout) {
+             let dependencies = crate::Dependencies::new().with_dialer(RouteDialer {
++                revision: network_revision.clone(),
+                 address,
+                 calls: route_calls.clone(),
+                 first_ready: route_first_ready.clone(),
+@@ -705,6 +712,7 @@ impl Fixture {
+                 .is_ok()
+         );
+         Self {
++            network_revision,
+             replaced_routes,
+             replaced_connects,
+             replacement_closed,
+@@ -762,6 +770,61 @@ impl Fixture {
+     }
+ }
+ 
++#[tokio::test]
++async fn network_event_makes_subsequent_http_use_a_new_pool_and_ignores_old_feedback() {
++    let fixture = Fixture::with_mode(
++        false,
++        Bytes::from_static(b"network"),
++        true,
++        ResponseMode::Routes,
++    )
++    .await;
++    fixture.route_first_ready.store(true, Ordering::SeqCst);
++    for _ in 0..2 {
++        fixture
++            .request(FIRST, http::Method::GET, body(""))
++            .await
++            .unwrap()
++            .into_body()
++            .collect()
++            .await
++            .unwrap();
++    }
++    assert_eq!(fixture.accepted.load(Ordering::SeqCst), 1);
++    let root = fixture.backend.routes.as_ref().unwrap();
++    let old = root.current();
++    fixture.network_revision.store(1, Ordering::SeqCst);
++    tokio::time::timeout(Duration::from_secs(4), async {
++        loop {
++            let next = root.current();
++            if next.generation != old.generation
++                && next
++                    .health
++                    .read()
++                    .iter()
++                    .any(|health| health.eligibility == crate::health::Eligibility::Available)
++            {
++                break;
++            }
++            tokio::time::sleep(Duration::from_millis(10)).await;
++        }
++    })
++    .await
++    .unwrap();
++    old.failure_at(0, FIRST, &Error::Transport, true);
++    assert!(!root.current().health.read()[0].targets.contains_key(FIRST));
++    fixture
++        .request(FIRST, http::Method::GET, body(""))
++        .await
++        .unwrap()
++        .into_body()
++        .collect()
++        .await
++        .unwrap();
++    assert_eq!(fixture.accepted.load(Ordering::SeqCst), 2);
++    fixture.close().await;
++}
++
+ struct ReplacedReverse(Arc<AtomicUsize>);
+ 
+ struct ReplacedHttpTunnel {
+diff --git a/src/lib.rs b/src/lib.rs
+index cdeb83c..3d07ff5 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -40,6 +40,7 @@ mod lifecycle;
+ pub mod modes;
+ #[cfg(feature = "fake-ip")]
+ pub mod network;
++mod network_change;
+ mod observation;
+ #[cfg(any(feature = "reverse-proxy", feature = "tunnel-proxy"))]
+ mod outbound;
+diff --git a/src/native_plane.rs b/src/native_plane.rs
+index 54d7905..c6584a3 100644
+--- a/src/native_plane.rs
++++ b/src/native_plane.rs
+@@ -633,7 +633,50 @@ pub(crate) async fn prepare_routes(
+     tasks: TaskTracker,
+     cancel: CancellationToken,
+ ) -> Result<Arc<crate::outbound::Registry>> {
+-    let generation = rand::random();
++    let deadline = Instant::now() + Duration::from_secs(15);
++    let initial = tokio::select! {
++        biased;
++        _ = cancel.cancelled() => return Err(Error::Canceled),
++        revision = tokio::time::timeout(Duration::from_secs(4), dependencies.dialer.network_revision()) => revision.ok().flatten(),
++    };
++    let (changes, receiver) = watch::channel(initial);
++    tasks.spawn(crate::network_change::watch(
++        dependencies.dialer.clone(),
++        cancel.clone(),
++        changes,
++    ));
++    let registry = build_routes(
++        config,
++        dependencies,
++        sockets.clone(),
++        &cancel,
++        rand::random(),
++        rand::random(),
++    )
++    .await?;
++    let (ready, result) = tokio::sync::oneshot::channel();
++    tasks.spawn(maintain_routes(
++        registry.clone(),
++        config.clone(),
++        dependencies.clone(),
++        sockets,
++        cancel.clone(),
++        receiver,
++        ready,
++        deadline,
++    ));
++    result.await.map_err(|_| Error::Task)??;
++    Ok(registry)
++}
++
++async fn build_routes(
++    config: &Config,
++    dependencies: &Dependencies,
++    sockets: Arc<Connections>,
++    cancel: &CancellationToken,
++    generation: u64,
++    session: u64,
++) -> Result<Arc<crate::outbound::Registry>> {
+     let mut routes = Vec::new();
+     for candidate in crate::routing::normalize(config) {
+         let (child, tier, payload, downloads, endpoint) = candidate?;
+@@ -644,7 +687,7 @@ pub(crate) async fn prepare_routes(
+             dependencies.dialer.clone(),
+             sockets.clone(),
+             None,
+-            cancel.clone(),
++            cancel.child_token(),
+             observation,
+             generation,
+         )
+@@ -661,38 +704,160 @@ pub(crate) async fn prepare_routes(
+             backend: Arc::new(backend),
+         });
+     }
+-    let registry = crate::outbound::Registry::new(routes, generation);
+-    check_routes(&registry, dependencies.dialer.clone(), &cancel, true).await?;
+-    if !registry
+-        .health
+-        .read()
+-        .iter()
+-        .any(|state| state.eligibility == Eligibility::Available)
+-    {
+-        return Err(Error::NoEndpoint);
+-    }
+-    let running = registry.clone();
+-    let dialer = dependencies.dialer.clone();
+-    tasks.spawn(crate::probe::maintain(cancel.clone(), move || {
+-        let running = running.clone();
+-        let dialer = dialer.clone();
+-        let cancel = cancel.clone();
+-        async move { check_routes(&running, dialer, &cancel, false).await }
+-    }));
+-    Ok(registry)
++    Ok(crate::outbound::Registry::in_session(
++        routes, generation, session,
++    ))
++}
++
++async fn maintain_routes(
++    root: Arc<crate::outbound::Registry>,
++    config: Config,
++    dependencies: Dependencies,
++    sockets: Arc<Connections>,
++    cancel: CancellationToken,
++    mut changes: watch::Receiver<Option<String>>,
++    ready: tokio::sync::oneshot::Sender<Result<()>>,
++    deadline: Instant,
++) {
++    let mut ready = Some(ready);
++    let mut current = root.clone();
++    let mut retired: Vec<Arc<crate::outbound::Registry>> = Vec::new();
++    let mut startup = true;
++    loop {
++        for index in (0..retired.len()).rev() {
++            if retired[index].active.is_empty() {
++                retired.swap_remove(index).close().await;
++            }
++        }
++        let probe_cancel = cancel.child_token();
++        let mut changed = {
++            let checking = check_routes_until(
++                &current,
++                dependencies.dialer.clone(),
++                &probe_cancel,
++                startup,
++                if ready.is_some() {
++                    deadline
++                } else {
++                    Instant::now() + Duration::from_secs(15)
++                },
++            );
++            tokio::pin!(checking);
++            tokio::select! {
++              biased;
++              _ = cancel.cancelled() => {
++                  probe_cancel.cancel();
++                  let _ = checking.await;
++                  break;
++              }
++              _ = tokio::time::sleep_until(deadline), if ready.is_some() => {
++                  let _ = checking.await;
++                  false
++              }
++              result = changes.changed() => {
++                  if result.is_err() { break; }
++                  current.invalidate();
++                  probe_cancel.cancel();
++                  let _ = checking.await;
++                  true
++              }
++              _ = &mut checking => false,
++            }
++        };
++        if cancel.is_cancelled() {
++            break;
++        }
++        if changes.has_changed().unwrap_or(false) {
++            changes.borrow_and_update();
++            current.invalidate();
++            changed = true;
++        }
++        if !changed {
++            if let Some(ready) = ready.take() {
++                let available = current
++                    .health
++                    .read()
++                    .iter()
++                    .any(|state| state.eligibility == Eligibility::Available);
++                let _ = ready.send(if available {
++                    Ok(())
++                } else {
++                    Err(Error::NoEndpoint)
++                });
++                if !available {
++                    break;
++                }
++            }
++            startup = false;
++            tokio::select! {
++                biased;
++                _ = cancel.cancelled() => break,
++                result = changes.changed() => {
++                    if result.is_err() { break; }
++                    current.invalidate();
++                }
++                _ = tokio::time::sleep(Duration::from_millis(250)) => continue,
++            }
++        }
++        let next = build_routes(
++            &config,
++            &dependencies,
++            sockets.clone(),
++            &cancel,
++            current.generation.wrapping_add(1),
++            current.session,
++        )
++        .await;
++        match next {
++            Ok(next) => {
++                next.inherit(&current);
++                retired.push(current);
++                current = next;
++                root.publish(current.clone());
++                startup = true;
++            }
++            Err(_) => break,
++        }
++    }
++    current.invalidate();
++    current.close().await;
++    for previous in retired {
++        previous.close().await;
++    }
++    if let Some(ready) = ready {
++        let _ = ready.send(Err(Error::Canceled));
++    }
+ }
+ 
++#[cfg(test)]
+ async fn check_routes(
+     registry: &crate::outbound::Registry,
+     dialer: Arc<dyn crate::TcpDialer>,
+     cancel: &CancellationToken,
+     startup: bool,
+ ) -> Result<()> {
+-    let deadline = Instant::now() + Duration::from_secs(15);
++    check_routes_until(
++        registry,
++        dialer,
++        cancel,
++        startup,
++        Instant::now() + Duration::from_secs(15),
++    )
++    .await
++}
++
++async fn check_routes_until(
++    registry: &crate::outbound::Registry,
++    dialer: Arc<dyn crate::TcpDialer>,
++    cancel: &CancellationToken,
++    startup: bool,
++    deadline: Instant,
++) -> Result<()> {
+     let mut targets = Vec::new();
+     {
+         let mut health = registry.health.write();
+         for (index, route) in registry.routes.iter().enumerate() {
++            health[index].prune(Instant::now());
+             match &route.endpoint {
+                 None => health[index].eligibility = Eligibility::Available,
+                 Some(endpoint) if startup || health[index].due <= Instant::now() => {
+@@ -770,6 +935,306 @@ mod outlet_probe_tests {
+     use tokio::io::AsyncReadExt;
+ 
+     struct RefuseBusiness;
++
++    struct ChangingNetwork {
++        revision: AtomicUsize,
++        calls: SyncMutex<Vec<String>>,
++        peers: SyncMutex<Vec<tokio::io::DuplexStream>>,
++        block_first: bool,
++        active: AtomicUsize,
++        stall: std::sync::atomic::AtomicBool,
++    }
++
++    #[async_trait::async_trait]
++    impl crate::TcpDialer for ChangingNetwork {
++        async fn network_revision(&self) -> Option<String> {
++            Some(self.revision.load(Ordering::SeqCst).to_string())
++        }
++        async fn resolve(&self, _: &str, port: u16) -> Result<Vec<std::net::SocketAddr>> {
++            Ok(vec![std::net::SocketAddr::from(([192, 0, 2, 1], port))])
++        }
++        async fn connect(&self, host: &str, _: u16) -> Result<BoxStream> {
++            let first = {
++                let mut calls = self.calls.lock();
++                calls.push(host.into());
++                calls.len() == 1
++            };
++            if (first && self.block_first) || self.stall.load(Ordering::SeqCst) {
++                self.active.fetch_add(1, Ordering::SeqCst);
++                struct Guard<'a>(&'a AtomicUsize);
++                impl Drop for Guard<'_> {
++                    fn drop(&mut self) {
++                        self.0.fetch_sub(1, Ordering::SeqCst);
++                    }
++                }
++                let _guard = Guard(&self.active);
++                std::future::pending::<()>().await;
++            }
++            let (stream, peer) = tokio::io::duplex(64);
++            self.peers.lock().push(peer);
++            Ok(Box::new(stream))
++        }
++    }
++
++    fn changing_network(block_first: bool) -> Arc<ChangingNetwork> {
++        Arc::new(ChangingNetwork {
++            revision: AtomicUsize::new(0),
++            calls: Default::default(),
++            peers: Default::default(),
++            block_first,
++            active: AtomicUsize::new(0),
++            stall: Default::default(),
++        })
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn startup_budget_settles_slow_remotes_and_keeps_local_direct_available() {
++        let source = changing_network(false);
++        source.stall.store(true, Ordering::SeqCst);
++        let config = Config::new(
++            "budget",
++            crate::Routes {
++                payload: crate::Payload::Http,
++                reverse: (0..16)
++                    .map(|index| crate::modes::RemoteReverse {
++                        backend: crate::RemoteBackend::Relay,
++                        server_name: format!("access-{index}.invalid"),
++                    })
++                    .collect(),
++                direct: true,
++                tunnel: vec![],
++            }
++            .into(),
++            crate::Whitelist::steam(),
++        );
++        let mut dependencies = Dependencies::new();
++        dependencies.dialer = source.clone();
++        let tasks = TaskTracker::new();
++        let cancel = CancellationToken::new();
++        let registry = prepare_routes(
++            &config,
++            &dependencies,
++            Arc::new(Connections::default()),
++            tasks.clone(),
++            cancel.clone(),
++        )
++        .await
++        .unwrap();
++        {
++            let health = registry.health.read();
++            assert!(
++                health
++                    .iter()
++                    .take(16)
++                    .all(|state| state.eligibility == Eligibility::Unavailable)
++            );
++            assert_eq!(health[16].eligibility, Eligibility::Available);
++        }
++        assert!(
++            source
++                .calls
++                .lock()
++                .iter()
++                .all(|host| host.starts_with("access-"))
++        );
++        cancel.cancel();
++        tasks.close();
++        tasks.wait().await;
++        assert_eq!(source.active.load(Ordering::SeqCst), 0);
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn sustained_changes_reap_inactive_generations_without_waiting_for_probe_completion() {
++        let source = changing_network(false);
++        let config = Config::new(
++            "storm",
++            crate::Routes {
++                payload: crate::Payload::Http,
++                reverse: vec![crate::modes::RemoteReverse {
++                    backend: crate::RemoteBackend::Relay,
++                    server_name: "access.invalid".into(),
++                }],
++                direct: true,
++                tunnel: vec![],
++            }
++            .into(),
++            crate::Whitelist::steam(),
++        );
++        let mut dependencies = Dependencies::new();
++        dependencies.dialer = source.clone();
++        let tasks = TaskTracker::new();
++        let cancel = CancellationToken::new();
++        let root = prepare_routes(
++            &config,
++            &dependencies,
++            Arc::new(Connections::default()),
++            tasks.clone(),
++            cancel.clone(),
++        )
++        .await
++        .unwrap();
++        source.stall.store(true, Ordering::SeqCst);
++        let mut previous = root.current();
++        for revision in 1..12 {
++            source.revision.store(revision, Ordering::SeqCst);
++            tokio::time::advance(Duration::from_secs(1)).await;
++            for _ in 0..100 {
++                if root.current().generation != previous.generation
++                    && previous.routes[0].backend.cancel.is_cancelled()
++                {
++                    break;
++                }
++                tokio::task::yield_now().await;
++            }
++            assert_ne!(root.current().generation, previous.generation);
++            assert!(
++                previous.routes[0].backend.cancel.is_cancelled(),
++                "inactive generation retained while probes keep being canceled"
++            );
++            assert!(source.active.load(Ordering::SeqCst) <= 1);
++            previous = root.current();
++        }
++        cancel.cancel();
++        tasks.close();
++        tasks.wait().await;
++        assert_eq!(source.active.load(Ordering::SeqCst), 0);
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn native_network_event_keeps_committed_stream_resets_history_and_stops_subscription() {
++        use tokio::io::AsyncWriteExt;
++        let source = changing_network(false);
++        let config = Config::new(
++            "network",
++            crate::Routes {
++                payload: crate::Payload::Tcp,
++                reverse: vec![],
++                direct: true,
++                tunnel: vec![],
++            }
++            .into(),
++            crate::Whitelist::steam(),
++        );
++        let mut dependencies = Dependencies::new();
++        dependencies.dialer = source.clone();
++        let (status, _) = watch::channel(State::Created);
++        let plane = NativePlane {
++            config,
++            dependencies,
++            #[cfg(feature = "fake-ip")]
++            fake: None,
++            session: Mutex::new(None),
++            stop: Default::default(),
++            status,
++            failure: Default::default(),
++        };
++        plane.start(Default::default()).await.unwrap();
++        let session = plane.session.lock().await.clone().unwrap();
++        let registry = session.backend.routes.as_ref().unwrap().clone();
++        let old = registry.current();
++        let mut stream = plane.connect("store.steampowered.com", 443).await.unwrap();
++        old.health.write()[0].targets.insert(
++            "other.test".into(),
++            Instant::now() + Duration::from_secs(60),
++        );
++        source.revision.store(1, Ordering::SeqCst);
++        tokio::time::advance(Duration::from_secs(2)).await;
++        for _ in 0..100 {
++            if registry.current().generation != old.generation {
++                break;
++            }
++            tokio::task::yield_now().await;
++        }
++        let next = registry.current();
++        assert_ne!(next.generation, old.generation);
++        assert!(old.acquisition.is_cancelled());
++        assert!(next.health.read()[0].targets.contains_key("other.test"));
++        old.failure_at(0, "store.steampowered.com", &Error::Transport, true);
++        assert!(
++            !next.health.read()[0]
++                .targets
++                .contains_key("store.steampowered.com")
++        );
++        let mut peer = source.peers.lock().remove(0);
++        peer.write_all(b"ok").await.unwrap();
++        let mut bytes = [0; 2];
++        stream.read_exact(&mut bytes).await.unwrap();
++        assert_eq!(&bytes, b"ok");
++        tokio::time::advance(Duration::from_secs(2)).await;
++        for _ in 0..20 {
++            tokio::task::yield_now().await;
++        }
++        assert_eq!(registry.current().generation, next.generation);
++        assert_eq!(*source.calls.lock(), ["192.0.2.1"]);
++        drop(stream);
++        plane.close().await.unwrap();
++        assert!(session.tasks.is_empty());
++        assert_eq!(plane.status().state, State::Closed);
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn network_event_during_start_drains_old_probe_and_rechecks_only_access() {
++        let source = changing_network(true);
++        let config = Config::new(
++            "access",
++            crate::ModeConfig::remote_reverse(crate::RemoteBackend::Relay, "access.invalid"),
++            crate::Whitelist::steam(),
++        );
++        let mut dependencies = Dependencies::new();
++        dependencies.dialer = source.clone();
++        let tasks = TaskTracker::new();
++        let cancel = CancellationToken::new();
++        let starting = {
++            let tasks = tasks.clone();
++            let cancel = cancel.clone();
++            tokio::spawn(async move {
++                prepare_routes(
++                    &config,
++                    &dependencies,
++                    Arc::new(Connections::default()),
++                    tasks,
++                    cancel,
++                )
++                .await
++            })
++        };
++        for _ in 0..100 {
++            if source.active.load(Ordering::SeqCst) == 1 {
++                break;
++            }
++            tokio::task::yield_now().await;
++        }
++        assert_eq!(source.active.load(Ordering::SeqCst), 1);
++        source.revision.store(1, Ordering::SeqCst);
++        tokio::time::advance(Duration::from_secs(1)).await;
++        let registry = starting.await.unwrap().unwrap();
++        assert_eq!(source.active.load(Ordering::SeqCst), 0);
++        assert_eq!(*source.calls.lock(), ["access.invalid", "access.invalid"]);
++        let old = registry.current();
++        old.health.write()[0].isolated = true;
++        source.revision.store(2, Ordering::SeqCst);
++        tokio::time::advance(Duration::from_secs(2)).await;
++        for _ in 0..100 {
++            if registry.current().generation != old.generation {
++                break;
++            }
++            tokio::task::yield_now().await;
++        }
++        let next = registry.current();
++        assert_ne!(next.generation, old.generation);
++        assert!(next.health.read()[0].isolated);
++        old.access_success(0, "store.steampowered.com");
++        old.failure_at(0, "store.steampowered.com", &Error::Transport, true);
++        assert!(
++            !next.health.read()[0]
++                .targets
++                .contains_key("store.steampowered.com")
++        );
++        cancel.cancel();
++        tasks.close();
++        tasks.wait().await;
++        assert!(tasks.is_empty());
++    }
+     #[async_trait::async_trait]
+     impl StreamOutbound for RefuseBusiness {
+         async fn close(&self) {}
+diff --git a/src/network_change.rs b/src/network_change.rs
+new file mode 100644
+index 0000000..3f7d632
+--- /dev/null
++++ b/src/network_change.rs
+@@ -0,0 +1,102 @@
++use std::time::Duration;
++
++pub(crate) async fn revision() -> Option<String> {
++    #[cfg(target_os = "linux")]
++    {
++        let mut snapshot = Vec::new();
++        for path in [
++            "/proc/net/route",
++            "/proc/net/ipv6_route",
++            "/proc/net/if_inet6",
++            "/proc/net/fib_trie",
++            "/etc/resolv.conf",
++        ] {
++            let data = tokio::fs::read_to_string(path).await.ok()?;
++            for line in data.lines() {
++                let fields: Vec<_> = line.split_whitespace().collect();
++                let stable = if path == "/proc/net/route" && fields.len() >= 8 {
++                    [
++                        fields[0], fields[1], fields[2], fields[3], fields[6], fields[7],
++                    ]
++                    .join(" ")
++                } else if path == "/proc/net/ipv6_route" && fields.len() >= 10 {
++                    fields[..6]
++                        .iter()
++                        .chain(fields[8..].iter())
++                        .copied()
++                        .collect::<Vec<_>>()
++                        .join(" ")
++                } else {
++                    line.to_string()
++                };
++                snapshot.push(format!("{path}:{stable}"));
++            }
++        }
++        snapshot.sort();
++        Some(snapshot.join("\n"))
++    }
++    #[cfg(target_os = "macos")]
++    {
++        let mut snapshot = String::new();
++        for (program, args) in [
++            ("/sbin/route", vec!["-n", "get", "default"]),
++            ("/sbin/route", vec!["-n", "get", "-inet6", "default"]),
++            ("/sbin/ifconfig", vec!["-a"]),
++        ] {
++            let mut command = tokio::process::Command::new(program);
++            command.args(args).kill_on_drop(true);
++            let output = tokio::time::timeout(Duration::from_secs(1), command.output())
++                .await
++                .ok()?
++                .ok()?;
++            if program == "/sbin/ifconfig" && !output.status.success() {
++                return None;
++            }
++            for line in String::from_utf8_lossy(&output.stdout).lines() {
++                let line = line.trim();
++                if ["gateway:", "interface:", "inet ", "inet6 ", "status:"]
++                    .iter()
++                    .any(|prefix| line.starts_with(prefix))
++                    || line.contains(": flags=")
++                {
++                    snapshot.push_str(line);
++                    snapshot.push('\n');
++                }
++            }
++        }
++        Some(snapshot)
++    }
++    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
++    {
++        None
++    }
++}
++
++pub(crate) async fn watch(
++    dialer: std::sync::Arc<dyn crate::TcpDialer>,
++    cancel: tokio_util::sync::CancellationToken,
++    sender: tokio::sync::watch::Sender<Option<String>>,
++) {
++    loop {
++        tokio::select! {
++            biased;
++            _ = cancel.cancelled() => return,
++            _ = tokio::time::sleep(Duration::from_secs(1)) => {}
++        }
++        let revision = tokio::select! {
++            biased;
++            _ = cancel.cancelled() => return,
++            result = tokio::time::timeout(Duration::from_secs(4), dialer.network_revision()) => result.ok().flatten(),
++        };
++        if let Some(revision) = revision {
++            sender.send_if_modified(|previous| {
++                if previous.as_ref() == Some(&revision) {
++                    false
++                } else {
++                    *previous = Some(revision);
++                    true
++                }
++            });
++        }
++    }
++}
+diff --git a/src/outbound/direct.rs b/src/outbound/direct.rs
+index f726817..b9e8a04 100644
+--- a/src/outbound/direct.rs
++++ b/src/outbound/direct.rs
+@@ -15,6 +15,10 @@ pub(crate) struct DirectOutbound<S: ?Sized> {
+ }
+ 
+ impl<S: TcpDialer + ?Sized> DirectOutbound<S> {
++    pub(crate) fn clear_history(&self) {
++        self.health.lock().clear();
++    }
++
+     pub fn new(source: Arc<S>, generation: u64) -> Self {
+         Self {
+             source,
+diff --git a/src/outbound/registry.rs b/src/outbound/registry.rs
+index a56c536..d27e751 100644
+--- a/src/outbound/registry.rs
++++ b/src/outbound/registry.rs
+@@ -18,15 +18,25 @@ pub(crate) struct Registry {
+     pub health: RwLock<Vec<Health>>,
+     pub generation: u64,
+     pub(crate) session: u64,
++    latest: RwLock<Option<Arc<Registry>>>,
++    pub(crate) acquisition: tokio_util::sync::CancellationToken,
++    pub(crate) active: tokio_util::task::TaskTracker,
+ }
+ 
+ impl Registry {
+     pub(crate) fn new(routes: Vec<Route>, generation: u64) -> Arc<Self> {
++        Self::in_session(routes, generation, rand::random())
++    }
++
++    pub(crate) fn in_session(routes: Vec<Route>, generation: u64, session: u64) -> Arc<Self> {
+         Arc::new(Self {
+             health: RwLock::new(routes.iter().map(|_| Health::new(generation)).collect()),
+             routes,
+             generation,
+-            session: rand::random(),
++            session,
++            latest: RwLock::new(None),
++            acquisition: Default::default(),
++            active: Default::default(),
+         })
+     }
+     #[cfg(test)]
+@@ -45,14 +55,54 @@ impl Registry {
+             routes,
+             generation: 1,
+             session: 1,
++            latest: RwLock::new(None),
++            acquisition: Default::default(),
++            active: Default::default(),
+         })
+     }
+ 
++    pub(crate) fn current(self: &Arc<Self>) -> Arc<Self> {
++        self.latest.read().clone().unwrap_or_else(|| self.clone())
++    }
++
++    pub(crate) fn publish(&self, next: Arc<Self>) {
++        *self.latest.write() = Some(next);
++    }
++
++    pub(crate) fn invalidate(&self) {
++        let _health = self.health.write();
++        self.acquisition.cancel();
++    }
++
++    pub(crate) fn inherit(&self, previous: &Self) {
++        let old = previous.health.read();
++        let mut health = self.health.write();
++        for (state, previous) in health.iter_mut().zip(old.iter()) {
++            state.isolated = previous.isolated;
++            state.targets = previous.targets.clone();
++            state.targets.retain(|_, until| *until > Instant::now());
++        }
++    }
++
++    pub(crate) async fn close(&self) {
++        for state in self.health.write().iter_mut() {
++            state.samples.clear();
++        }
++        for route in &self.routes {
++            route.backend.drain_carrier_dials().await;
++            #[cfg(feature = "reverse-proxy")]
++            crate::http_proxy::shutdown(&route.backend).await;
++        }
++    }
++
+     pub(crate) fn get(&self, index: usize) -> Arc<Backend> {
+         self.routes[index].backend.clone()
+     }
+ 
+     pub fn usable(&self, index: usize, traffic: &Traffic<'_>) -> bool {
++        if self.acquisition.is_cancelled() {
++            return false;
++        }
+         crate::routing::filter::allows(
+             &self.routes[index],
+             &self.health.read()[index],
+@@ -72,6 +122,9 @@ impl Registry {
+         let target = target || target_connection(&self.routes[index], host);
+         let outcome = classify_failure(&self.routes[index], error, target);
+         let mut health = self.health.write();
++        if self.acquisition.is_cancelled() {
++            return;
++        }
+         if matches!(outcome, Outcome::Access) {
+             for (route, state) in self.routes.iter().zip(health.iter_mut()) {
+                 if route.endpoint == self.routes[index].endpoint {
+@@ -87,6 +140,9 @@ impl Registry {
+             return;
+         }
+         let mut health = self.health.write();
++        if self.acquisition.is_cancelled() {
++            return;
++        }
+         for (route, state) in self.routes.iter().zip(health.iter_mut()) {
+             if route.endpoint == self.routes[index].endpoint {
+                 state.access_success();
+@@ -94,6 +150,43 @@ impl Registry {
+         }
+     }
+ }
++pub(crate) struct GenerationStream {
++    pub stream: crate::BoxStream,
++    pub _token: tokio_util::task::task_tracker::TaskTrackerToken,
++}
++
++impl tokio::io::AsyncRead for GenerationStream {
++    fn poll_read(
++        mut self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++        buffer: &mut tokio::io::ReadBuf<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        std::pin::Pin::new(&mut self.stream).poll_read(context, buffer)
++    }
++}
++
++impl tokio::io::AsyncWrite for GenerationStream {
++    fn poll_write(
++        mut self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++        buffer: &[u8],
++    ) -> std::task::Poll<std::io::Result<usize>> {
++        std::pin::Pin::new(&mut self.stream).poll_write(context, buffer)
++    }
++    fn poll_flush(
++        mut self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        std::pin::Pin::new(&mut self.stream).poll_flush(context)
++    }
++    fn poll_shutdown(
++        mut self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        std::pin::Pin::new(&mut self.stream).poll_shutdown(context)
++    }
++}
++
+ #[cfg(feature = "reverse-proxy")]
+ pub(crate) struct SocketBridge {
+     pub address: SocketAddr,
+diff --git a/src/outbound/stream.rs b/src/outbound/stream.rs
+index b57908f..f530d65 100644
+--- a/src/outbound/stream.rs
++++ b/src/outbound/stream.rs
+@@ -78,6 +78,7 @@ impl<T: Tunnel> NativeStream<T> {
+ #[async_trait::async_trait]
+ impl<T: Tunnel> StreamOutbound for NativeStream<T> {
+     async fn close(&self) {
++        self.direct.clear_history();
+         self.tunnel.close().await;
+     }
+ 
+diff --git a/src/probe/mod.rs b/src/probe/mod.rs
+index 62425df..1c70348 100644
+--- a/src/probe/mod.rs
++++ b/src/probe/mod.rs
+@@ -5,7 +5,7 @@ mod runner;
+ mod scheduler;
+ mod tcp;
+ pub(crate) use runner::ProbeRunner;
+-pub(crate) use scheduler::{ProbeScheduler, group_targets, maintain};
++pub(crate) use scheduler::{ProbeScheduler, group_targets};
+ pub(crate) use tcp::TcpProbe;
+ #[derive(Clone, Debug, Eq, PartialEq, Hash)]
+ pub(crate) struct SocketEndpoint {
+diff --git a/src/probe/scheduler.rs b/src/probe/scheduler.rs
+index 5f4ad35..3c92055 100644
+--- a/src/probe/scheduler.rs
++++ b/src/probe/scheduler.rs
+@@ -1,6 +1,6 @@
+ use super::{Probe, ProbeResult, ProbeRunner};
+ use crate::{Error, Result};
+-use std::{collections::HashMap, future::Future, hash::Hash, sync::Arc, time::Duration};
++use std::{collections::HashMap, hash::Hash, sync::Arc};
+ use tokio::time::Instant;
+ use tokio_util::sync::CancellationToken;
+ 
+@@ -14,23 +14,6 @@ pub(crate) fn group_targets<T: Eq + Hash, I>(
+     groups
+ }
+ 
+-pub(crate) async fn maintain<F, R>(cancel: CancellationToken, mut check: F)
+-where
+-    F: FnMut() -> R,
+-    R: Future<Output = Result<()>>,
+-{
+-    loop {
+-        tokio::select! {
+-            biased;
+-            _ = cancel.cancelled() => break,
+-            _ = tokio::time::sleep(Duration::from_millis(250)) => {}
+-        }
+-        if check().await.is_err() && cancel.is_cancelled() {
+-            break;
+-        }
+-    }
+-}
+-
+ pub(crate) struct ProbeScheduler<P> {
+     pub runner: Arc<ProbeRunner<P>>,
+     pub concurrency: usize,
