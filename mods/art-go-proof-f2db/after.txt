@@ -1,0 +1,4 @@
+=== RUN   TestStartupAccessQualificationBeforeRunning
+--- PASS: TestStartupAccessQualificationBeforeRunning (0.00s)
+PASS
+ok  	github.com/gamesir123/steam-proxy	0.420s

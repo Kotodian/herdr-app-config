@@ -1,0 +1,29 @@
+git diff --check: exit 0
+Changed/new files: 27
+bindings/go/README.md
+bindings/go/config.go
+bindings/go/config_test.go
+bindings/go/connection.go
+bindings/go/connection_reverse.go
+bindings/go/connection_reverse_disabled.go
+bindings/go/connection_test.go
+bindings/go/http.go
+bindings/go/identity.go
+bindings/go/identity_reverse.go
+bindings/go/mode.go
+bindings/go/test_helpers_test.go
+bindings/go/tunnel.go
+bindings/go/tunnel_vless.go
+bindings/go/tunnel_wss.go
+bindings/go/lifecycle.go
+bindings/go/lifecycle_test.go
+bindings/go/pool.go
+bindings/go/pool_test.go
+bindings/go/probe.go
+bindings/go/probe_test.go
+bindings/go/routes_config.go
+bindings/go/routing.go
+bindings/go/routing_http_test.go
+bindings/go/routing_test.go
+bindings/go/startup_contract_test.go
+bindings/go/tunnel_http_test.go

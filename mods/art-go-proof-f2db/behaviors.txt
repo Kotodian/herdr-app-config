@@ -1,0 +1,60 @@
+=== RUN   TestRestartValidationFailurePreservesOldSession
+--- PASS: TestRestartValidationFailurePreservesOldSession (0.00s)
+=== RUN   TestRestartCloseFailureDoesNotStartReplacement
+--- PASS: TestRestartCloseFailureDoesNotStartReplacement (0.00s)
+=== RUN   TestRestartFreshSessionClosesOldConnections
+--- PASS: TestRestartFreshSessionClosesOldConnections (0.00s)
+=== RUN   TestRestartNewStartFailureAndCancellation
+=== RUN   TestRestartNewStartFailureAndCancellation/unreachable
+=== RUN   TestRestartNewStartFailureAndCancellation/cancelled
+--- PASS: TestRestartNewStartFailureAndCancellation (0.00s)
+    --- PASS: TestRestartNewStartFailureAndCancellation/unreachable (0.00s)
+    --- PASS: TestRestartNewStartFailureAndCancellation/cancelled (0.00s)
+=== RUN   TestRestartAndConcurrentStatusClose
+--- PASS: TestRestartAndConcurrentStatusClose (0.00s)
+=== RUN   TestStartupBudgetAndCancellationWaitForAllProbes
+--- PASS: TestStartupBudgetAndCancellationWaitForAllProbes (0.00s)
+=== RUN   TestProbeRunnerConcurrencyTimeoutAndCancellation
+--- PASS: TestProbeRunnerConcurrencyTimeoutAndCancellation (0.00s)
+=== RUN   TestHTTPPoolReuseAndNoReplayAfterCommit
+=== RUN   TestHTTPPoolReuseAndNoReplayAfterCommit/h1/GET
+=== RUN   TestHTTPPoolReuseAndNoReplayAfterCommit/h1/POST
+=== RUN   TestHTTPPoolReuseAndNoReplayAfterCommit/h2/GET
+=== RUN   TestHTTPPoolReuseAndNoReplayAfterCommit/h2/POST
+--- PASS: TestHTTPPoolReuseAndNoReplayAfterCommit (0.01s)
+    --- PASS: TestHTTPPoolReuseAndNoReplayAfterCommit/h1/GET (0.00s)
+    --- PASS: TestHTTPPoolReuseAndNoReplayAfterCommit/h1/POST (0.00s)
+    --- PASS: TestHTTPPoolReuseAndNoReplayAfterCommit/h2/GET (0.00s)
+    --- PASS: TestHTTPPoolReuseAndNoReplayAfterCommit/h2/POST (0.00s)
+=== RUN   TestHTTPBusinessFallbackTriesA2BeforeFasterB
+--- PASS: TestHTTPBusinessFallbackTriesA2BeforeFasterB (0.00s)
+=== RUN   TestHTTPSelectionIsPerRequestOnOneDownstreamConnection
+2026/11/15 23:55:55 http: TLS handshake error from 127.0.0.1:50413: EOF
+2026/11/15 23:55:55 http: TLS handshake error from 127.0.0.1:50412: EOF
+--- PASS: TestHTTPSelectionIsPerRequestOnOneDownstreamConnection (0.00s)
+=== RUN   TestHTTP2MultiplexesWithoutSharingRequestCancellation
+2026/11/15 23:55:56 http: TLS handshake error from 127.0.0.1:50419: EOF
+--- PASS: TestHTTP2MultiplexesWithoutSharingRequestCancellation (0.00s)
+=== RUN   TestHTTP2RefusedStreamAndGoAwayDoNotReplay
+=== RUN   TestHTTP2RefusedStreamAndGoAwayDoNotReplay/REFUSED_STREAM
+=== RUN   TestHTTP2RefusedStreamAndGoAwayDoNotReplay/GOAWAY
+--- PASS: TestHTTP2RefusedStreamAndGoAwayDoNotReplay (0.00s)
+    --- PASS: TestHTTP2RefusedStreamAndGoAwayDoNotReplay/REFUSED_STREAM (0.00s)
+    --- PASS: TestHTTP2RefusedStreamAndGoAwayDoNotReplay/GOAWAY (0.00s)
+=== RUN   TestDirectOnlyStartAndBackgroundNeverDialOrigin
+--- PASS: TestDirectOnlyStartAndBackgroundNeverDialOrigin (0.00s)
+=== RUN   TestHTTPOverWSSTunnelVerifiesOriginTLSAndReusesConnection
+=== RUN   TestHTTPOverWSSTunnelVerifiesOriginTLSAndReusesConnection/legacy
+2026/11/15 23:55:56 http: TLS handshake error from 127.0.0.1:50427: EOF
+=== RUN   TestHTTPOverWSSTunnelVerifiesOriginTLSAndReusesConnection/routes
+2026/11/15 23:55:56 http: TLS handshake error from 127.0.0.1:50432: EOF
+--- PASS: TestHTTPOverWSSTunnelVerifiesOriginTLSAndReusesConnection (0.01s)
+    --- PASS: TestHTTPOverWSSTunnelVerifiesOriginTLSAndReusesConnection/legacy (0.00s)
+    --- PASS: TestHTTPOverWSSTunnelVerifiesOriginTLSAndReusesConnection/routes (0.00s)
+=== RUN   TestTunnelCredentialsRemainIsolatedAfterTCPProbeSuccess
+2026/11/15 23:55:56 http: TLS handshake error from 127.0.0.1:50436: EOF
+2026/11/15 23:55:56 http: TLS handshake error from 127.0.0.1:50438: EOF
+2026/11/15 23:55:56 http: TLS handshake error from 127.0.0.1:50439: read tcp 127.0.0.1:50435->127.0.0.1:50439: use of closed network connection
+--- PASS: TestTunnelCredentialsRemainIsolatedAfterTCPProbeSuccess (0.00s)
+PASS
+ok  	github.com/gamesir123/steam-proxy	0.233s
