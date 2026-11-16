@@ -21,6 +21,7 @@ from .templates import instructions
 from .agents import detail, LINE_MAX, live_agents, SUMMARY_MAX
 from .github import finish, remote_of
 from .browsers import browser_line, browser_path
+from .workflow import policy as git_workflow, require_task_base, task_base
 
 
 # ---- an agent's own herdr-task commands never ask -------------------------------------------
@@ -732,8 +733,11 @@ def branch_for(s, task):
 
 def folder_for(s, task):
     if task.get("mode") != "worktree":
+        from .workflow import require_folder
+        require_folder(task, s.loc["folder"])
         return s.loc["folder"]
     if task.get("worktree") and os.path.isdir(task["worktree"]):
+        require_task_base(task)
         return task["worktree"]
     if s.loc["kind"] != "repo":
         raise Fail("Worktrees need a git repo. Use --here.")
@@ -744,7 +748,11 @@ def folder_for(s, task):
     root = os.path.expanduser(str(settings_for(s, task.get("space"))["tasks"].get("worktree_root") or "").strip()) or WORKTREES
     path = os.path.join(root, os.path.basename(main), re.sub(r"[^A-Za-z0-9._-]+", "-", branch).strip("-"))
     # Its own base (--base) branches from that branch; else from what the folder has checked out.
-    own = task.get("base") if task.get("base_set") else None
+    workflow = git_workflow()
+    own = task.get("base") if task.get("base_set") else task_base(task) if workflow else None
+    if own:
+        from .workflow import require_base
+        require_base(own, task)
     base = base_ref(main, own) if own else current_base(main)
     have = registered_worktree(main, path)
     if have:
@@ -755,6 +763,7 @@ def folder_for(s, task):
         base = task.get("base") or base
         start = task.get("start") or git(main, "merge-base", base, have.get("head") or br)[1] or have.get("head")
         task.update(worktree=path, branch=br, base=base, start=start)
+        require_task_base(task)
         return path
     exists = git(main, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}")[0]
     os.makedirs(os.path.dirname(path), exist_ok=True)

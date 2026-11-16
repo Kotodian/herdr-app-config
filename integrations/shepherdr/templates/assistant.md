@@ -199,16 +199,21 @@ A handoff message names the previous agent's session log and screen. Read the en
 If the person's first message follows these instructions, it is your first ask: start on it. Otherwise say in one short line that you are ready, then wait for the person.
 
 <!-- local-gamehub-git-release:start -->
-## 本机工作流：gamehub-git-release
+## 用户工作流：gamehub-git-release
 
-下面的授权边界优先于本模板中默认的自动 Git 写入步骤。配置这套规范本身不授权创建分支、提交、推送、PR、合并、tag 或发布；按用户当前任务已经授权的范围执行，不要重复索取已有授权。
-仅修改代码的任务先完成代码和必要验证。若提交或推送尚未获授权，不为满足模板的默认完成步骤而执行；保留可审查结果，并说明后续 Git 步骤。
+本节是用户明确指定的分支与发布边界，优先于模板默认步骤及旧任务的 main 基线例外。配置本规范本身不等于要求立即提交、推送或合并现有代码；按当前任务已获授权的范围执行，不重复索取已有授权。
 
-为适用的 Git/发布任务核对仓库 AGENTS.md、CLAUDE.md、Makefile 和工作流；把本节规则及已获授权的 Git 动作写进任务简报。适用仓库应从 dev 开发并以 dev 为 PR 目标；创建任务前确认 dev 确实存在，再为该项目选择 dev 作为 base，不要把所有项目的默认分支改成 dev。没有 dev 或工作流不符合预期时先查清仓库约定。合并策略保持 ask，由用户针对任务授权；不因技能配置而发起提交、合并或发布。
+普通开发从 dev 创建分支，开发 PR/合并目标为 dev。明确修复 main/生产上已有 bug 的任务使用 hotfix，从 main 创建修复分支，验证评审后合并回 main；不自动执行 tag 或生产部署。只有用户明确要求本次“上线”或同等生产发布指令，才允许 dev → main、发布 tag 或生产部署。完成、接受 Artifact、普通合并不等于上线。
+
+### 独立决策模型
+
+用户在 Settings → Agents → Decision model · 决策模型 独立选择模型。已选时，对每个新请求在规划/拆任务前调用 `herdr-task decide "请求标题" --prompt-file <包含完整请求和必要上下文的文件> --folder <项目目录> --json`，按分类、理由、风险、步骤和验证要求选择执行流程，不能只把它当分支判断器。未选时引导用户在设置中选择，不能自行指定或偷偷改用执行模型。
+
+`add` 在创建代码任务前自动分类；可用同一标题/简报/目录的 `--decision-file` 复用结果。拆分任务各自分类。遇到不明确的生产目标先问最少必要问题；只读调研/评审由 Assistant 处理；上线分类不构成发布授权。任务结果保存在 decision 字段，show 和简报可看理由。用户明确调整工作流时可用 `--workflow development|hotfix`，保留覆盖记录，不改动已有工作树的代码或历史。
 
 # GameHub Git 与发布规范
 
-仅用于 GameHub 项目或用户明确要求沿用 GameHub 团队规范的任务。先核对仓库指令、当前实现和 Makefile；示例签名以实际代码为准。
+用户已明确要求所有代码沿用本规范，并增加下列 dev/main 边界；此用户规则优先于旧任务里“仅有 main、不创建 dev”的约定。先核对仓库指令、当前实现和 Makefile；示例签名以实际代码为准。
 
 仅在分支、提交、PR 或发布任务中读取。具体操作以用户授权范围为准。
 
@@ -216,8 +221,13 @@ If the person's first message follows these instructions, it is your first ask: 
 
 - `main`：生产代码。
 - `dev`：开发分支，测试环境代码。
-- 从 `dev` 创建个人开发分支；开发并测试完成后向 `dev` 提交 PR，符合开发规范后合并。合并会自动发布测试环境。
-- 正式发布必须打 tag，源文档说明随后自动合并到 `main`；实际 tag 格式和自动化行为先核对仓库工作流，不自行假定版本格式。
+- 普通开发和一般 bug 修复基于 `dev`，开发并测试完成后向 `dev` 提交 PR，符合开发规范后先合并到 `dev`。
+- **生产修复例外**：用户明确要修复 `main` / 生产版本上已有的 bug 时，从 `main` 创建修复分支，验证和评审后合并回 `main`（任务标为 `workflow=hotfix`）。不能因为当前检出 `main` 或请求中出现“bug”就当作生产修复。该例外允许修复代码回到 `main`，不自动授权 tag 或生产部署。
+- 验收任务、接受 Artifact、说“完成”或“合并”按该任务的分类目标推进，不等于上线，不授权将普通开发代码从 `dev` 推进到 `main`。
+- 缺少 `dev` 时先核对生产基线并建立开发分支；不得回退到 `main` 接收开发代码。已有脏工作树应原地保留，只在目标分支内容完全相同且没有 PR 时安全调整任务 base；分叉时先核对整合方式，不重置或丢弃改动。
+- 只有用户明确说“上线”（或同等明确的生产发布指令），才允许将已经验证的 `dev` 合并到 `main`，并执行本次授权的 tag/发布步骤。上线授权仅适用于本次指定范围；后续普通开发仍回到 `dev`，不得留下自动向 `main` 合并或打 tag 的任务。生产修复回合 `main` 遵守上一条明确例外。
+- 正式发布沿用团队 tag 规范，但创建/推送 tag、自动化合并到 `main` 或触发生产部署均属于上线动作，必须等明确上线指令。先核对仓库实际 tag 格式及自动化；若 tag 会自动合并到 `main`，采用该流程，不重复手工合并。
+- 合并到 `dev` 是否自动发布测试环境，以仓库现有工作流为准；不得将未经验证的自动化行为当成事实。
 
 原文未规定个人分支名称，不追加团队未提供的强制命名规则。提交、推送、合并和发布按当前用户任务执行；整理或使用技能本身不授权这些动作。
 

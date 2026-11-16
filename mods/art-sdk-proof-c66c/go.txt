@@ -1,0 +1,58 @@
+SDK checks: current checkout only; per-command limit 300s
+Environment: CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 GOWORK=off GOENV=off GOFLAGS= GOPROXY=off GOSUMDB=off GONOPROXY=none 'GONOSUMDB=*' GOPRIVATE= GOTOOLCHAIN=local GOTELEMETRY=off
+
+[go/default] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s ./...
+ok  	github.com/gamesir123/steam-proxy	0.456s
+
+[go/default] PASS (exit 0, 1.0s)
+
+[go/race] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=1 go test -mod=readonly -count=1 -timeout=300s -race ./...
+ok  	github.com/gamesir123/steam-proxy	1.696s
+
+[go/race] PASS (exit 0, 2.5s)
+
+[go/reverse_proxy] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy ./...
+ok  	github.com/gamesir123/steam-proxy	0.391s
+
+[go/reverse_proxy] PASS (exit 0, 0.8s)
+
+[go/tunnel_proxy] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags tunnel_proxy ./...
+ok  	github.com/gamesir123/steam-proxy	0.345s
+
+[go/tunnel_proxy] PASS (exit 0, 0.7s)
+
+[go/vless_xhttp] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags vless_xhttp ./...
+ok  	github.com/gamesir123/steam-proxy	0.402s
+
+[go/vless_xhttp] PASS (exit 0, 1.0s)
+
+[go/websocket] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags websocket ./...
+ok  	github.com/gamesir123/steam-proxy	0.349s
+
+[go/websocket] PASS (exit 0, 0.8s)
+
+[go/shadowsocks] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags shadowsocks ./...
+ok  	github.com/gamesir123/steam-proxy	0.377s
+
+[go/shadowsocks] PASS (exit 0, 0.8s)
+
+[go/reverse-vless] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy,vless_xhttp ./...
+ok  	github.com/gamesir123/steam-proxy	0.454s
+
+[go/reverse-vless] PASS (exit 0, 1.0s)
+
+[go/combined] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy,vless_xhttp,websocket,shadowsocks ./...
+ok  	github.com/gamesir123/steam-proxy	0.455s
+
+[go/combined] PASS (exit 0, 1.1s)
+
+Result: 9 commands completed, 0 failed, 0 not run.

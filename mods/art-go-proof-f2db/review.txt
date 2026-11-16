@@ -1,0 +1,63 @@
+Independent read-only review: sps-2-review / t53
+Reviewed pre-fix uncommitted diff and new files; no commit was misregistered.
+
+1. **blocker — Tunnel physical dials escape the attempt deadline and are not joined during shutdown.**  
+   Locations: [mode.go:101](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/mode.go:101), [tunnel_vless.go:59](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel_vless.go:59), [tunnel_wss.go:38](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel_wss.go:38).  
+   Both tunnel transports pass `http.Transport`’s dial context directly to the injected dialer. The installed Go transport creates that context using `context.WithoutCancel`, removing the request deadline and cancellation. The default dialer now also has no timeout. A compliant dialer waiting on `ctx.Done()` can therefore remain blocked after the SDK attempt returns. Tunnel `Close` calls `CloseIdleConnections`, but does not join these physical dial goroutines before returning, so Restart can begin the replacement while old dial work still exists.  
+   **Fix:** explicitly preserve the original establishment deadline and cancellation across the transport boundary, bind physical dials to the tunnel lifetime, and track/join them. Verify with a blocking fake dialer that checks its deadline and acknowledges termination before Close returns.
+
+2. **blocker — VLESS credential and outer-TLS failures are discarded before reaching route health.**  
+   Locations: [tunnel_vless.go:201](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel_vless.go:201), [tunnel_vless.go:227](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel_vless.go:227).  
+   `requestStream` classifies certificate failures and HTTP 401/403 as `errExitIdentity`, and `vlessTunnelConn.Read` preserves that sentinel. However, `spliceTunnel` discards the `io.Copy` error and closes the `net.Pipe`. The caller receives EOF/closed-pipe instead of the identity error. Consequently, raw TCP can receive no health penalty, while tunneled HTTP gets a temporary target cooldown; the exit is never permanently blocked for the known credential failure. The packet-upload path also discards rejection errors.  
+   **Fix:** propagate classified terminal errors through the bridge or an explicit outcome callback, including upload failures, and preserve them through handshake wrappers. Add VLESS-specific certificate/401/403 isolation tests; the existing credential test exercises WSS.
+
+3. **major — The revised background scheduler can permanently starve unavailable endpoints.**  
+   Locations: [routing.go:231](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/routing.go:231), [routing.go:303](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/routing.go:303).  
+   This finding includes the latest correction. Available/recovering records always sort ahead of isolated records, and only three probes dispatch per one-second tick. With 60 healthy endpoints, even instantaneous probes cannot refresh all of them within the maximum normal interval of 18 seconds. Healthy probes remain continuously due, so an unavailable endpoint that becomes due after that backlog forms can receive no further recovery probes—exceeding the specified 120-second maximum backoff indefinitely. The new test covers only two active endpoints.  
+   **Fix:** provide bounded fairness for overdue isolated endpoints and dispatch ready work as capacity becomes available, while retaining the three-in-flight limit. Test sustained scheduling with at least 60 active endpoints and one unavailable endpoint.
+
+4. **major — Reaching the pool limit closes a new HTTP/2 connection before its first request.**  
+   Locations: [pool.go:122](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:122), [pool.go:184](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:184).  
+   `connectHTTP` inserts a newly established H2 connection before returning it for `RoundTrip`. When the pool already contains 256 connections, `put` closes that new connection without returning an error; `connectHTTP` then returns the closed connection as a successful acquisition. For example, requests across 257 admitted direct authorities within the idle timeout fail at the 257th authority despite successful TCP/TLS establishment. Active H2 connections also count toward this nominal idle-pool limit.  
+   **Fix:** distinguish acquisition from idle retention. Evict an eligible idle connection or allow the new connection to serve its request without retaining it afterward; never silently close the connection being returned for use.
+
+5. **major — Connection failures leak the HTTP request body.**  
+   Location: [http.go:98](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/http.go:98).  
+   If route selection, DNS, TCP, TLS, or acquisition cancellation fails, this branch calls `done()` and returns without closing `r.Body`. Body ownership and cleanup are installed only after acquisition succeeds. This regresses the previous transport path and violates the advertised `RoundTripper` contract: an upload producer using `io.Pipe` can remain blocked, and a file body remains open after the request fails.  
+   **Fix:** establish request-body ownership before acquisition and close it on every failure path, preserving exactly-once cleanup. Verify both an exhausted-route failure and cancellation during dialing with a close-observing body.
+
+6. **major — Close cannot cancel an in-progress Start.**  
+   Locations: [lifecycle.go:15](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/lifecycle.go:15), [mode.go:226](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/mode.go:226).  
+   `Mode.Start` holds `owner` throughout startup, while `Mode.Close` needs the same lock before reaching cancellation. The session’s `operation` mutex imposes the same ordering internally. Calling Close during blocked startup probes therefore leaves them running until the startup budget expires—up to 15 seconds. With Direct enabled, Start can subsequently publish Running and return success before the waiting Close proceeds.  
+   **Fix:** allow Close to signal cancellation of the current session before waiting for lifecycle serialization, then join startup work before completing shutdown. Add a concurrent Start/Close test with probes blocked on cancellation.
+
+7. **major — SDK-owned attempt timeouts do not count as access failures.**  
+   Location: [routing.go:361](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/routing.go:361).  
+   Access feedback is recorded only when `ctx.Err() == nil`, but this `ctx` is the SDK’s shared attempt context. When DNS/TCP consumes `Runtime.ConnectTimeout`, the observed timeout is skipped and the function returns at line 393 without updating health. Repeated connection timeouts therefore never increase consecutive failures or reduce same-tier preference. This conflates internal connection-budget exhaustion with caller cancellation.  
+   **Fix:** retain the caller/session cancellation cause separately from the attempt deadline. Count attributable DNS/TCP timeouts once per logical attempt while excluding caller cancellation and shutdown.
+
+8. **minor — HTTPS responses lose their TLS metadata on both protocol paths.**  
+   Locations: [pool.go:158](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:158), [http.go:190](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/http.go:190).  
+   The manual H1 response never receives `Response.TLS`. For H2, wrapping the TLS connection in `managedConn` hides `ConnectionState()`, so `http2.NewClientConn` cannot populate its TLS state either. Existing callers inspecting the negotiated protocol or verified peer certificates now receive nil metadata.  
+   **Fix:** retain the verified connection state and populate responses, or expose the required connection-state method through the wrapper.
+
+**Not run in my sandbox:** executable Go tests. I attempted `GOWORK=off CGO_ENABLED=0 go test ./...`; it failed before execution because creating the temporary build directory was denied. `git diff --check` produced no whitespace diagnostics.
+
+The worker’s [default](/private/tmp/sps-2-proof/default.txt), [race](/private/tmp/sps-2-proof/race.txt), and [feature](/private/tmp/sps-2-proof/features.txt) logs contain successful results, but their last observed timestamps precede the scheduler correction. Those are worker results, not tests I ran, and do not establish validation of the latest change.
+
+Included the measurement correction and its test in the same read-only review. **No additional finding in this change:** [probe.go:26](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/probe.go:26) now captures `dial_elapsed` before `Close`; [probe_test.go:53](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/probe_test.go:53) checks that a 40 ms dial excludes a one-second disposal delay.
+
+The existing findings remain unchanged:
+
+| Level | Location | Remaining finding and fix |
+|---|---|---|
+| **blocker** | `tunnel_vless.go:59`, `tunnel_wss.go:38`, `mode.go:101` | Physical tunnel dials receive the HTTP transport’s detached context and lack lifecycle joining. Preserve the attempt deadline/cancellation and wait for physical dials during shutdown. |
+| **blocker** | `tunnel_vless.go:201,227` | The bridge discards classified credential/TLS errors, exposing EOF instead and preventing exit isolation. Propagate terminal errors through the bridge and upload paths. |
+| **major** | `routing.go:231,303` | The bounded scheduler still permits indefinite recovery starvation: active probes always outrank isolated endpoints, while dispatch is limited to three per second. Add bounded fairness and scheduling that uses available concurrency. |
+| **major** | `pool.go:122,184` | Pool admission can close a newly established H2 connection before its first request, then return it as usable. Separate active acquisition from idle retention. |
+| **major** | `http.go:98` | Acquisition errors return without closing the request body. Establish body ownership before dialing and close it on failure. |
+| **major** | `lifecycle.go:15`, `mode.go:226` | Close waits behind Start’s locks before it can cancel startup probes. Signal cancellation before waiting for lifecycle serialization. |
+| **major** | `routing.go:361` | SDK attempt-deadline exhaustion suppresses attributable access-failure feedback. Distinguish internal timeout from caller cancellation and shutdown. |
+| **minor** | `pool.go:158`, `http.go:190` | HTTPS responses lose `Response.TLS` metadata. Preserve and expose the verified connection state for H1 and H2. |
+
+**Not run in my sandbox:** Go tests; the earlier execution attempt was blocked by temporary-directory creation permissions. The refreshed worker logs contain successful default, race, and feature-tag results timestamped **November 16, 2026, 00:01:13–00:01:27 EST**, after the scheduler correction but before the measurement correction at **00:01:59 EST**. They therefore do not establish validation of this final change.

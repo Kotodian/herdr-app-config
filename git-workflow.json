@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "development_branch": "dev",
+  "production_branch": "main",
+  "hotfix_from_production": true,
+  "release_requires_user": true,
+  "release_instruction": "上线",
+  "task_merge": "ask"
+}

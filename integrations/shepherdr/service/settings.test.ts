@@ -169,15 +169,35 @@ test("Agents and Tasks say the window's words: the model button, Other CLI, Must
   s.start();
   s.choices = C.choicesFrom({ claude: { model: "opus[1m]", effort: "high", per: {} }, codex: { models: [{ id: "gpt-5", label: "GPT-5", efforts: ["low", "high"] }] } });
   const agents = s.sections(null).find((x) => x.name === "Agents" && x.level === "all")!;
-  expect(agents.rows.map((r) => r.label)).toEqual(["Assistant", "Workers", "Reviewer", "Backup agent", "Reactions", "Suggested next message", "Feedback offers", "Feedback repo"]);
-  expect(agents.rows[0].value).toBe("Opus 5.5 · 1M · High");
-  expect(agents.rows[2]).toMatchObject({ value: "Other CLI (Codex)", agent: { unset: true, other: false } });
+  expect(agents.rows.map((r) => r.label)).toEqual([...C.ROLES.map((r: any) => r.title), "Backup agent", "Reactions", "Suggested next message", "Feedback offers", "Feedback repo"]);
+  expect(agents.rows.find((r) => r.key === "role.coordinator")?.value).toBe("Opus 5.5 · 1M · High");
+  expect(agents.rows.find((r) => r.key === "role.reviewer")).toMatchObject({ value: "Other CLI (Codex)", agent: { unset: true, other: false } });
+  expect(agents.rows.find((r) => r.key === "role.decider")).toMatchObject({ value: C.CHOOSE_DECIDER, agent: { unset: true } });
   const tasks = s.sections(null).find((x) => x.name === "Tasks" && x.level === "all")!;
   expect(tasks.rows.some((r) => r.key === "tasks.must_fix")).toBe(false);
   expect(tasks.rows.find((r) => r.key === "tasks.max_running")).toMatchObject({ hint: C.ABOUT["tasks.max_running"], steps: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"] });
   const web = s.sections({ on: true, link: "https://box/shepherdr/", why: null }).find((x) => x.name === "Web")!;
   expect(web.rows.map((r) => r.label)).toEqual(["Shepherdr on the web", "Link"]);
   expect(web.rows[0].hint).toBe("On, private to your tailnet.");
+});
+
+test("the decision model is an independent selectable custom-provider model and inherits by space", () => {
+  writeFileSync(file, "{}");
+  const s = new Settings();
+  s.start();
+  s.choices = CORE.choicesFrom({ claude: { model: "opus", per: {} }, codex: { models: [{ id: "custom/my-choice", label: "My choice", efforts: ["high"] }] } });
+  const sp = { id: "decider-space", name: "Decision test", machine: null, folder: "/decision-test" };
+  const pick = { agent: "codex", model: "custom/my-choice", effort: "high" };
+  s.set("role.decider", JSON.stringify(pick));
+  let cfg = JSON.parse(readFileSync(file, "utf8"));
+  expect(cfg.everywhere.decider).toMatchObject(pick);
+  expect(cfg.everywhere.worker).toBeUndefined();
+  const row = () => s.sections(null, [sp]).find((x) => x.name === "Agents" && x.level === sp.id)!.rows.find((r) => r.key === "role.decider")!;
+  expect(row().agent?.sel).toMatchObject(pick);
+  s.set("role.decider", JSON.stringify({ ...pick, model: "custom/space-choice" }), sp.id, sp);
+  expect(row().agent?.sel?.model).toBe("custom/space-choice");
+  s.set("role.decider", null, sp.id, sp);
+  expect(row().agent?.sel?.model).toBe("custom/my-choice");
 });
 
 // SHEP-48: Reactions, one Agents row for every agent: on by default, off Everywhere, a space's own on, Reset back

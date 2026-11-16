@@ -1,0 +1,242 @@
+   Compiling steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-1-rust)
+warning: unused imports: `DiagnosticRecorder`, `Kind`, and `ObservationContext`
+ --> src/inspection_tests.rs:2:13
+  |
+2 | use crate::{DiagnosticRecorder, Kind, ObservationContext};
+  |             ^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bytes::Bytes`
+ --> src/inspection_tests.rs:3:5
+  |
+3 | use bytes::Bytes;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `sync::Arc`
+ --> src/inspection_tests.rs:4:34
+  |
+4 | use std::{collections::BTreeMap, sync::Arc};
+  |                                  ^^^^^^^^^
+
+warning: field `endpoint` is never read
+  --> src/backend.rs:49:16
+   |
+36 | pub(crate) struct Backend {
+   |                   ------- field in this struct
+...
+49 |     pub(crate) endpoint: Option<SocketAddr>,
+   |                ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `http1_only` is never used
+   --> src/config.rs:469:19
+    |
+468 | impl RuntimeConfig {
+    | ------------------ method in this implementation
+469 |     pub(crate) fn http1_only(&self, host: &str) -> bool {
+    |                   ^^^^^^^^^^
+
+warning: methods `handshake`, `idle`, and `write` are never used
+   --> src/config.rs:509:19
+    |
+508 | impl WebSocketTimeouts {
+    | ---------------------- methods in this implementation
+509 |     pub(crate) fn handshake(self) -> Duration {
+    |                   ^^^^^^^^^
+...
+516 |     pub(crate) fn idle(self) -> Duration {
+    |                   ^^^^
+...
+523 |     pub(crate) fn write(self) -> Duration {
+    |                   ^^^^^
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+
+warning: method `target_headers` is never used
+  --> src/outbound.rs:10:8
+   |
+ 8 | pub(crate) trait ReverseBackend {
+   |                  -------------- method in this trait
+ 9 |     fn allows_download(&self) -> bool;
+10 |     fn target_headers(&self) -> bool;
+   |        ^^^^^^^^^^^^^^
+
+warning: method `target_headers` is never used
+  --> src/outbound.rs:31:12
+   |
+27 | impl<B: ReverseBackend> ReverseProxy<B> {
+   | --------------------------------------- method in this implementation
+...
+31 |     pub fn target_headers(&self) -> bool {
+   |            ^^^^^^^^^^^^^^
+
+warning: method `websocket_trust` is never used
+   --> src/backend.rs:256:19
+    |
+254 | impl Backend {
+    | ------------ method in this implementation
+255 |     #[cfg(all(test, feature = "websocket"))]
+256 |     pub(crate) fn websocket_trust(&mut self, config: Arc<rustls::ClientConfig>) {
+    |                   ^^^^^^^^^^^^^^^
+
+warning: associated function `from_socket` is never used
+  --> src/websocket.rs:60:19
+   |
+59 | impl ByteStream {
+   | --------------- associated function in this implementation
+60 |     pub(crate) fn from_socket(socket: WebSocketStream<ManagedStream>) -> Self {
+   |                   ^^^^^^^^^^^
+
+warning: `steam-proxy` (lib) generated 6 warnings
+warning: `steam-proxy` (lib test) generated 10 warnings (5 duplicates) (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+warning: unused import: `time::Duration`
+ --> tests/routes.rs:3:62
+  |
+3 | use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Duration};
+  |                                                              ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `HttpDialer` is never constructed
+   --> tests/routes.rs:135:8
+    |
+135 | struct HttpDialer {
+    |        ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `PendingDialer` is never constructed
+   --> tests/routes.rs:315:8
+    |
+315 | struct PendingDialer(Arc<std::sync::atomic::AtomicUsize>);
+    |        ^^^^^^^^^^^^^
+
+warning: struct `PendingGuard` is never constructed
+   --> tests/routes.rs:317:8
+    |
+317 | struct PendingGuard(Arc<std::sync::atomic::AtomicUsize>);
+    |        ^^^^^^^^^^^^
+
+warning: `steam-proxy` (test "routes") generated 4 warnings (run `cargo fix --test "routes" -p steam-proxy` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.60s
+     Running unittests src/lib.rs (target/debug/build/steam-proxy/9da73dbb29a593d4/out/steam_proxy-9da73dbb29a593d4)
+
+running 38 tests
+test config::tests::http1_ingress_matches_dns_suffix_boundaries ... ok
+test buffer::tests::same_generic_buffer_supports_distinct_storage_types ... ok
+test buffer::tests::allocation_returns_only_after_the_final_bytes_reader ... ok
+test backend::vless_tests::wire_preserves_domain_for_remote_dns_and_original_target_port ... ok
+test backend::tests::websocket_upgrade_errors_retain_status_without_response_text ... ok
+test inspection::tests::inspection_defaults_off_and_respects_build_feature ... ok
+test backend::carrier_tests::carrier_budget_bounds_pending_io_but_does_not_expire_acquired_pool ... ok
+test relay::tests::cancellation_interrupts_pending_connect ... ok
+test probe::tests::tcp_probe_only_opens_access_socket_and_closes_without_writing ... ok
+test observation::resource_tests::resource_bytes_include_partial_transfers_but_exclude_probes ... ok
+test buffer::tests::canceling_a_borrower_returns_its_buffer ... ok
+test routing::tests::delayed_probe_publication_preserves_completion_time_and_ignores_older_evidence ... ok
+test probe::tests::cancel_drains_running_and_queued_probes ... ok
+test outbound::tests::direct_addresses_only_learn_from_business_and_history_is_per_generation ... ok
+test probe::tests::scheduler_summarizes_all_timeouts_and_bounds_concurrency_and_total_budget ... ok
+test routing::tests::health_ewma_recovery_backoff_expiry_and_generation ... ok
+test routing::tests::failure_count_then_twenty_percent_window_then_capability_filter ... ok
+test routing::tests::fixed_tiers_exhaust_same_tier_and_hash_is_stable ... ok
+test routing::tests::successful_stream_attempts_reset_consecutive_access_failures ... ok
+test routing::tests::attempt_loop_shares_deadline_across_candidates_and_stops_after_commit ... ok
+test stream::managed::tests::partial_vectored_writes_survive_adapters_and_count_only_accepted_bytes ... ok
+test stream::managed::tests::closing_wakes_a_pending_reader_held_by_the_host ... ok
+test tunnel_url::tests::websocket_retains_custom_port_and_path ... ok
+test tunnel_url::tests::ss_plain_and_base64_userinfo_roundtrip_without_changing_the_key ... ok
+test tunnel_url::tests::invalid_tunnel_urls_fail_without_echoing_private_input ... ok
+test sniff::tests::http_prefix_and_unread_body_are_replayed_in_order ... ok
+test import::tests::edgeone_function_and_origin_profiles_remain_independently_selectable ... ok
+test vless_url::tests::share_url_preserves_encoded_transport_and_private_settings ... ok
+test vless_url::tests::invalid_links_never_echo_credentials_or_url ... ok
+test backend::vless_tests::url_uses_embedded_credentials_and_only_dials_proxy_hostname ... ok
+test backend::carrier_tests::remaining_deadline_bounds_vless_carrier_and_drains_dial_tasks ... ok
+test sniff::tests::tls_records_are_parsed_and_replayed_without_losing_early_data ... ok
+test relay::tests::upstream_eof_never_reconnects_or_replays_tls ... ok
+test backend::carrier_tests::dropping_vless_acquisition_cancels_detached_carrier_dial ... ok
+test sniff::tests::prefix_limit_accepts_a_complete_head_and_rejects_an_unfinished_one ... ok
+test backend::tests::websocket_uses_verified_relay_tls_and_preserves_original_stream ... ok
+test retry::tests::cancel_interrupts_backoff_and_deadline_bounds_pending_attempt ... ok
+test retry::tests::bounded_retries_record_backoff_and_stop_on_policy_errors ... ok
+
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 1.41s
+
+     Running tests/configuration.rs (target/debug/build/steam-proxy/d12374b493e85e6b/out/configuration-d12374b493e85e6b)
+
+running 8 tests
+test whitelist_matches_label_suffixes_and_preserves_original_hosts ... ok
+test native_source_supports_figment_overrides_and_literal_domains ... ok
+test shared_settings_replace_host_policy_and_extract_each_profile_once ... ok
+test http1_ingress_domains_are_caller_owned_and_scoped_to_the_whitelist ... ok
+test websocket_timeout_bounds_are_validated_by_figment_configuration ... ok
+test malformed_and_empty_policy_never_falls_back_to_product_domains ... ok
+test builtin_domains_and_additions_are_sdk_owned_and_isolated ... ok
+test tunnel_profiles_use_one_url_in_native_and_multi_profile_settings ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/policy_lifecycle.rs (target/debug/build/steam-proxy/aa1ad5c559bd928e/out/policy_lifecycle-aa1ad5c559bd928e)
+
+running 9 tests
+test policy_is_exact_and_revalidated_after_deserialization ... ok
+test admission_precedes_data_plane_construction ... ok
+test canceled_parent_never_constructs_data_plane ... ok
+test restart_validates_first_and_keeps_old_handle_when_close_fails ... ok
+test restart_replaces_inner_and_old_clones_remain_closed_on_success_and_failure ... ok
+test restart_rejects_invalid_tunnel_encryption_without_closing_old ... ok
+test bandwidth_configuration_is_imported_and_validated ... ok
+test native_factory_rejects_disabled_backends_before_startup ... ok
+test websocket_ingress_starts_without_ca_state_or_credentials ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/routes.rs (target/debug/build/steam-proxy/b2b63a3e727c90c8/out/routes-b2b63a3e727c90c8)
+
+running 1 test
+test direct_only_start_never_connects_origin_and_close_stops_pending_calls ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/serve_connection.rs (target/debug/build/steam-proxy/507ca95f9f1732d6/out/serve_connection-507ca95f9f1732d6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/steam_policy.rs (target/debug/build/steam-proxy/4774e3da952f00c6/out/steam_policy-4774e3da952f00c6)
+
+running 2 tests
+test steam_suffix_boundaries_reject_unrelated_domains ... ok
+test steam_suffixes_preserve_complete_original_hostname ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tun_stack.rs (target/debug/build/steam-proxy/ab8a3331f27ea402/out/tun_stack-ab8a3331f27ea402)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tunnel_ingress.rs (target/debug/build/steam-proxy/5aa622a3174bf43d/out/tunnel_ingress-5aa622a3174bf43d)
+
+running 1 test
+test each_tunnel_starts_without_ca_and_only_probes_the_node_before_handoff ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests steam_proxy
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

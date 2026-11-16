@@ -1,0 +1,44 @@
+Worker resolutions after the independent review (not a second independent review):
+
+blocker: physical WSS/VLESS dials now recover the establishment context explicitly,
+bind to tunnel lifetime, perform TLS under that budget, and register physical workers.
+TestTunnelPhysicalDialCancellationAndRestartWait verifies both protocols retain their
+deadline, observe cancellation and prevent Restart returning before old work exits.
+
+blocker: VLESS bridge and packet/stream upload failures retain terminal classifications.
+TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated covers TCP and HTTP ingress,
+download and packet-upload 401/403, outer TLS rejection and successful TCP probes that
+must not remove isolation.
+
+major: background probes use oldest-due ordering and refill freed concurrency immediately.
+TestBackgroundProbeRecoveryFairness runs 65 healthy endpoints plus an isolated endpoint
+under a controlled clock, asserting recovery, healthy refresh, at most three in flight
+and no remaining work on close.
+
+major: H2 pool admission no longer closes an acquired connection. Overflow connections
+serve their assigned request without retention and close after use.
+TestHTTPSResponseMetadataAndPoolOverflow fills the pool and completes two real local
+requests for both H1 and H2.
+
+major: Request owns the body before acquisition and closes it once on errors.
+TestRequestAcquisitionFailureClosesBody checks route exhaustion and cancellation during
+dial, the close count and an io.Pipe upload producer unblocked by the actual body Close.
+
+major: Close signals session cancellation before waiting on lifecycle serialization.
+TestCloseCancelsAndJoinsStartingProbes verifies prompt cancellation/join and no Running
+publication. The existing concurrent Restart/Close stress accepts cancellation as a
+valid outcome and asserts the final closed state.
+
+major: access feedback distinguishes SDK attempt deadline from caller/session cancellation.
+TestAttemptTimeoutCountsAccessFailureButCallerCancelDoesNot isolates an endpoint after
+three SDK timeouts and checks that caller cancellation does not penalize it.
+
+minor: verified TLS metadata is retained on pooled connections and assigned to H1/H2
+responses. TestHTTPSResponseMetadataAndPoolOverflow checks verified chains and SNI.
+
+All eight findings were addressed by the worker. The previous uncommitted review is
+historical evidence, not a registered formal round. The space Assistant confirmed the
+formal first round reviewed 24ed87f in t5d and found four additional major issues.
+Those were fixed in ca5de67. The additional authorized final round in t5g has
+confirmed the four fixes with no blocking findings in the narrowed scope.
+Both formal reports are included separately. This worker report replaces neither.

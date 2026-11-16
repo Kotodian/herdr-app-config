@@ -1,1 +1,3 @@
-ok  	github.com/gamesir123/steam-proxy	0.801s
+GOWORK=off CGO_ENABLED=0 go test -count=1 -timeout 60s ./...
+ok  	github.com/gamesir123/steam-proxy	1.584s
+exit status: 0

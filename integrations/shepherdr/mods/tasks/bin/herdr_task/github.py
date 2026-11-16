@@ -8,6 +8,7 @@ import shutil
 
 from .base import Fail, GH, git, hc_json, now, run, STORE
 from .agents import agent_running, detail, live_agents, live_helpers, mid_turn_agents
+from .workflow import require_task_base
 
 
 # ---- GitHub ---------------------------------------------------------------------------------
@@ -96,6 +97,7 @@ def pr_open(s, task, repo, summary=None):
     """Pushes the task's branch and opens its pull request (or keeps the open one, also one opened
     by hand or by its agent for the branch: SHEP-13's "already exists"). Its description follows
     each ready (#1004) when Herdr wrote it."""
+    require_task_base(task)
     br = task["branch"]
     # Continuing a pull request already open on another branch, its work pushed there (#828): that
     # one is the task's, never a second with the same commits.
@@ -309,7 +311,7 @@ BAD = {"FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP
 PENDING = {"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "REQUESTED", "EXPECTED"}
 
 
-VIEW = "state,mergeable,headRefOid,mergeCommit,reviewDecision,mergeStateStatus"
+VIEW = "state,mergeable,baseRefName,headRefOid,mergeCommit,reviewDecision,mergeStateStatus"
 # SHEP-179: a token that may read a pull request but not its checks (a fine-grained one without Checks: read, as
 # the exe.dev GitHub integration's) gets GitHub's "Resource not accessible" for them: a permission, never a blip.
 DENIED = ("resource not accessible", "http 403", "must have", "not have permission", "insufficient scope")

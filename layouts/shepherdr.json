@@ -116,9 +116,6 @@
                 {
                   "id": "panel-body",
                   "type": "stack",
-                  "size": {
-                    "weight": 1
-                  },
                   "children": [
                     {
                       "id": "files",
@@ -178,13 +175,6 @@
                                   }
                                 },
                                 {
-                                  "id": "tasks-thread-term",
-                                  "type": "block",
-                                  "content": {
-                                    "agent": "focused"
-                                  }
-                                },
-                                {
                                   "id": "tasks-thread-pr",
                                   "type": "block",
                                   "content": {
@@ -198,11 +188,11 @@
                                     {
                                       "id": "tasks-thread-browser-host",
                                       "type": "block",
-                                      "size": {
-                                        "weight": 1
-                                      },
                                       "content": {
                                         "mod": "task-browser"
+                                      },
+                                      "size": {
+                                        "weight": 1
                                       }
                                     }
                                   ],
@@ -213,6 +203,13 @@
                                   "type": "block",
                                   "content": {
                                     "mod": "task-artifacts"
+                                  }
+                                },
+                                {
+                                  "id": "tasks-thread-term",
+                                  "type": "block",
+                                  "content": {
+                                    "agent": "focused"
                                   }
                                 }
                               ],
@@ -278,15 +275,18 @@
                       "active": "artifacts-list"
                     }
                   ],
-                  "active": "tasks"
+                  "active": "tasks",
+                  "size": {
+                    "weight": 1
+                  }
                 }
               ],
-              "resizable": false,
               "size": {
                 "px": 510
               },
               "min": 280,
-              "max": 900
+              "max": 900,
+              "resizable": false
             }
           ],
           "padding": 8,

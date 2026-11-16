@@ -1,0 +1,35 @@
+test_interrupt_before_spawn_returns_still_cleans_process_group (tools.test_check_sdk.CheckSDKTests) ... FAIL
+test_interrupt_before_final_kill_still_cleans_process_group (tools.test_check_sdk.CheckSDKTests) ... FAIL
+
+======================================================================
+FAIL: test_interrupt_before_spawn_returns_still_cleans_process_group (tools.test_check_sdk.CheckSDKTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/tools/test_check_sdk.py", line 285, in test_interrupt_before_spawn_returns_still_cleans_process_group
+    self.check_interrupt_window("spawn", "hang")
+  File "__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/tools/test_check_sdk.py", line 329, in check_interrupt_window
+    self.assertIsNotNone(spawned[0].poll(), "test parent is still running")
+AssertionError: unexpectedly None : test parent is still running
+
+======================================================================
+FAIL: test_interrupt_before_final_kill_still_cleans_process_group (tools.test_check_sdk.CheckSDKTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/tools/test_check_sdk.py", line 321, in check_interrupt_window
+    code, output, result = checker.run(
+  File "/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-gm4u7brq/checkout with spaces/tools/check-sdk.py", line 193, in run
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/tools/test_check_sdk.py", line 288, in test_interrupt_before_final_kill_still_cleans_process_group
+    self.check_interrupt_window("cleanup", "silent-orphan")
+  File "__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/tools/test_check_sdk.py", line 326, in check_interrupt_window
+    self.fail("interrupt escaped before process-group cleanup")
+AssertionError: interrupt escaped before process-group cleanup
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.484s
+
+FAILED (failures=2)

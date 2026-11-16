@@ -1,0 +1,46 @@
+    Checking steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-1-rust)
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `child` is never used
+  --> src/managed_stream.rs:38:12
+   |
+36 | impl Connections {
+   | ---------------- method in this implementation
+37 |     #[cfg(feature = "reverse-proxy")]
+38 |     pub fn child(self: &Arc<Self>) -> crate::Result<Arc<Self>> {
+   |            ^^^^^
+
+warning: fields `cipher` and `password` are never read
+  --> src/tunnel_url.rs:16:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- fields in this struct
+...
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+17 |     pub(crate) password: Zeroizing<String>,
+   |                ^^^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: field `path` is never read
+  --> src/tunnel_url.rs:25:16
+   |
+21 | pub struct WebSocketUrl {
+   |            ------------ field in this struct
+...
+25 |     pub(crate) path: String,
+   |                ^^^^
+   |
+   = note: `WebSocketUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `steam-proxy` (lib) generated 4 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.90s

@@ -9,6 +9,7 @@ import shutil
 import subprocess
 
 from .base import Fail, git, HOME, MAX_RUNNING, WHERE
+from .workflow import apply_defaults, policy as git_workflow
 
 
 # What each agent key starts by default. Unknown keys run as themselves; --argv overrides.
@@ -26,7 +27,7 @@ ASSISTANT_TEMPLATES = ("assistant", "coordinator")  # "coordinator": Assistants 
 DEFAULTS = {"tasks": {"merge": "ask", "review_rounds": 0, "must_fix": "major", "max_running": MAX_RUNNING, "worktrees": True,
                       "start_notes": "", "finish_notes": "", "archive_after": 7, "proof": True, "base": "", "branch": "",
                       "worktree_root": ""},
-            "automations": {"enabled": True}, "worker": {}, "reviewer": {}, "coordinator": {}, "backup": {},
+            "automations": {"enabled": True}, "decider": {}, "worker": {}, "reviewer": {}, "coordinator": {}, "backup": {},
             "agents": {"reactions": True, "suggestions": True, "feedback": True, "feedback_repo": "eliasstravik/shepherdr"}}
 LEVELS = ["blocker", "major", "minor"]
 
@@ -137,7 +138,7 @@ def settings_for(s, space=None):
     merge(everywhere)
     merge(machine)
     merge(pick)
-    return out
+    return apply_defaults(out)
 
 
 def notes(s, task, which, space=None):
@@ -520,7 +521,7 @@ def task_settings(s, t, space=None, argv=None, live=False):
         add("Review rounds", f"at most {rounds + more}" + (f" ({more} added by the assistant)" if more else ""), rounds + more,
             "task" if "review_rounds" in sets else (kept or {}).get("rounds_by") if kept else
             by_layer(s, space, "tasks", "review_rounds", rounds, 3))
-    policy = sets.get("merge") or (k.get("merge") if k.get("merge") in MERGE_WORDS else "ask")
+    policy = "ask" if git_workflow() else sets.get("merge") or (k.get("merge") if k.get("merge") in MERGE_WORDS else "ask")
     m_by = "task" if "merge" in sets else by_layer(s, space, "tasks", "merge", policy, "ask")
     if here:
         add("Merge", "nothing to merge: you work in the folder itself, and the person accepts it", policy, m_by)
@@ -551,6 +552,8 @@ def settings_block(s, t, space=None, argv=None, live=False):
     word = sandbox_word(lines, argv or (t["agents"][-1].get("argv") if t.get("agents") else None) or worker_argv(s, t, space))
     if word:
         rows.append(f"- Sandbox: {word}")
+    from .decision import words
+    rows.extend(words(t))
     return "\n".join([SETTINGS_HEAD, *rows])
 
 
@@ -617,6 +620,8 @@ def branch_pattern_problem(pattern):
 
 def merge_policy(s, t):
     """How a ready task merges: its own --set merge, else Settings' (auto, checks or ask)."""
+    if git_workflow():
+        return "ask"
     p = (t.get("set") or {}).get("merge") or settings_for(s, t.get("space"))["tasks"].get("merge")
     return p if p in MERGE_WORDS else "ask"
 

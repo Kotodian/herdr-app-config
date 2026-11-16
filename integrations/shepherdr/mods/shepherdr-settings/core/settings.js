@@ -61,6 +61,8 @@ export const SAME_AS_ALL_MACHINES = "Inherited from all machines";
 
 // ---- Agents ----------------------------------------------------------------------------------------------------
 export const ROLES = [
+  { id: "decider", title: "Decision model · 决策模型", about: "Classifies requests, chooses a workflow and explains the validation needed. Runs separately before task creation.", file: "decider.md",
+    told: "What the decision model is told first" },
   { id: "coordinator", title: "Assistant", about: "Plans the work and starts a task for each part.", file: "assistant.md",
     told: "What every Assistant is told first" },
   { id: "worker", title: "Workers", about: "Do one task each.", file: "worker.md", told: "What every worker is told first" },
@@ -73,6 +75,7 @@ export const EDIT_INSTRUCTIONS = "Edit instructions";
 export const INSTRUCTIONS = {
   title: "Instructions", done: "Done", saved: "Saved.", notSaved: (why) => `Not saved: ${why}`,
   notes: {
+    decider: "Used for each decision. Classifies and recommends only; never implements or releases. Changes apply to the next decision.",
     coordinator: "Every Assistant uses this. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply when an Assistant restarts.",
     worker: "Every worker gets this first. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply to the next task that starts.",
     reviewer: "Every reviewer gets this first. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply to the next review.",
@@ -80,6 +83,7 @@ export const INSTRUCTIONS = {
   },
 };
 export const USE_OTHER_CLI = "Use other CLI";
+export const CHOOSE_DECIDER = "Choose model…";
 export const LOADING_AGENTS = "Loading agents…";
 // An unset Reviewer's button: what runs, the other CLI.
 export const otherCliWords = (cli) => `Other CLI (${NAMES[cli] ?? cli})`;
@@ -149,7 +153,19 @@ export function choicesFrom(dflts, installed = { claude: true, codex: true }) {
   const first = menus.claude ? "claude" : Object.keys(menus)[0] ?? "claude";
   const c = current(first, [], {}, dflts[first]);
   const model = rowFor(first, c) ?? menus[first]?.models?.[0]?.id ?? null;
-  return { menus, permDefault, defaults: { agent: first, model, effort: c.effort ?? null, fast: false, perm: permDefault[first] } };
+  return { menus, permDefault, decisionModels: dflts.decisionModels ?? [],
+    defaults: { agent: first, model, effort: c.effort ?? null, fast: false, perm: permDefault[first] } };
+}
+// These classifiers are offered in both existing agent tabs, in the decision role.
+export function roleChoices(choices, role) {
+  if (!choices || role !== "decider") return choices;
+  const extra = (choices.decisionModels ?? []).map((m) => ({
+    id: m.id, name: m.name, icon: "typesafe", efforts: [], defaultEffort: null, fast: false,
+  }));
+  const menus = Object.fromEntries(Object.entries(choices.menus).map(([key, menu]) => [key, {
+    ...menu, models: [...menu.models.filter((m) => !extra.some((x) => x.id === m.id)), ...extra],
+  }]));
+  return { ...choices, menus };
 }
 // What a role's model button starts from: its own choice, else for the Reviewer the other CLI, else the defaults.
 export function roleSel(role, own, choices, worker) {
@@ -277,7 +293,7 @@ export const MACHINES = {
   home: { title: "Home Assistant", make: "Make home space" },
 };
 // What the old machine scope could hold, as the person knows it.
-export const OLD_NAMES = { coordinator: "Assistant", worker: "Workers", reviewer: "Reviewer", backup: "Backup agent",
+export const OLD_NAMES = { decider: "Decision model", coordinator: "Assistant", worker: "Workers", reviewer: "Reviewer", backup: "Backup agent",
   automations: "Run automations", merge: "Merge", review_rounds: "Review", must_fix: "Must fix", proof: "Proof",
   max_running: "Tasks at once", archive_after: "Archive Done after", worktrees: "Worktrees",
   start_notes: "When a task starts", finish_notes: "When a task finishes", base: "Base branch", branch: "Branch names", agents: "Reactions" };

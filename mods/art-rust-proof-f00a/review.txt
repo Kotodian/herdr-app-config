@@ -23,4 +23,4 @@ Findings and worker disposition:
 
 The reviewer reran ten already-built in-memory tests read-only; all passed. Fresh final-source Cargo checks were run by the worker after fixes.
 No additional review round was started. Post-review fixes have regression coverage but were not independently reviewed again.
-No commit is authorized, so no commit-based herdr-task reviewed or ready record was fabricated.
+After the review and regression fixes, the user authorized committing and merging to dev. Final commit: c50f76b (feat(routing): implement multi-route policy engine). This final commit has not received an independent post-fix review. The single configured review round is exhausted; the parent Assistant was notified that an additional round is needed for a truthful final-commit gate. No final-commit reviewed or ready record was fabricated. No push, PR or merge was performed; the parent Assistant is handling the original task base main versus authorized target dev.

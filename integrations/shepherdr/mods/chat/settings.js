@@ -15,7 +15,7 @@
 
 import { div, svg, image } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { knownAgents, openOverlay, shared, appHome } from "herdr";
+import { knownAgents, openOverlay, shared, appHome, exec } from "herdr";
 import * as fs from "fs/promises";
 import * as agent from "./agent.js";
 // The button's words and the choices on offer: core/settings.js, shared with the web app's Settings.
@@ -28,14 +28,17 @@ const LAST = () => `${appHome()}/data/coordinator-last.json`;
 
 // What the agents on this machine (or `machine`) offer: { menus, icons, installed, permDefault,
 // defaults } (defaults: the CLI's own, for a first time).
-export async function loadChoices(machine = null) {
-  const [claude, codex, known] = await Promise.all([agent.defaults("claude", machine), agent.defaults("codex", machine),
-    knownAgents({ on: machine }).catch(() => [])]);
+export async function loadChoices(machine = null, decisions = false) {
+  const [claude, codex, known, decisionModels] = await Promise.all([agent.defaults("claude", machine), agent.defaults("codex", machine),
+    knownAgents({ on: machine }).catch(() => []),
+    decisions ? exec("herdr-task", ["decision-models", "--json"], { on: machine }).then((r) => {
+      try { return r.code === 0 ? JSON.parse(r.stdout).models ?? [] : []; } catch { return []; }
+    }, () => []) : []]);
   const prog = (k) => known.find((a) => a.key === k || (a.run ?? [])[0] === k);
   const installed = Object.fromEntries(["claude", "codex"].map((k) => [k, prog(k) ? prog(k).installed !== false : k === "claude"]));
   const icons = Object.fromEntries(["claude", "codex"].map((k) => [k, { icon: prog(k)?.icon ?? null, tint: Boolean(prog(k)?.tint) }]));
   const { menus, permDefault, defaults } = choicesFrom({ claude, codex }, installed);
-  return { menus, icons, installed, permDefault, defaults };
+  return { menus, icons, installed, permDefault, defaults, decisionModels };
 }
 
 // The last choice made (data/coordinator-last.json) when it still fits what is offered, else
@@ -125,6 +128,7 @@ function applyReply(coord, cx) {
     if (reply.field === "settings" && reply.value?.agent) coord.sel = { ...reply.value };
     if (reply.field === "model") { const [a, ...id] = String(reply.value).split(":"); choose(coord, a, id.join(":")); }
     if (reply.field === "perm") coord.sel = { ...coord.sel, perm: reply.value };
+    coord.chosen = true;
     cx.notify();
   });
 }

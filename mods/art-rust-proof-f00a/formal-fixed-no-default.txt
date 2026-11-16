@@ -1,0 +1,321 @@
+warning: method `connection_endpoints` is never used
+   --> src/config.rs:248:19
+    |
+238 | impl ModeConfig {
+    | --------------- method in this implementation
+...
+248 |     pub(crate) fn connection_endpoints(&self) -> Cow<'_, [String]> {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `endpoint` is never used
+   --> src/config.rs:382:19
+    |
+381 | impl ForwardConfig {
+    | ------------------ method in this implementation
+382 |     pub(crate) fn endpoint(&self) -> (&str, u16) {
+    |                   ^^^^^^^^
+
+warning: method `http1_only` is never used
+   --> src/config.rs:469:19
+    |
+468 | impl RuntimeConfig {
+    | ------------------ method in this implementation
+469 |     pub(crate) fn http1_only(&self, host: &str) -> bool {
+    |                   ^^^^^^^^^^
+
+warning: methods `handshake`, `idle`, and `write` are never used
+   --> src/config.rs:509:19
+    |
+508 | impl WebSocketTimeouts {
+    | ---------------------- methods in this implementation
+509 |     pub(crate) fn handshake(self) -> Duration {
+    |                   ^^^^^^^^^
+...
+516 |     pub(crate) fn idle(self) -> Duration {
+    |                   ^^^^
+...
+523 |     pub(crate) fn write(self) -> Duration {
+    |                   ^^^^^
+
+warning: method `edgeone_origin` is never used
+   --> src/config.rs:605:19
+    |
+591 | impl Config {
+    | ----------- method in this implementation
+...
+605 |     pub(crate) fn edgeone_origin(&self, host: &str) -> Result<Option<&str>> {
+    |                   ^^^^^^^^^^^^^^
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+
+warning: struct `SocketEndpoint` is never constructed
+ --> src/probe.rs:9:19
+  |
+9 | pub(crate) struct SocketEndpoint {
+  |                   ^^^^^^^^^^^^^^
+
+warning: trait `Probe` is never used
+  --> src/probe.rs:14:18
+   |
+14 | pub(crate) trait Probe: Send + Sync {
+   |                  ^^^^^
+
+warning: struct `TcpProbe` is never constructed
+  --> src/probe.rs:23:19
+   |
+23 | pub(crate) struct TcpProbe<D: ?Sized> {
+   |                   ^^^^^^^^
+
+warning: struct `ProbeRunner` is never constructed
+  --> src/probe.rs:39:19
+   |
+39 | pub(crate) struct ProbeRunner<P> {
+   |                   ^^^^^^^^^^^
+
+warning: method `run` is never used
+  --> src/probe.rs:45:18
+   |
+44 | impl<P: Probe> ProbeRunner<P> {
+   | ----------------------------- method in this implementation
+45 |     pub async fn run(
+   |                  ^^^
+
+warning: struct `ProbeScheduler` is never constructed
+  --> src/probe.rs:65:19
+   |
+65 | pub(crate) struct ProbeScheduler<P> {
+   |                   ^^^^^^^^^^^^^^
+
+warning: struct `ProbeResult` is never constructed
+  --> src/probe.rs:70:19
+   |
+70 | pub(crate) struct ProbeResult<T> {
+   |                   ^^^^^^^^^^^
+
+warning: method `run` is never used
+  --> src/probe.rs:80:18
+   |
+76 | / impl<P: Probe + 'static> ProbeScheduler<P>
+77 | | where
+78 | |     P::Target: Clone + 'static,
+   | |_______________________________- method in this implementation
+79 |   {
+80 |       pub async fn run(
+   |                    ^^^
+
+warning: fields `server`, `port`, `cipher`, and `password` are never read
+  --> src/tunnel_url.rs:14:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- fields in this struct
+13 |     original: Zeroizing<String>,
+14 |     pub(crate) server: String,
+   |                ^^^^^^
+15 |     pub(crate) port: u16,
+   |                ^^^^
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+17 |     pub(crate) password: Zeroizing<String>,
+   |                ^^^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: fields `server`, `port`, and `path` are never read
+  --> src/tunnel_url.rs:23:16
+   |
+21 | pub struct WebSocketUrl {
+   |            ------------ fields in this struct
+22 |     original: Zeroizing<String>,
+23 |     pub(crate) server: String,
+   |                ^^^^^^
+24 |     pub(crate) port: u16,
+   |                ^^^^
+25 |     pub(crate) path: String,
+   |                ^^^^
+   |
+   = note: `WebSocketUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: multiple fields are never read
+  --> src/vless_url.rs:13:16
+   |
+11 | pub struct VlessXhttpUrl {
+   |            ------------- fields in this struct
+12 |     original: Zeroizing<String>,
+13 |     pub(crate) server: String,
+   |                ^^^^^^
+14 |     pub(crate) port: u16,
+   |                ^^^^
+15 |     pub(crate) server_name: String,
+   |                ^^^^^^^^^^^
+16 |     pub(crate) path: String,
+   |                ^^^^
+17 |     pub(crate) mode: String,
+   |                ^^^^
+18 |     pub(crate) uuid: Zeroizing<String>,
+   |                ^^^^
+19 |     pub(crate) encryption: Option<Zeroizing<String>>,
+   |                ^^^^^^^^^^
+   |
+   = note: `VlessXhttpUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `steam-proxy` (lib) generated 17 warnings
+warning: unused imports: `DiagnosticRecorder`, `Kind`, and `ObservationContext`
+ --> src/inspection_tests.rs:2:13
+  |
+2 | use crate::{DiagnosticRecorder, Kind, ObservationContext};
+  |             ^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bytes::Bytes`
+ --> src/inspection_tests.rs:3:5
+  |
+3 | use bytes::Bytes;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `sync::Arc`
+ --> src/inspection_tests.rs:4:34
+  |
+4 | use std::{collections::BTreeMap, sync::Arc};
+  |                                  ^^^^^^^^^
+
+warning: method `endpoint` is never used
+   --> src/config.rs:382:19
+    |
+381 | impl ForwardConfig {
+    | ------------------ method in this implementation
+382 |     pub(crate) fn endpoint(&self) -> (&str, u16) {
+    |                   ^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `connection` is never used
+   --> src/observation.rs:334:19
+    |
+297 | impl ObservationContext {
+    | ----------------------- method in this implementation
+...
+334 |     pub(crate) fn connection(
+    |                   ^^^^^^^^^^
+
+warning: fields `server` and `cipher` are never read
+  --> src/tunnel_url.rs:14:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- fields in this struct
+13 |     original: Zeroizing<String>,
+14 |     pub(crate) server: String,
+   |                ^^^^^^
+15 |     pub(crate) port: u16,
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: field `uuid` is never read
+  --> src/vless_url.rs:18:16
+   |
+11 | pub struct VlessXhttpUrl {
+   |            ------------- field in this struct
+...
+18 |     pub(crate) uuid: Zeroizing<String>,
+   |                ^^^^
+   |
+   = note: `VlessXhttpUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `steam-proxy` (lib test) generated 10 warnings (3 duplicates) (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+   Compiling steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-1-rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.33s
+     Running unittests src/lib.rs (target/debug/build/steam-proxy/d13a4a097c6003e7/out/steam_proxy-d13a4a097c6003e7)
+
+running 14 tests
+test config::tests::http1_ingress_matches_dns_suffix_boundaries ... ok
+test inspection::tests::inspection_defaults_off_and_respects_build_feature ... ok
+test tunnel_url::tests::websocket_retains_custom_port_and_path ... ok
+test observation::resource_tests::resource_bytes_include_partial_transfers_but_exclude_probes ... ok
+test tunnel_url::tests::invalid_tunnel_urls_fail_without_echoing_private_input ... ok
+test vless_url::tests::invalid_links_never_echo_credentials_or_url ... ok
+test vless_url::tests::share_url_preserves_encoded_transport_and_private_settings ... ok
+test tunnel_url::tests::ss_plain_and_base64_userinfo_roundtrip_without_changing_the_key ... ok
+test probe::tests::tcp_probe_only_opens_access_socket_and_closes_without_writing ... ok
+test config::tests::single_domain_reverse_and_default_cm_ports ... ok
+test probe::tests::cancel_drains_running_and_queued_probes ... ok
+test config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes ... ok
+test probe::tests::scheduler_summarizes_all_timeouts_and_bounds_concurrency_and_total_budget ... ok
+test import::tests::edgeone_function_and_origin_profiles_remain_independently_selectable ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/configuration.rs (target/debug/build/steam-proxy/fe20c28600a1c4b2/out/configuration-fe20c28600a1c4b2)
+
+running 8 tests
+test whitelist_matches_label_suffixes_and_preserves_original_hosts ... ok
+test http1_ingress_domains_are_caller_owned_and_scoped_to_the_whitelist ... ok
+test native_source_supports_figment_overrides_and_literal_domains ... ok
+test websocket_timeout_bounds_are_validated_by_figment_configuration ... ok
+test shared_settings_replace_host_policy_and_extract_each_profile_once ... ok
+test malformed_and_empty_policy_never_falls_back_to_product_domains ... ok
+test builtin_domains_and_additions_are_sdk_owned_and_isolated ... ok
+test tunnel_profiles_use_one_url_in_native_and_multi_profile_settings ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/policy_lifecycle.rs (target/debug/build/steam-proxy/02827a2faad7cad7/out/policy_lifecycle-02827a2faad7cad7)
+
+running 7 tests
+test policy_is_exact_and_revalidated_after_deserialization ... ok
+test admission_precedes_data_plane_construction ... ok
+test canceled_parent_never_constructs_data_plane ... ok
+test restart_validates_first_and_keeps_old_handle_when_close_fails ... ok
+test native_factory_rejects_disabled_backends_before_startup ... ok
+test restart_replaces_inner_and_old_clones_remain_closed_on_success_and_failure ... ok
+test bandwidth_configuration_is_imported_and_validated ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/routes.rs (target/debug/build/steam-proxy/5d96a9f510a309d3/out/routes-5d96a9f510a309d3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/serve_connection.rs (target/debug/build/steam-proxy/d76c0d7d815d4bc3/out/serve_connection-d76c0d7d815d4bc3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/steam_policy.rs (target/debug/build/steam-proxy/44550fea9fa6585f/out/steam_policy-44550fea9fa6585f)
+
+running 2 tests
+test steam_suffix_boundaries_reject_unrelated_domains ... ok
+test steam_suffixes_preserve_complete_original_hostname ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tun_stack.rs (target/debug/build/steam-proxy/2ce21a58f7b984d7/out/tun_stack-2ce21a58f7b984d7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tunnel_ingress.rs (target/debug/build/steam-proxy/e5d1671c68bd342b/out/tunnel_ingress-e5d1671c68bd342b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests steam_proxy
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,183 @@
+   Compiling steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-1-rust)
+warning: unused imports: `DiagnosticRecorder`, `Kind`, and `ObservationContext`
+ --> src/inspection_tests.rs:2:13
+  |
+2 | use crate::{DiagnosticRecorder, Kind, ObservationContext};
+  |             ^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bytes::Bytes`
+ --> src/inspection_tests.rs:3:5
+  |
+3 | use bytes::Bytes;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `sync::Arc`
+ --> src/inspection_tests.rs:4:34
+  |
+4 | use std::{collections::BTreeMap, sync::Arc};
+  |                                  ^^^^^^^^^
+
+warning: variant `CacheRange` is never constructed
+   --> src/http_proxy_tests.rs:170:5
+    |
+155 | enum ResponseMode {
+    |      ------------ variant in this enum
+...
+170 |     CacheRange,
+    |     ^^^^^^^^^^
+    |
+    = note: `ResponseMode` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+
+warning: method `child` is never used
+  --> src/managed_stream.rs:38:12
+   |
+36 | impl Connections {
+   | ---------------- method in this implementation
+37 |     #[cfg(feature = "reverse-proxy")]
+38 |     pub fn child(self: &Arc<Self>) -> crate::Result<Arc<Self>> {
+   |            ^^^^^
+
+warning: field `cipher` is never read
+  --> src/tunnel_url.rs:16:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- field in this struct
+...
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `steam-proxy` (lib test) generated 7 warnings (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.64s
+     Running unittests src/lib.rs (target/debug/build/steam-proxy/4d1b71e1c6dfc44e/out/steam_proxy-4d1b71e1c6dfc44e)
+
+running 77 tests
+test cache::tests::default_has_no_storage_eviction_or_maintenance ... ok
+test bandwidth::tests::disabled_limits_and_empty_chunks_do_not_delay ... ok
+test config::tests::http1_ingress_matches_dns_suffix_boundaries ... ok
+test bandwidth::tests::concurrent_streams_share_one_budget_and_idle_refills_only_one_burst ... ok
+test backend::vless_tests::wire_preserves_domain_for_remote_dns_and_original_target_port ... ok
+test buffer::tests::allocation_returns_only_after_the_final_bytes_reader ... ok
+test buffer::tests::same_generic_buffer_supports_distinct_storage_types ... ok
+test buffer::tests::canceling_a_borrower_returns_its_buffer ... ok
+test http_cache::tests::incorrect_content_length_never_publishes_partial_or_growing_bodies ... ok
+test http_cache::tests::oversize_and_abandoned_fills_are_not_published ... ok
+test config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes ... ok
+test config::tests::single_domain_reverse_and_default_cm_ports ... ok
+test http_cache::tests::reservations_cover_fills_and_purged_bytes_and_exhaustion_fails_open ... ok
+test backend::vless_tests::url_uses_embedded_credentials_and_only_dials_proxy_hostname ... ok
+test http_cache::tests::small_objects_share_budget_and_remain_readable ... ok
+test http_cache::tests::policy_excludes_sensitive_requests_and_respects_age ... ok
+test backend::carrier_tests::dropping_vless_acquisition_cancels_detached_carrier_dial ... FAILED
+test http_cache::tests::unknown_length_bodies_retain_only_their_allocated_capacity ... ok
+test ca::tests::ingress_policy_selects_http1_without_disabling_other_h2_hosts ... ok
+test cache::tests::maintenance_repeats_and_joins_on_host_cancellation ... ok
+test http_proxy::tests::authority_and_whitelist_rejection_never_dial_upstream ... ok
+test http_proxy::tests::acquisition_watchdog_counts_access_timeouts_once ... FAILED
+test http_proxy::tests::caller_mapped_websocket_uses_alias_tls_and_preserves_frames ... ok
+test http_proxy::tests::business_websocket_respects_authority_and_session_shutdown ... ok
+test http_proxy::tests::business_websocket_rejection_is_not_replayed ... ok
+test http_proxy::tests::cached_response_can_stream_past_acquisition_deadline ... FAILED
+test http_proxy::tests::closing_a_throttled_response_cancels_its_wait ... ok
+test http_proxy::tests::close_cancels_requests_even_when_the_host_holds_a_response ... ok
+test http_proxy::tests::default_cache_forwards_each_cacheable_request_to_upstream ... ok
+test http_proxy::tests::business_websocket_upgrades_beside_a_warm_h2_pool ... ok
+test http_proxy::tests::pingora_h1_reuses_relay_and_preserves_headers_query_and_upload ... ok
+test http_proxy::tests::idle_downstream_h2_is_released_after_active_body_finishes ... ok
+test http_proxy::tests::pingora_h2_multiplexes_cold_large_responses_across_registered_origins ... ok
+test http_proxy::tests::pingora_vary_reuses_assets_across_pages_without_mixing_variants ... ok
+test http_proxy::tests::gzip_negotiation_and_encoded_bytes_survive_uncached_proxy ... ok
+test import::tests::edgeone_function_and_origin_profiles_remain_independently_selectable ... ok
+test inspection::tests::inspection_defaults_off_and_respects_build_feature ... ok
+test observation::resource_tests::resource_bytes_include_partial_transfers_but_exclude_probes ... ok
+test outbound::tests::direct_addresses_only_learn_from_business_and_history_is_per_generation ... ok
+test outbound::tests::dropping_bridge_connection_drains_half_open_upstream_before_sdk_close ... ok
+test pingora_io::tests::downstream_tls_rejection_before_a_request_is_observable ... ok
+test probe::tests::cancel_drains_running_and_queued_probes ... ok
+test probe::tests::scheduler_summarizes_all_timeouts_and_bounds_concurrency_and_total_budget ... ok
+test probe::tests::tcp_probe_only_opens_access_socket_and_closes_without_writing ... ok
+test relay::tests::cancellation_interrupts_pending_connect ... ok
+test relay::tests::upstream_eof_never_reconnects_or_replays_tls ... ok
+test http_proxy::tests::pooled_h2_capacity_wait_obeys_operation_deadline_without_submitting_again ... ok
+test retry::tests::cancel_interrupts_backoff_and_deadline_bounds_pending_attempt ... ok
+test routing::tests::attempt_loop_shares_deadline_across_candidates_and_stops_after_commit ... ok
+test routing::tests::delayed_probe_publication_preserves_completion_time_and_ignores_older_evidence ... ok
+test routing::tests::failure_count_then_twenty_percent_window_then_capability_filter ... ok
+test routing::tests::fixed_tiers_exhaust_same_tier_and_hash_is_stable ... ok
+test routing::tests::health_ewma_recovery_backoff_expiry_and_generation ... ok
+test routing::tests::successful_stream_attempts_reset_consecutive_access_failures ... FAILED
+test sniff::tests::http_prefix_and_unread_body_are_replayed_in_order ... ok
+test sniff::tests::prefix_limit_accepts_a_complete_head_and_rejects_an_unfinished_one ... ok
+test sniff::tests::tls_records_are_parsed_and_replayed_without_losing_early_data ... ok
+test stream::managed::tests::closing_wakes_a_pending_reader_held_by_the_host ... ok
+test stream::managed::tests::partial_vectored_writes_survive_adapters_and_count_only_accepted_bytes ... ok
+test tunnel_url::tests::invalid_tunnel_urls_fail_without_echoing_private_input ... ok
+test tunnel_url::tests::ss_plain_and_base64_userinfo_roundtrip_without_changing_the_key ... ok
+test tunnel_url::tests::websocket_retains_custom_port_and_path ... ok
+test vless_url::tests::invalid_links_never_echo_credentials_or_url ... ok
+test vless_url::tests::share_url_preserves_encoded_transport_and_private_settings ... ok
+test http_proxy::tests::routed_h2_selects_per_request_exhausts_relays_and_isolates_upstream_pools ... ok
+test http_proxy::tests::h2_protocol_recovery_has_no_sdk_backoff ... ok
+test http_proxy::tests::native_ingress_uses_pingora_h1_and_h2_without_a_listener ... ok
+test http_proxy::tests::truncated_response_is_a_body_error_and_is_never_replayed ... ok
+test http_proxy::tests::untrusted_tls_is_rejected_and_errors_are_redacted ... ok
+test http_proxy::tests::pingora_native_cache_collapses_concurrent_requests_and_preserves_large_streams ... ok
+test retry::tests::bounded_retries_record_backoff_and_stop_on_policy_errors ... ok
+test http_proxy::tests::business_websocket_times_out_handshake_idle_and_blocked_writes ... ok
+test http_proxy::tests::caller_mapped_origins_preserve_http_and_isolate_verified_tls_pools ... ok
+test http_proxy::tests::tcp_backoff_recovers_before_tls_and_http_begin ... ok
+test http_proxy::tests::pingora_paces_shared_encoded_bytes_without_changing_the_body ... ok
+test http_proxy::tests::pingora_keeps_many_small_assets_without_repeating_upstream_requests ... ok
+test http_proxy::tests::smaller_h2_window_reduces_upstream_bytes_when_media_is_canceled ... ok
+
+failures:
+
+---- backend::carrier_tests::dropping_vless_acquisition_cancels_detached_carrier_dial stdout ----
+
+thread 'backend::carrier_tests::dropping_vless_acquisition_cancels_detached_carrier_dial' (12445208) panicked at src/backend.rs:630:9:
+assertion `left == right` failed: carrier dial outlived its acquisition
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- http_proxy::tests::acquisition_watchdog_counts_access_timeouts_once stdout ----
+
+thread 'http_proxy::tests::acquisition_watchdog_counts_access_timeouts_once' (12445229) panicked at src/http_proxy_tests.rs:663:5:
+assertion `left == right` failed
+  left: 0
+ right: 1
+
+---- http_proxy::tests::cached_response_can_stream_past_acquisition_deadline stdout ----
+
+thread 'http_proxy::tests::cached_response_can_stream_past_acquisition_deadline' (12445237) panicked at src/http_proxy_tests.rs:693:53:
+called `Result::unwrap()` on an `Err` value: hyper::Error(Body, Custom { kind: UnexpectedEof, error: IncompleteBody })
+
+---- routing::tests::successful_stream_attempts_reset_consecutive_access_failures stdout ----
+
+thread 'routing::tests::successful_stream_attempts_reset_consecutive_access_failures' (12447691) panicked at src/routing.rs:946:13:
+assertion `left == right` failed
+  left: 1
+ right: 0
+
+
+failures:
+    backend::carrier_tests::dropping_vless_acquisition_cancels_detached_carrier_dial
+    http_proxy::tests::acquisition_watchdog_counts_access_timeouts_once
+    http_proxy::tests::cached_response_can_stream_past_acquisition_deadline
+    routing::tests::successful_stream_attempts_reset_consecutive_access_failures
+
+test result: FAILED. 73 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.08s
+
+error: test failed, to rerun pass `--lib`

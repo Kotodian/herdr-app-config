@@ -16,6 +16,7 @@ from .base import addon_off, hc_json, MAX_RUNNING, now, run, STORE
 from .settings import DEFAULTS, LOCAL_MACHINE, MUST_WORDS, SETTINGS, agent_key, bare, read_settings
 from .launch import coordinators, is_coordinator
 from . import reactions
+from .workflow import apply_defaults
 
 # What an Assistant was last told, on its terminal: "review:1a2b3c,merge:…", a short hash of each line.
 LABEL = "herdr.settings"
@@ -60,7 +61,7 @@ def resolve(ls):
                 out[k].update({kk: vv for kk, vv in v.items() if vv is not None})
             elif k in out and v is not None:
                 out[k] = v
-    return out
+    return apply_defaults(out)
 
 
 def pick_words(p, unset):
@@ -106,6 +107,9 @@ def rows(space, d=None, auto=None):
         from .feedback import feedback_repo
         repo = feedback_repo(d)
         return [
+            ("decider", "Decision model", pick_words(cfg.get("decider"), "not selected; choose in Settings > Agents > Decision model")
+             + ("; run herdr-task decide before planning each new request; add also classifies code tasks" if cfg.get("decider") else ""),
+             pick_words(cfg.get("decider"), "unset"), [("decider", None)]),
             ("review", "Review", review, "on" if rounds > 0 else "off",
              [("tasks", "review_rounds"), ("tasks", "must_fix"), ("reviewer", None)]),
             ("merge", "Merge", MERGE_SHORT[merge], merge, [("tasks", "merge")]),

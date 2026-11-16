@@ -111,13 +111,15 @@ index a115b8b..cd98616 100644
  
  纯 Go 实现位于 `bindings/go`，module 为 `github.com/gamesir123/steam-proxy`，不需要 Rust 库或 cgo。在调用方项目目录克隆仓库并使用本地替换：
 diff --git a/src/backend.rs b/src/backend.rs
-index f57a779..53ed4c0 100644
+index f57a779..5898555 100644
 --- a/src/backend.rs
 +++ b/src/backend.rs
-@@ -34,6 +34,10 @@ use crate::{
+@@ -34,6 +34,12 @@ use crate::{
  use crate::ForwardConfig;
  
  pub(crate) struct Backend {
++    #[cfg(feature = "vless-xhttp")]
++    carrier_dials: tokio_util::task::TaskTracker,
 +    pub(crate) routes: Option<Arc<crate::routing::Registry>>,
 +    pub(crate) direct: crate::outbound::DirectOutbound<dyn TcpDialer>,
 +    #[cfg(feature = "reverse-proxy")]
@@ -125,7 +127,159 @@ index f57a779..53ed4c0 100644
      #[cfg(feature = "reverse-proxy")]
      pub(crate) http_cache: crate::cache::HttpCache,
      pub(crate) config: Config,
-@@ -149,6 +153,11 @@ fn vless_header(uuid: uuid::Uuid, host: &str, port: u16) -> Result<Zeroizing<Vec
+@@ -67,6 +73,151 @@ enum Forward {
+     },
+ }
+ 
++#[cfg(feature = "vless-xhttp")]
++struct AcquiringCarrier {
++    stream: BoxStream,
++    armed: Arc<std::sync::atomic::AtomicBool>,
++    preface_remaining: usize,
++    deadline: std::pin::Pin<Box<tokio::time::Sleep>>,
++    canceled: std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>,
++}
++
++#[cfg(feature = "vless-xhttp")]
++impl AcquiringCarrier {
++    fn new(
++        stream: BoxStream,
++        armed: Arc<std::sync::atomic::AtomicBool>,
++        deadline: tokio::time::Instant,
++        cancel: tokio_util::sync::CancellationToken,
++    ) -> Self {
++        Self {
++            stream,
++            armed,
++            preface_remaining: b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".len(),
++            deadline: Box::pin(tokio::time::sleep_until(deadline)),
++            canceled: Box::pin(cancel.cancelled_owned()),
++        }
++    }
++
++    fn check(&mut self, context: &mut std::task::Context<'_>) -> std::io::Result<()> {
++        use std::future::Future;
++        if (self.preface_remaining > 0 || self.armed.load(std::sync::atomic::Ordering::Acquire))
++            && (self.canceled.as_mut().poll(context).is_ready()
++                || self.deadline.as_mut().poll(context).is_ready())
++        {
++            return Err(std::io::ErrorKind::TimedOut.into());
++        }
++        Ok(())
++    }
++}
++
++#[cfg(feature = "vless-xhttp")]
++impl tokio::io::AsyncRead for AcquiringCarrier {
++    fn poll_read(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++        buffer: &mut tokio::io::ReadBuf<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        let stream = self.get_mut();
++        stream.check(context)?;
++        std::pin::Pin::new(&mut stream.stream).poll_read(context, buffer)
++    }
++}
++
++#[cfg(feature = "vless-xhttp")]
++impl tokio::io::AsyncWrite for AcquiringCarrier {
++    fn poll_write(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++        bytes: &[u8],
++    ) -> std::task::Poll<std::io::Result<usize>> {
++        let stream = self.get_mut();
++        stream.check(context)?;
++        let result = std::pin::Pin::new(&mut stream.stream).poll_write(context, bytes);
++        if let std::task::Poll::Ready(Ok(written)) = &result {
++            stream.preface_remaining = stream.preface_remaining.saturating_sub(*written);
++        }
++        result
++    }
++
++    fn poll_flush(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        let stream = self.get_mut();
++        stream.check(context)?;
++        std::pin::Pin::new(&mut stream.stream).poll_flush(context)
++    }
++
++    fn poll_shutdown(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        std::pin::Pin::new(&mut self.get_mut().stream).poll_shutdown(context)
++    }
++}
++
++#[cfg(feature = "vless-xhttp")]
++impl xray_transport::TransportStream for AcquiringCarrier {
++    fn poll_read_direct(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++        buffer: &mut tokio::io::ReadBuf<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        tokio::io::AsyncRead::poll_read(self, context, buffer)
++    }
++
++    fn poll_write_direct(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++        bytes: &[u8],
++    ) -> std::task::Poll<std::io::Result<usize>> {
++        tokio::io::AsyncWrite::poll_write(self, context, bytes)
++    }
++}
++
++#[cfg(feature = "vless-xhttp")]
++struct XhttpSession {
++    stream: BoxStream,
++    _cancel: tokio_util::sync::DropGuard,
++}
++
++#[cfg(feature = "vless-xhttp")]
++impl tokio::io::AsyncRead for XhttpSession {
++    fn poll_read(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++        buffer: &mut tokio::io::ReadBuf<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        std::pin::Pin::new(&mut self.get_mut().stream).poll_read(context, buffer)
++    }
++}
++
++#[cfg(feature = "vless-xhttp")]
++impl tokio::io::AsyncWrite for XhttpSession {
++    fn poll_write(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++        bytes: &[u8],
++    ) -> std::task::Poll<std::io::Result<usize>> {
++        std::pin::Pin::new(&mut self.get_mut().stream).poll_write(context, bytes)
++    }
++
++    fn poll_flush(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        std::pin::Pin::new(&mut self.get_mut().stream).poll_flush(context)
++    }
++
++    fn poll_shutdown(
++        self: std::pin::Pin<&mut Self>,
++        context: &mut std::task::Context<'_>,
++    ) -> std::task::Poll<std::io::Result<()>> {
++        std::pin::Pin::new(&mut self.get_mut().stream).poll_shutdown(context)
++    }
++}
++
+ #[cfg(any(feature = "websocket", feature = "vless-xhttp"))]
+ pub(crate) fn tls_client(alpn: Vec<Vec<u8>>) -> Result<TlsConnector> {
+     let roots = rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+@@ -149,6 +300,11 @@ fn vless_header(uuid: uuid::Uuid, host: &str, port: u16) -> Result<Zeroizing<Vec
  }
  
  impl Backend {
@@ -137,10 +291,12 @@ index f57a779..53ed4c0 100644
      pub async fn create(
          config: &Config,
          dialer: Arc<dyn TcpDialer>,
-@@ -159,6 +168,10 @@ impl Backend {
+@@ -159,6 +315,12 @@ impl Backend {
      ) -> Result<Self> {
          #[allow(unused_mut)]
          let mut backend = Self {
++            #[cfg(feature = "vless-xhttp")]
++            carrier_dials: tokio_util::task::TaskTracker::new(),
 +            routes: None,
 +            direct: crate::outbound::DirectOutbound::new(dialer.clone(), rand::random()),
 +            #[cfg(feature = "reverse-proxy")]
@@ -148,10 +304,45 @@ index f57a779..53ed4c0 100644
              #[cfg(feature = "reverse-proxy")]
              http_cache: crate::cache::HttpCache::default(),
              config: config.clone(),
-@@ -321,6 +334,24 @@ impl Backend {
+@@ -267,6 +429,7 @@ impl Backend {
+         server: &str,
          port: u16,
          context: &ObservationContext,
++        deadline: tokio::time::Instant,
      ) -> Result<BoxStream> {
+         let stream = tokio::select! {
+             biased;
+@@ -274,7 +437,7 @@ impl Backend {
+             _ = self.sockets.cancelled() => return Err(Error::Canceled),
+             result = crate::retry::connect(
+                 || self.dialer.connect_observed(server, port, context),
+-                self.config.connect_timeout(), &self.cancel, context,
++                deadline.saturating_duration_since(tokio::time::Instant::now()), &self.cancel, context,
+             ) => result?,
+         };
+         Ok(Box::new(self.sockets.track(stream)?))
+@@ -285,6 +448,7 @@ impl Backend {
+         &self,
+         endpoints: &[String],
+         context: &ObservationContext,
++        deadline: tokio::time::Instant,
+     ) -> Result<BoxStream> {
+         // Retry only connection establishment, before sending any HTTP data.
+         // One deadline covers DNS and all configured endpoint fallbacks.
+@@ -304,7 +468,7 @@ impl Backend {
+                     }
+                     Err(last)
+                 },
+-                self.config.connect_timeout(), &self.cancel, context,
++                deadline.saturating_duration_since(tokio::time::Instant::now()), &self.cancel, context,
+             ) => result?,
+         };
+         Ok(Box::new(self.sockets.track(stream)?))
+@@ -320,20 +484,51 @@ impl Backend {
+         host: &str,
+         port: u16,
+         context: &ObservationContext,
++    ) -> Result<BoxStream> {
 +        if let Some(routes) = &self.routes {
 +            let mut attempt = crate::routing::Attempt::new(self.config.connect_timeout());
 +            let traffic = crate::routing::Traffic {
@@ -170,10 +361,53 @@ index f57a779..53ed4c0 100644
 +            .run(routes, &traffic, &mut attempt, &self.cancel)
 +            .await;
 +        }
++        self.connect_until(
++            host,
++            port,
++            context,
++            tokio::time::Instant::now() + self.config.connect_timeout(),
++        )
++        .await
++    }
++
++    pub(crate) async fn connect_until(
++        &self,
++        host: &str,
++        port: u16,
++        context: &ObservationContext,
++        deadline: tokio::time::Instant,
+     ) -> Result<BoxStream> {
          context
              .measure(Stage::ProxyHandshake, async {
-                 tokio::time::timeout(
-@@ -348,6 +379,34 @@ impl Backend {
+-                tokio::time::timeout(
+-                    self.config.connect_timeout(),
+-                    self.connect_inner(host, port, context),
+-                )
+-                .await
+-                .unwrap_or_else(|_| {
+-                    Err(Error::Operation(Failure::new(
+-                        Stage::ProxyHandshake,
+-                        FailureCode::Timeout,
+-                    )))
+-                })
++                tokio::time::timeout_at(deadline, self.connect_inner(host, port, context, deadline))
++                    .await
++                    .unwrap_or_else(|_| {
++                        Err(Error::Operation(Failure::new(
++                            Stage::ProxyHandshake,
++                            FailureCode::Timeout,
++                        )))
++                    })
+             })
+             .await
+     }
+@@ -343,26 +538,63 @@ impl Backend {
+         host: &str,
+         port: u16,
+         _context: &ObservationContext,
++        deadline: tokio::time::Instant,
+     ) -> Result<BoxStream> {
+         self.config.whitelist.origin(host)?;
          if !self.config.runtime.accepts_proxy_port(port) {
              return Err(Error::DomainDenied);
          }
@@ -182,7 +416,7 @@ index f57a779..53ed4c0 100644
 +            let stream = self.direct.connect(origin, port, _context).await?;
 +            return Ok(Box::new(self.sockets.track(stream)?));
 +        }
-+        self.connect_transport(host, port, _context).await
++        self.connect_transport(host, port, _context, deadline).await
 +    }
 +
 +    #[cfg(feature = "reverse-proxy")]
@@ -191,12 +425,14 @@ index f57a779..53ed4c0 100644
 +        host: &str,
 +        port: u16,
 +        context: &ObservationContext,
++        deadline: tokio::time::Instant,
 +    ) -> Result<BoxStream> {
 +        let target = self.config.whitelist.origin(host)?;
 +        if !self.config.runtime.accepts_proxy_port(port) {
 +            return Err(Error::DomainDenied);
 +        }
-+        self.connect_transport(target, port, context).await
++        self.connect_transport(target, port, context, deadline)
++            .await
 +    }
 +
 +    async fn connect_transport(
@@ -204,11 +440,278 @@ index f57a779..53ed4c0 100644
 +        host: &str,
 +        port: u16,
 +        _context: &ObservationContext,
++        deadline: tokio::time::Instant,
 +    ) -> Result<BoxStream> {
++        let _ = deadline;
          #[cfg(feature = "websocket")]
          if let Some(url) = &self.websocket {
              let stream = match &self.config.mode {
-@@ -698,6 +757,7 @@ mod tests {
+                 ModeConfig::RemoteReverse { .. } => {
+-                    self.configured_tcp(&self.config.mode.connection_endpoints(), _context)
+-                        .await?
++                    self.configured_tcp(
++                        &self.config.mode.connection_endpoints(),
++                        _context,
++                        deadline,
++                    )
++                    .await?
+                 }
+-                _ => self.tcp(&url.server, url.port, _context).await?,
++                _ => self.tcp(&url.server, url.port, _context, deadline).await?,
+             };
+             let stream = secure_with(
+                 stream,
+                 &url.server,
+                 &self.websocket_tls,
+                 _context,
+-                self.config.connect_timeout(),
++                deadline.saturating_duration_since(tokio::time::Instant::now()),
+             )
+             .await?;
+             let stream = self.sockets.track(Box::new(stream))?;
+@@ -381,7 +613,7 @@ impl Backend {
+                 },
+                 Some(Forward::Ss(method)),
+             ) => {
+-                let tcp = self.tcp(&url.server, url.port, _context).await?;
++                let tcp = self.tcp(&url.server, url.port, _context, deadline).await?;
+                 let mut stream = ClientStream::new(tcp, method.clone(), &target).map_err(|_| {
+                     Error::Operation(Failure::new(
+                         Stage::ProxyHandshake,
+@@ -408,6 +640,8 @@ impl Backend {
+                     transport,
+                 }),
+             ) => {
++                let stop = self.cancel.child_token();
++                let lifetime = stop.clone().drop_guard();
+                 let header = vless_header(*uuid, host, port)?;
+                 let (dialer, sockets, server, name, upstream_port) = (
+                     self.dialer.clone(),
+@@ -416,7 +650,10 @@ impl Backend {
+                     server_name.clone(),
+                     *proxy_port,
+                 );
+-                let (stop, timeout) = (self.cancel.clone(), self.config.connect_timeout());
++                let tracker = self.carrier_dials.clone();
++                let armed = Arc::new(std::sync::atomic::AtomicBool::new(true));
++                let dial_armed = armed.clone();
++                let connect_timeout = self.config.connect_timeout();
+                 let observation = _context.clone();
+                 let dial_failure = Arc::new(parking_lot::Mutex::new(None::<Error>));
+                 let failure_for_dial = dial_failure.clone();
+@@ -430,7 +667,14 @@ impl Backend {
+                         name.clone(),
+                     );
+                     let stop = stop.clone();
+-                    Box::pin(async move {
++                    let armed = dial_armed.clone();
++                    Box::pin(tracker.track_future(async move {
++                        let deadline = if armed.load(std::sync::atomic::Ordering::Acquire) {
++                            deadline
++                        } else {
++                            tokio::time::Instant::now() + connect_timeout
++                        };
++                        let timeout = deadline.saturating_duration_since(tokio::time::Instant::now());
+                         let operation = async {
+                             let raw = crate::retry::connect(
+                                 || dialer.connect_observed(&server, upstream_port, &observation),
+@@ -450,7 +694,8 @@ impl Backend {
+                                     "mode closed",
+                                 ))
+                             })?;
+-                            let tls = secure(Box::new(raw), &name, b"h2", &observation, timeout)
++                            let tls = secure(Box::new(raw), &name, b"h2", &observation,
++                                deadline.saturating_duration_since(tokio::time::Instant::now()))
+                                 .await
+                                 .map_err(|error| {
+                                     *failure.lock() = Some(error);
+@@ -463,18 +708,20 @@ impl Backend {
+                                     "mode closed",
+                                 ))
+                             })?;
+-                            Ok(Box::new(stream) as xray_transport::BoxedTransportStream)
++                            Ok(Box::new(AcquiringCarrier::new(
++                                Box::new(stream), armed, deadline, stop.clone(),
++                            )) as xray_transport::BoxedTransportStream)
+                         };
+                         tokio::select! {
+                             biased;
+                             _ = stop.cancelled() => Err(xray_transport::TransportError::Tcp(std::io::Error::other("mode closed"))),
+                             _ = sockets.cancelled() => Err(xray_transport::TransportError::Tcp(std::io::Error::other("carrier closed"))),
+-                            result = tokio::time::timeout(timeout, operation) => result.unwrap_or_else(|_| {
++                            result = tokio::time::timeout_at(deadline, operation) => result.unwrap_or_else(|_| {
+                                 *failure.lock() = Some(Error::Operation(Failure::new(Stage::ProxyHandshake, FailureCode::Timeout)));
+                                 Err(xray_transport::TransportError::Tcp(std::io::Error::other("dial timed out")))
+                             }),
+                         }
+-                    })
++                    }))
+                 });
+                 let carrier = transport.open_stream_with_dial(dial).await.map_err(|_| {
+                     dial_failure.lock().clone().unwrap_or_else(|| {
+@@ -507,13 +754,160 @@ impl Backend {
+                         FailureCode::ProxyProtocol,
+                     ))
+                 })?;
+-                Ok(Box::new(VlessResponseStream::new(stream)))
++                armed.store(false, std::sync::atomic::Ordering::Release);
++                Ok(Box::new(XhttpSession {
++                    stream: Box::new(VlessResponseStream::new(stream)),
++                    _cancel: lifetime,
++                }))
+             }
+             _ => Err(Error::Config("backend does not support a raw TCP payload")),
+         }
+         #[cfg(not(any(feature = "shadowsocks", feature = "vless-xhttp")))]
+         Err(Error::Config("backend does not support a raw TCP payload"))
+     }
++
++    pub(crate) async fn drain_carrier_dials(&self) {
++        #[cfg(feature = "vless-xhttp")]
++        {
++            self.carrier_dials.close();
++            self.carrier_dials.wait().await;
++        }
++    }
++}
++
++#[cfg(all(test, feature = "vless-xhttp"))]
++mod carrier_tests {
++    use super::*;
++    use std::sync::atomic::{AtomicUsize, Ordering};
++
++    struct Active(Arc<AtomicUsize>);
++    impl Drop for Active {
++        fn drop(&mut self) {
++            self.0.fetch_sub(1, Ordering::SeqCst);
++        }
++    }
++    struct PendingDialer(Arc<AtomicUsize>);
++    #[async_trait::async_trait]
++    impl TcpDialer for PendingDialer {
++        async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
++            self.0.fetch_add(1, Ordering::SeqCst);
++            let _active = Active(self.0.clone());
++            std::future::pending().await
++        }
++    }
++
++    #[tokio::test]
++    async fn dropping_vless_acquisition_cancels_detached_carrier_dial() {
++        let active = Arc::new(AtomicUsize::new(0));
++        let config = Config::new(
++            "carrier-cancel",
++            ModeConfig::ForwardProxy {
++                protocol: ForwardConfig::parse("vless://00000000-0000-0000-0000-000000000001@access.example.test?type=xhttp&security=tls&path=%2Ftest").unwrap(),
++            },
++            crate::Whitelist::steam(),
++        );
++        let cancel = tokio_util::sync::CancellationToken::new();
++        let backend = Arc::new(
++            Backend::create(
++                &config,
++                Arc::new(PendingDialer(active.clone())),
++                Arc::new(Connections::default()),
++                None,
++                cancel.clone(),
++                ObservationContext::new(config.kind(), Arc::new(crate::NoopObserver)),
++            )
++            .await
++            .unwrap(),
++        );
++        let task = tokio::spawn({
++            let backend = backend.clone();
++            async move { backend.connect("store.steampowered.com", 443).await }
++        });
++        tokio::time::timeout(std::time::Duration::from_secs(1), async {
++            while active.load(Ordering::SeqCst) == 0 {
++                tokio::task::yield_now().await;
++            }
++        })
++        .await
++        .unwrap();
++        task.abort();
++        let _ = task.await;
++        for _ in 0..32 {
++            tokio::task::yield_now().await;
++        }
++        let remaining = active.load(Ordering::SeqCst);
++        cancel.cancel();
++        assert_eq!(remaining, 0, "carrier dial outlived its acquisition");
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn remaining_deadline_bounds_vless_carrier_and_drains_dial_tasks() {
++        let active = Arc::new(AtomicUsize::new(0));
++        let config = Config::new(
++            "carrier-deadline",
++            ModeConfig::ForwardProxy {
++                protocol: ForwardConfig::parse("vless://00000000-0000-0000-0000-000000000001@access.example.test?type=xhttp&security=tls&path=%2Ftest").unwrap(),
++            },
++            crate::Whitelist::steam(),
++        );
++        let backend = Backend::create(
++            &config,
++            Arc::new(PendingDialer(active.clone())),
++            Arc::new(Connections::default()),
++            None,
++            Default::default(),
++            ObservationContext::new(config.kind(), Arc::new(crate::NoopObserver)),
++        )
++        .await
++        .unwrap();
++        let started = tokio::time::Instant::now();
++        let result = backend
++            .connect_until(
++                "store.steampowered.com",
++                443,
++                &backend.observation,
++                started + std::time::Duration::from_millis(30),
++            )
++            .await;
++        assert!(result.is_err());
++        backend.drain_carrier_dials().await;
++        assert_eq!(started.elapsed(), std::time::Duration::from_millis(30));
++        assert_eq!(active.load(Ordering::SeqCst), 0);
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn carrier_budget_bounds_pending_io_but_does_not_expire_acquired_pool() {
++        use tokio::io::AsyncReadExt;
++        for acquired in [false, true] {
++            let (client, mut peer) = tokio::io::duplex(64);
++            let armed = Arc::new(std::sync::atomic::AtomicBool::new(true));
++            let cancel = tokio_util::sync::CancellationToken::new();
++            let mut stream = AcquiringCarrier::new(
++                Box::new(client),
++                armed.clone(),
++                tokio::time::Instant::now() + std::time::Duration::from_millis(30),
++                cancel.clone(),
++            );
++            if acquired {
++                stream
++                    .write_all(b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n")
++                    .await
++                    .unwrap();
++                armed.store(false, Ordering::Release);
++                cancel.cancel();
++                tokio::time::sleep(std::time::Duration::from_millis(40)).await;
++                peer.write_all(b"x").await.unwrap();
++                assert_eq!(stream.read_u8().await.unwrap(), b'x');
++            } else {
++                let started = tokio::time::Instant::now();
++                assert_eq!(
++                    stream.read_u8().await.unwrap_err().kind(),
++                    std::io::ErrorKind::TimedOut
++                );
++                assert_eq!(started.elapsed(), std::time::Duration::from_millis(30));
++            }
++        }
++    }
+ }
+ 
+ #[cfg(all(test, feature = "websocket"))]
+@@ -698,6 +1092,7 @@ mod tests {
  }
  
  pub(crate) fn check_features(config: &Config) -> Result<()> {
@@ -469,7 +972,7 @@ index 1078df8..0150718 100644
  
  pub(crate) fn parse_endpoint(endpoint: &str) -> Result<(String, u16)> {
 diff --git a/src/http_proxy.rs b/src/http_proxy.rs
-index da0b421..c0dcaa0 100644
+index da0b421..50053f2 100644
 --- a/src/http_proxy.rs
 +++ b/src/http_proxy.rs
 @@ -13,7 +13,7 @@ use http_body_util::{BodyExt, StreamBody};
@@ -481,7 +984,7 @@ index da0b421..c0dcaa0 100644
      connectors::L4Connect,
      protocols::{
          Digest,
-@@ -55,10 +55,82 @@ const H2_DOWNSTREAM_STREAM_WINDOW: u32 = 128 * 1024;
+@@ -55,10 +55,125 @@ const H2_DOWNSTREAM_STREAM_WINDOW: u32 = 128 * 1024;
  const H2_CONNECTION_WINDOW: u32 = 2 * 1024 * 1024;
  const DOWNSTREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(90);
  pub(crate) struct ReverseProxy {
@@ -502,6 +1005,49 @@ index da0b421..c0dcaa0 100644
 +    registry: Weak<crate::routing::Registry>,
 +    index: usize,
 +    host: String,
++    phase: Arc<parking_lot::Mutex<AcquisitionPhase>>,
++    settled: Arc<std::sync::atomic::AtomicBool>,
++}
++
++#[derive(Clone, Copy)]
++enum AcquisitionPhase {
++    Resolve,
++    Pool,
++    Access,
++    Target,
++}
++
++impl AcquisitionTarget {
++    fn phase(&self, phase: AcquisitionPhase) {
++        *self.phase.lock() = phase;
++    }
++
++    fn settle(&self, failure: &Error, target: bool) {
++        if !self.settled.swap(true, std::sync::atomic::Ordering::AcqRel)
++            && let Some(registry) = self.registry.upgrade()
++        {
++            registry.failure_at(self.index, &self.host, failure, target);
++        }
++    }
++
++    fn expire(&self) {
++        let phase = *self.phase.lock();
++        match phase {
++            AcquisitionPhase::Resolve => self.settle(&timeout(Stage::Resolve), false),
++            AcquisitionPhase::Access => self.settle(&timeout(Stage::Connect), false),
++            AcquisitionPhase::Target => self.settle(&timeout(Stage::HttpHeaders), true),
++            AcquisitionPhase::Pool => {}
++        }
++    }
++
++    fn fail(&self, failure: &Error) {
++        let phase = *self.phase.lock();
++        match phase {
++            AcquisitionPhase::Pool => {}
++            AcquisitionPhase::Target => self.settle(failure, true),
++            _ => self.settle(failure, false),
++        }
++    }
 +}
 +
 +tokio::task_local! {
@@ -520,33 +1066,33 @@ index da0b421..c0dcaa0 100644
 +        shutdown: &pingora_core::server::ShutdownWatch,
 +    ) -> Option<ReusedHttpStream> {
 +        let (sender, mut state) = tokio::sync::watch::channel(Acquisition::Waiting);
-+        ACQUISITION.scope(sender, async {
-+            let processing = self.inner.process_new_http(session, shutdown);
-+            tokio::pin!(processing);
-+            loop {
-+                let phase = state.borrow_and_update().clone();
-+                match phase {
-+                    Acquisition::Ready => return processing.await,
-+                    Acquisition::Waiting => tokio::select! {
-+                        result = &mut processing => return result,
-+                        _ = state.changed() => {}
-+                    },
-+                    Acquisition::Connecting(deadline, target) => tokio::select! {
-+                        biased;
-+                        _ = tokio::time::sleep_until(deadline) => {
-+                            if let Some(target) = target
-+                                && let Some(registry) = target.registry.upgrade()
-+                            {
-+                                registry.failure(target.index, &target.host, &timeout(Stage::HttpHeaders));
-+                            }
-+                            return None;
++        ACQUISITION
++            .scope(sender, async {
++                let processing = self.inner.process_new_http(session, shutdown);
++                tokio::pin!(processing);
++                loop {
++                    let phase = state.borrow_and_update().clone();
++                    match phase {
++                        Acquisition::Ready => return processing.await,
++                        Acquisition::Waiting => tokio::select! {
++                            result = &mut processing => return result,
++                            _ = state.changed() => {}
 +                        },
-+                        result = &mut processing => return result,
-+                        _ = state.changed() => {}
-+                    },
++                        Acquisition::Connecting(deadline, target) => tokio::select! {
++                            biased;
++                            _ = tokio::time::sleep_until(deadline) => {
++                                if let Some(target) = target {
++                                    target.expire();
++                                }
++                                return None;
++                            },
++                            result = &mut processing => return result,
++                            _ = state.changed() => {}
++                        },
++                    }
 +                }
-+            }
-+        }).await
++            })
++            .await
 +    }
 +
 +    fn server_options(&self) -> Option<&HttpServerOptions> {
@@ -565,7 +1111,16 @@ index da0b421..c0dcaa0 100644
  pub(crate) fn engine(backend: &Arc<Backend>) -> Arc<ReverseProxy> {
      backend
          .http
-@@ -92,7 +164,7 @@ fn build_with_idle_timeout(app: Proxy, idle_timeout: Duration) -> Arc<ReversePro
+@@ -79,6 +194,8 @@ pub(crate) fn engine(backend: &Arc<Backend>) -> Arc<ReverseProxy> {
+                 ca: None,
+                 #[cfg(test)]
+                 h2_stream_window: H2_UPSTREAM_STREAM_WINDOW,
++                #[cfg(test)]
++                downstream_write_timeout: None,
+             })
+         })
+         .clone()
+@@ -92,7 +209,7 @@ fn build_with_idle_timeout(app: Proxy, idle_timeout: Duration) -> Arc<ReversePro
      // No Server, process signals, listener, daemon or global configuration.
      let conf = Arc::new(ServerConf {
          threads: 1,
@@ -574,7 +1129,7 @@ index da0b421..c0dcaa0 100644
          upstream_keepalive_pool_size: 64,
          ..ServerConf::default()
      });
-@@ -111,7 +183,9 @@ fn build_with_idle_timeout(app: Proxy, idle_timeout: Duration) -> Arc<ReversePro
+@@ -111,7 +228,9 @@ fn build_with_idle_timeout(app: Proxy, idle_timeout: Duration) -> Arc<ReversePro
          .initial_connection_window_size(H2_CONNECTION_WINDOW);
      proxy.h2_options = Some(h2);
      Arc::new(ReverseProxy {
@@ -585,7 +1140,7 @@ index da0b421..c0dcaa0 100644
          requests,
      })
  }
-@@ -153,6 +227,16 @@ pub(crate) async fn shutdown(backend: &Backend) {
+@@ -153,9 +272,21 @@ pub(crate) async fn shutdown(backend: &Backend) {
          proxy.requests.close();
          proxy.requests.wait().await;
      }
@@ -602,25 +1157,24 @@ index da0b421..c0dcaa0 100644
  }
  
  pub(crate) struct Proxy {
-@@ -178,6 +262,9 @@ struct ResolvedPeer {
++    #[cfg(test)]
++    downstream_write_timeout: Option<Duration>,
+     #[cfg(feature = "http-cache")]
+     cache: crate::cache::HttpCache,
+     bandwidth: crate::bandwidth::SessionBandwidth,
+@@ -178,6 +309,11 @@ struct ResolvedPeer {
  
  #[derive(Default)]
  pub(crate) struct RequestContext {
 +    selected: Option<(usize, Arc<Backend>)>,
++    acquisition: Option<AcquisitionTarget>,
++    acquisition_state: Option<tokio::sync::watch::Sender<Acquisition>>,
 +    attempt: Option<crate::routing::Attempt>,
 +    download: bool,
      #[cfg(feature = "response-inspection")]
      inspection: Option<crate::inspection::decode::Inspection>,
      #[cfg(feature = "response-inspection")]
-@@ -201,6 +288,7 @@ pub(crate) struct RequestContext {
-     reused: bool,
-     transport_began: Option<std::time::Instant>,
-     transport_elapsed: Option<Duration>,
-+    target_transport_ready: Arc<std::sync::atomic::AtomicBool>,
-     connection_lease: Option<tokio::sync::OwnedMutexGuard<()>>,
-     _token: Option<tokio_util::task::task_tracker::TaskTrackerToken>,
- }
-@@ -297,7 +385,17 @@ impl ProxyHttp for Proxy {
+@@ -297,7 +433,18 @@ impl ProxyHttp for Proxy {
                  })));
              }
          }
@@ -629,24 +1183,44 @@ index da0b421..c0dcaa0 100644
 +            backend.config.connect_timeout(),
 +        ));
 +        ctx.deadline = ctx.attempt.as_ref().map(|attempt| attempt.deadline);
-+        let _ = ACQUISITION.try_with(|state| {
++        ctx.acquisition_state = ACQUISITION.try_with(Clone::clone).ok();
++        if let Some(state) = &ctx.acquisition_state {
 +            state.send_replace(Acquisition::Connecting(
 +                ctx.deadline.expect("request filter"),
 +                None,
 +            ));
-+        });
++        }
 +        ctx.download = crate::routing::download(&ctx.host, session.req_header().uri.path());
          let ws = backend.config.runtime.websocket;
          // Server-push WebSockets need not send client frames. Upstream read
          // inactivity enforces idle expiry without timing out a quiet client.
-@@ -421,19 +519,60 @@ impl ProxyHttp for Proxy {
+@@ -307,6 +454,10 @@ impl ProxyHttp for Proxy {
+         } else {
+             backend.config.connect_timeout()
+         }));
++        #[cfg(test)]
++        if let Some(timeout) = self.downstream_write_timeout {
++            session.set_write_timeout(Some(timeout));
++        }
+         #[cfg(feature = "http-cache")]
+         if session.as_mut().is_body_empty()
+             && !ctx.observation.as_ref().is_some_and(|o| o.is_probe())
+@@ -407,6 +558,9 @@ impl ProxyHttp for Proxy {
+         ctx: &mut Self::CTX,
+     ) -> pingora_error::Result<Option<pingora_cache::ForcedFreshness>> {
+         if fresh {
++            if let Some(state) = &ctx.acquisition_state {
++                state.send_replace(Acquisition::Ready);
++            }
+             if let Some(observation) = &ctx.observation {
+                 ctx.cache_hit = Some(observation.start(Stage::HttpCacheHit));
+             }
+@@ -421,19 +575,62 @@ impl ProxyHttp for Proxy {
      ) -> pingora_error::Result<Box<HttpPeer>> {
          // Retries must never retain a lease from an unsuccessful acquisition.
          ctx.connection_lease.take();
 -        let backend = self.backend()?;
 +        let root = self.backend()?;
-+        ctx.target_transport_ready
-+            .store(false, std::sync::atomic::Ordering::Release);
 +        let backend = if let Some(routes) = &root.routes {
 +            let traffic = crate::routing::Traffic {
 +                host: &ctx.host,
@@ -657,16 +1231,20 @@ index da0b421..c0dcaa0 100644
 +                .select(&traffic, ctx.attempt.as_mut().expect("request filter"))
 +                .map_err(proxy_error)?;
 +            ctx.selected = Some(selected.clone());
-+            let _ = ACQUISITION.try_with(|state| {
++            let acquisition = AcquisitionTarget {
++                registry: Arc::downgrade(routes),
++                index: selected.0,
++                host: ctx.host.clone(),
++                phase: Arc::new(parking_lot::Mutex::new(AcquisitionPhase::Resolve)),
++                settled: Default::default(),
++            };
++            ctx.acquisition = Some(acquisition.clone());
++            if let Some(state) = &ctx.acquisition_state {
 +                state.send_replace(Acquisition::Connecting(
 +                    ctx.deadline.expect("request filter"),
-+                    Some(AcquisitionTarget {
-+                        registry: Arc::downgrade(routes),
-+                        index: selected.0,
-+                        host: ctx.host.clone(),
-+                    }),
++                    Some(acquisition),
 +                ));
-+            });
++            }
 +            selected.1
 +        } else {
 +            root.clone()
@@ -702,7 +1280,7 @@ index da0b421..c0dcaa0 100644
                  let mut cache = self.peers.lock().await;
                  if let Some(peer) = cache.get(&endpoints)
                      && peer.expires > tokio::time::Instant::now()
-@@ -468,20 +607,44 @@ impl ProxyHttp for Proxy {
+@@ -468,20 +665,44 @@ impl ProxyHttp for Proxy {
          let addresses = tokio::select! {
              biased;
              _ = backend.cancel.cancelled() => return Err(proxy_error(Error::Canceled)),
@@ -710,17 +1288,15 @@ index da0b421..c0dcaa0 100644
 +            result = resolved => match result.unwrap_or_else(|_| Err(timeout(Stage::Resolve))) {
 +                Ok(addresses) => addresses,
 +                Err(error) => {
-+                    if let (Some(routes), Some((index, _))) = (&root.routes, &ctx.selected) {
-+                        routes.failure(*index, &ctx.host, &error);
++                    if let Some(acquisition) = &ctx.acquisition {
++                        acquisition.fail(&error);
 +                    }
 +                    let mut failure = proxy_error(error);
 +                    failure.set_retry(root.routes.is_some() && !ctx.attempt.as_ref().is_some_and(|attempt| attempt.committed));
 +                    return Err(failure);
 +                }
 +            },
-         };
--        let address = addresses[0];
--        let mut peer = HttpPeer::new(address, true, sni);
++        };
 +        let address = if direct {
 +            backend
 +                .bridge
@@ -730,7 +1306,9 @@ index da0b421..c0dcaa0 100644
 +                .address
 +        } else {
 +            addresses[0]
-+        };
+         };
+-        let address = addresses[0];
+-        let mut peer = HttpPeer::new(address, true, sni);
 +        let mut peer = HttpPeer::new(address, !(direct || tunnel) || ctx.port != 80, sni.clone());
          #[cfg(test)]
          {
@@ -754,7 +1332,7 @@ index da0b421..c0dcaa0 100644
              ctx.websocket.hash(&mut hash);
              peer.group_key = hash.finish();
          }
-@@ -515,8 +678,11 @@ impl ProxyHttp for Proxy {
+@@ -515,8 +736,11 @@ impl ProxyHttp for Proxy {
              backend: Arc::downgrade(&backend),
              observation: observation.clone(),
              addresses,
@@ -764,11 +1342,21 @@ index da0b421..c0dcaa0 100644
 +            target_port: ctx.port,
 +            target_domain: sni,
 +            deadline,
-+            target_transport_ready: ctx.target_transport_ready.clone(),
++            acquisition: ctx.acquisition.clone(),
          }));
          // Pingora may briefly remove a reusable H2 connection while allocating
          // a stream. Coordinate pool acquisition/handshake, not response bodies.
-@@ -543,6 +709,27 @@ impl ProxyHttp for Proxy {
+@@ -534,6 +758,9 @@ impl ProxyHttp for Proxy {
+                     gate
+                 })
+         };
++        if let Some(acquisition) = &ctx.acquisition {
++            acquisition.phase(AcquisitionPhase::Pool);
++        }
+         let queued = observation.start(Stage::HttpQueue);
+         let lease = tokio::select! {
+             biased;
+@@ -543,6 +770,27 @@ impl ProxyHttp for Proxy {
          };
          queued.finish(&lease.as_ref().map(|_| ()).map_err(Clone::clone));
          ctx.connection_lease = Some(lease.map_err(proxy_error)?);
@@ -796,7 +1384,7 @@ index da0b421..c0dcaa0 100644
          ctx.transport_began = Some(std::time::Instant::now());
          ctx.connect = Some(observation.start(Stage::ProxyHandshake));
          Ok(Box::new(peer))
-@@ -554,6 +741,12 @@ impl ProxyHttp for Proxy {
+@@ -554,6 +802,12 @@ impl ProxyHttp for Proxy {
          request: &mut RequestHeader,
          ctx: &mut Self::CTX,
      ) -> pingora_error::Result<()> {
@@ -809,7 +1397,7 @@ index da0b421..c0dcaa0 100644
          #[cfg(feature = "http-cache")]
          if ctx.cache_key.is_some() {
              if let Some(range) = _session.req_header().headers.get(header::RANGE) {
-@@ -598,8 +791,16 @@ impl ProxyHttp for Proxy {
+@@ -598,8 +852,16 @@ impl ProxyHttp for Proxy {
              path.parse().map_err(|_| proxy_error(Error::Http))?
          };
          request.set_uri(uri);
@@ -828,22 +1416,38 @@ index da0b421..c0dcaa0 100644
              && backend.config.requires_local_ca()
              && backend
                  .config
-@@ -656,6 +857,14 @@ impl ProxyHttp for Proxy {
+@@ -656,6 +918,14 @@ impl ProxyHttp for Proxy {
          ctx: &mut Self::CTX,
      ) -> pingora_error::Result<()> {
          ctx.connection_lease.take();
-+        let _ = ACQUISITION.try_with(|state| {
++        if let Some(state) = &ctx.acquisition_state {
 +            state.send_replace(Acquisition::Ready);
-+        });
++        }
 +        if !reused {
 +            if let (Some(routes), Some((index, _))) = (&self.backend()?.routes, &ctx.selected) {
-+                routes.access_success(*index);
++                routes.access_success(*index, &ctx.host);
 +            }
 +        }
          // Connection timing is separate from HTTP response-header latency.
          if let Some(operation) = ctx.connect.take() {
              operation.finish(&Ok(()));
-@@ -852,10 +1061,29 @@ impl ProxyHttp for Proxy {
+@@ -787,8 +1057,14 @@ impl ProxyHttp for Proxy {
+         &self,
+         _session: &mut ProxySession,
+         response: &mut ResponseHeader,
+-        _ctx: &mut Self::CTX,
++        ctx: &mut Self::CTX,
+     ) -> pingora_error::Result<()> {
++        if let Some(state) = &ctx.acquisition_state {
++            state.send_replace(Acquisition::Ready);
++        }
++        if let Some(attempt) = &mut ctx.attempt {
++            attempt.committed = true;
++        }
+         // Pingora owns protocol framing and connection-close handling.
+         response.remove_header(&header::ALT_SVC);
+         Ok(())
+@@ -852,10 +1128,25 @@ impl ProxyHttp for Proxy {
          _session: &mut ProxySession,
          _peer: &HttpPeer,
          ctx: &mut Self::CTX,
@@ -853,14 +1457,10 @@ index da0b421..c0dcaa0 100644
          ctx.connection_lease.take();
          let failure = http_error(Stage::Connect, "upstream-connect", error.as_ref());
 +        if let Ok(root) = self.backend() {
-+            if let (Some(routes), Some((index, _))) = (&root.routes, &ctx.selected) {
-+                routes.failure_at(
-+                    *index,
-+                    &ctx.host,
-+                    &failure,
-+                    ctx.target_transport_ready
-+                        .load(std::sync::atomic::Ordering::Acquire),
-+                );
++            if root.routes.is_some() && ctx.selected.is_some() {
++                if let Some(acquisition) = &ctx.acquisition {
++                    acquisition.fail(&failure);
++                }
 +                error.set_retry(
 +                    !matches!(failure, Error::Canceled)
 +                        && ctx.attempt.as_ref().is_some_and(|attempt| {
@@ -874,7 +1474,7 @@ index da0b421..c0dcaa0 100644
          if let Some(operation) = ctx.headers.take() {
              operation.finish::<()>(&Err(failure.clone()));
          }
-@@ -865,6 +1093,29 @@ impl ProxyHttp for Proxy {
+@@ -865,6 +1156,29 @@ impl ProxyHttp for Proxy {
          error
      }
  
@@ -904,7 +1504,7 @@ index da0b421..c0dcaa0 100644
      async fn fail_to_proxy(
          &self,
          session: &mut ProxySession,
-@@ -987,15 +1238,18 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
+@@ -987,15 +1301,18 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
          return Ok((alias.into(), alias.into(), vec![format!("{alias}:443")]));
      }
      match &backend.config.mode {
@@ -929,7 +1529,7 @@ index da0b421..c0dcaa0 100644
              Ok((server_name.clone(), server_name.clone(), endpoints))
          }
          ModeConfig::LocalReverse {
-@@ -1011,7 +1265,17 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
+@@ -1011,7 +1328,17 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
                  Ok((
                      tls_server_name.clone(),
                      origin,
@@ -948,7 +1548,7 @@ index da0b421..c0dcaa0 100644
                  ))
              }
          }
-@@ -1022,7 +1286,7 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
+@@ -1022,7 +1349,7 @@ fn http_route(backend: &Backend, host: &str) -> Result<(String, String, Vec<Stri
          )),
          ModeConfig::ForwardProxy { protocol } => {
              let (server, port) = protocol.endpoint();
@@ -957,20 +1557,24 @@ index da0b421..c0dcaa0 100644
          }
      }
  }
-@@ -1032,6 +1296,10 @@ struct UpstreamConnector {
+@@ -1032,6 +1359,10 @@ struct UpstreamConnector {
      observation: ObservationContext,
      addresses: Vec<std::net::SocketAddr>,
      tunnel_host: Option<String>,
 +    target_port: u16,
 +    target_domain: String,
 +    deadline: tokio::time::Instant,
-+    target_transport_ready: Arc<std::sync::atomic::AtomicBool>,
++    acquisition: Option<AcquisitionTarget>,
  }
  impl std::fmt::Debug for UpstreamConnector {
      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-@@ -1046,18 +1314,50 @@ impl L4Connect for UpstreamConnector {
+@@ -1045,19 +1376,60 @@ impl L4Connect for UpstreamConnector {
+             .backend
              .upgrade()
              .ok_or_else(|| proxy_error(Error::Canceled))?;
++        if let Some(acquisition) = &self.acquisition {
++            acquisition.phase(AcquisitionPhase::Access);
++        }
          if let Some(host) = &self.tunnel_host {
 -            let stream = backend
 -                .connect_observed(host, 443, &self.observation)
@@ -982,13 +1586,19 @@ index da0b421..c0dcaa0 100644
 -            );
 +            let stream = tokio::time::timeout_at(
 +                self.deadline,
-+                backend.connect_http_tunnel(host, self.target_port, &self.observation),
++                backend.connect_http_tunnel(
++                    host,
++                    self.target_port,
++                    &self.observation,
++                    self.deadline,
++                ),
 +            )
 +            .await
 +            .map_err(|_| proxy_error(timeout(Stage::ProxyHandshake)))?
 +            .map_err(proxy_error)?;
-+            self.target_transport_ready
-+                .store(true, std::sync::atomic::Ordering::Release);
++            if let Some(acquisition) = &self.acquisition {
++                acquisition.phase(AcquisitionPhase::Target);
++            }
 +            let bridge = backend
 +                .bridge
 +                .get()
@@ -1027,7 +1637,7 @@ index da0b421..c0dcaa0 100644
          let mut attempt = 0;
          let stream = tokio::select! {
              biased;
-@@ -1072,7 +1372,7 @@ impl L4Connect for UpstreamConnector {
+@@ -1072,7 +1444,7 @@ impl L4Connect for UpstreamConnector {
                          backend.dialer.connect_observed(&target, address.port(), &self.observation).await
                      }
                  },
@@ -1036,7 +1646,7 @@ index da0b421..c0dcaa0 100644
              ) => result.map_err(proxy_error)?,
          };
          if stream.as_ref().type_id() == std::any::TypeId::of::<tokio::net::TcpStream>() {
-@@ -1234,6 +1534,22 @@ async fn send_observed(
+@@ -1234,6 +1606,22 @@ async fn send_observed(
          return Err(Error::Canceled);
      }
      let host = request_host(&request, &config.runtime.extra_tls_ports)?;
@@ -1059,7 +1669,7 @@ index da0b421..c0dcaa0 100644
      config.whitelist.origin(&host)?;
      http_route(backend, &host)?;
      let version = request.version();
-@@ -1260,7 +1576,7 @@ async fn send_observed(
+@@ -1260,7 +1648,7 @@ async fn send_observed(
          false,
          Some(ConnectionInfo {
              host,
@@ -1068,7 +1678,7 @@ index da0b421..c0dcaa0 100644
              observation: observation.clone(),
              handshake_expired: CancellationToken::new(),
          }),
-@@ -1451,84 +1767,6 @@ fn websocket_upgrade(request: &RequestHeader) -> bool {
+@@ -1451,84 +1839,6 @@ fn websocket_upgrade(request: &RequestHeader) -> bool {
          })
  }
  
@@ -1154,10 +1764,10 @@ index da0b421..c0dcaa0 100644
  #[path = "http_proxy_tests.rs"]
  mod tests;
 diff --git a/src/http_proxy_tests.rs b/src/http_proxy_tests.rs
-index f4e4d21..674d1e8 100644
+index f4e4d21..519e7c0 100644
 --- a/src/http_proxy_tests.rs
 +++ b/src/http_proxy_tests.rs
-@@ -24,6 +24,40 @@ struct Dialer {
+@@ -24,6 +24,44 @@ struct Dialer {
      failures: usize,
      mapped: Option<SocketAddr>,
  }
@@ -1166,6 +1776,7 @@ index f4e4d21..674d1e8 100644
 +    address: SocketAddr,
 +    calls: Arc<Mutex<Vec<String>>>,
 +    first_ready: Arc<std::sync::atomic::AtomicBool>,
++    stall: bool,
 +}
 +
 +#[async_trait]
@@ -1186,6 +1797,9 @@ index f4e4d21..674d1e8 100644
 +            drop(peer);
 +            return Ok(Box::new(stream));
 +        }
++        if self.stall {
++            return std::future::pending().await;
++        }
 +        match host {
 +            "192.0.2.1" if !self.first_ready.load(Ordering::SeqCst) => Err(Error::Transport),
 +            "192.0.2.1" | "192.0.2.2" => {
@@ -1198,16 +1812,18 @@ index f4e4d21..674d1e8 100644
  #[async_trait]
  impl TcpDialer for Dialer {
      async fn resolve(&self, host: &str, port: u16) -> Result<Vec<SocketAddr>> {
-@@ -115,6 +149,8 @@ struct Received {
+@@ -115,6 +153,10 @@ struct Received {
  
  #[derive(Clone, Copy)]
  enum ResponseMode {
++    RoutesTimeout,
++    CacheSlow,
 +    H2CapacityStop,
 +    Routes,
      Complete,
      Mapped,
      MappedWebSocket,
-@@ -134,6 +170,8 @@ enum ResponseMode {
+@@ -134,6 +176,8 @@ enum ResponseMode {
  }
  
  struct Fixture {
@@ -1216,7 +1832,7 @@ index f4e4d21..674d1e8 100644
      backend: Arc<Backend>,
      config: Config,
      stop: CancellationToken,
-@@ -230,12 +268,46 @@ impl Fixture {
+@@ -230,12 +274,46 @@ impl Fixture {
                          let requests = requests.clone();
                          children.spawn(async move {
                              let Ok(tls) = acceptor.accept(socket).await else { return };
@@ -1264,11 +1880,20 @@ index f4e4d21..674d1e8 100644
                              if let ResponseMode::Refuse(count) = mode {
                                  let mut connection = h2::server::handshake(tls).await.unwrap();
                                  while let Some(Ok((_request, mut respond))) = connection.accept().await {
-@@ -377,7 +449,32 @@ impl Fixture {
+@@ -322,7 +400,7 @@ impl Fixture {
+                                     let body = request.into_body().collect().await.unwrap().to_bytes();
+                                     seen.lock().push(Received { host, uri, original, original_port, cookie, spoofed, body, accept_encoding });
+                                     let mut response = Response::builder().header(header::ALT_SVC, "h3=\":443\"");
+-                                    if matches!(mode, ResponseMode::Cache | ResponseMode::CacheSized | ResponseMode::Gzip | ResponseMode::CacheVary | ResponseMode::CacheRange | ResponseMode::WebSocket) {
++                                    if matches!(mode, ResponseMode::CacheSlow | ResponseMode::Cache | ResponseMode::CacheSized | ResponseMode::Gzip | ResponseMode::CacheVary | ResponseMode::CacheRange | ResponseMode::WebSocket) {
+                                         tokio::time::sleep(Duration::from_millis(50)).await;
+                                         response = response.header("cache-control", "private, max-age=60").header("content-type",
+                                             if matches!(mode, ResponseMode::CacheRange) { "video/webm" } else { "text/css" });
+@@ -377,7 +455,35 @@ impl Fixture {
              ]))
              .unwrap(),
          );
-+        if matches!(mode, ResponseMode::Routes) {
++        if matches!(mode, ResponseMode::Routes | ResponseMode::RoutesTimeout) {
 +            config.mode = crate::Routes {
 +                payload: crate::Payload::Http,
 +                reverse: vec![
@@ -1291,13 +1916,16 @@ index f4e4d21..674d1e8 100644
 +            .into();
 +        }
          config.runtime.bandwidth = bandwidth;
-+        if matches!(mode, ResponseMode::H2CapacityStop) {
++        if matches!(
++            mode,
++            ResponseMode::H2CapacityStop | ResponseMode::RoutesTimeout | ResponseMode::CacheSlow
++        ) {
 +            config.runtime.connect_timeout_ms = 150;
 +        }
          if matches!(mode, ResponseMode::Mapped | ResponseMode::MappedWebSocket) {
              config.runtime.edgeone_origins = BTreeMap::from([
                  (FIRST.into(), "one.edge.test".into()),
-@@ -417,28 +514,50 @@ impl Fixture {
+@@ -417,28 +523,51 @@ impl Fixture {
          let stop = CancellationToken::new();
          let carrier_received = Arc::new(AtomicUsize::new(0));
          let dials = Arc::new(AtomicUsize::new(0));
@@ -1326,11 +1954,12 @@ index f4e4d21..674d1e8 100644
 +        )
 +        .await
 +        .unwrap();
-+        if matches!(mode, ResponseMode::Routes) {
++        if matches!(mode, ResponseMode::Routes | ResponseMode::RoutesTimeout) {
 +            let dependencies = crate::Dependencies::new().with_dialer(RouteDialer {
 +                address,
 +                calls: route_calls.clone(),
 +                first_ready: route_first_ready.clone(),
++                stall: matches!(mode, ResponseMode::RoutesTimeout),
 +            });
 +            let registry = crate::routing::Registry::prepare(
                  &config,
@@ -1366,7 +1995,16 @@ index f4e4d21..674d1e8 100644
          let ca = trust.then(|| {
              use pingora_core::utils::tls::{WrappedX509, parse_x509};
              Arc::from(vec![WrappedX509::new(
-@@ -476,10 +595,12 @@ impl Fixture {
+@@ -451,6 +580,8 @@ impl Fixture {
+                 .http
+                 .set(build_with_idle_timeout(
+                     Proxy {
++                        downstream_write_timeout: matches!(mode, ResponseMode::CacheSlow)
++                            .then_some(Duration::from_secs(3)),
+                         bandwidth: crate::bandwidth::SessionBandwidth::new(
+                             config.runtime.bandwidth
+                         ),
+@@ -476,10 +607,12 @@ impl Fixture {
                  .is_ok()
          );
          Self {
@@ -1380,7 +2018,121 @@ index f4e4d21..674d1e8 100644
              recorder,
              accepted,
              dials,
-@@ -1471,6 +1592,349 @@ async fn pingora_h1_reuses_relay_and_preserves_headers_query_and_upload() {
+@@ -527,6 +660,113 @@ impl Fixture {
+     }
+ }
+ 
++#[tokio::test]
++async fn acquisition_watchdog_counts_access_timeouts_once() {
++    let fixture = Fixture::with_mode(true, Bytes::new(), true, ResponseMode::RoutesTimeout).await;
++    assert!(
++        fixture
++            .request(FIRST, http::Method::GET, body(""))
++            .await
++            .is_err()
++    );
++    let health = fixture.backend.routes.as_ref().unwrap().health.read();
++    assert_eq!(health.iter().map(|state| state.failures).sum::<u32>(), 1);
++    assert!(health.iter().all(|state| state.targets.is_empty()));
++    drop(health);
++    fixture.close().await;
++}
++
++#[cfg(feature = "memory-cache")]
++#[tokio::test]
++async fn cached_response_can_stream_past_acquisition_deadline() {
++    let payload = Bytes::from(vec![0x61; 192 * 1024]);
++    let fixture = Fixture::with_cache(
++        true,
++        payload.clone(),
++        true,
++        ResponseMode::CacheSlow,
++        crate::BandwidthConfig::default(),
++        crate::cache::HttpCache::memory(),
++    )
++    .await;
++    let request = || {
++        Request::builder()
++            .uri(format!("https://{FIRST}/slow-cache.css"))
++            .header(header::HOST, FIRST)
++            .body(body(""))
++            .unwrap()
++    };
++    let warm = send(
++        &fixture.config,
++        &fixture.backend,
++        request(),
++        &fixture.backend.sockets,
++        &fixture.tasks,
++        &fixture.stop,
++    )
++    .await
++    .unwrap();
++    assert_eq!(
++        warm.into_body().collect().await.unwrap().to_bytes(),
++        payload
++    );
++    let (application, stream) = tokio::io::duplex(8192);
++    let backend = fixture.backend.clone();
++    let cancel = fixture.stop.clone();
++    let serving = tokio::spawn(async move {
++        serve(
++            &backend,
++            Box::new(stream),
++            FIRST.into(),
++            443,
++            false,
++            backend.observation.clone(),
++            &cancel,
++        )
++        .await
++    });
++    let (mut client, connection) = hyper::client::conn::http1::handshake(TokioIo::new(application))
++        .await
++        .unwrap();
++    let driver = tokio::spawn(connection);
++    let response = client.send_request(request()).await.unwrap();
++    let started = tokio::time::Instant::now();
++    let mut response = response.into_body();
++    let mut received = Vec::new();
++    while let Some(frame) = response.frame().await {
++        let frame = frame.unwrap_or_else(|error| {
++            let failures: Vec<_> = fixture
++                .recorder
++                .snapshot()
++                .events
++                .iter()
++                .filter_map(|event| {
++                    event
++                        .event
++                        .failure
++                        .as_ref()
++                        .map(|failure| (event.event.stage, failure.code))
++                })
++                .collect();
++            panic!(
++                "{error:?}; received {}; elapsed {:?}; {failures:?}",
++                received.len(),
++                started.elapsed()
++            );
++        });
++        if let Ok(bytes) = frame.into_data() {
++            received.extend(bytes);
++        }
++        tokio::time::sleep(Duration::from_millis(40)).await;
++    }
++    assert!(started.elapsed() > Duration::from_millis(150));
++    assert_eq!(received, payload);
++    assert_eq!(fixture.attempts.load(Ordering::SeqCst), 1);
++    driver.abort();
++    fixture.close().await;
++    let _ = serving.await;
++}
++
+ #[tokio::test]
+ #[cfg(feature = "response-inspection")]
+ async fn pingora_upgraded_body_reports_cm_login_without_changing_frames() {
+@@ -1471,6 +1711,353 @@ async fn pingora_h1_reuses_relay_and_preserves_headers_query_and_upload() {
      fixture.close().await;
  }
  
@@ -1618,7 +2370,10 @@ index f4e4d21..674d1e8 100644
 +        tier: crate::routing::Tier::D,
 +        payload: crate::Payload::Http,
 +        downloads: true,
-+        endpoint: None,
++        endpoint: Some(crate::probe::SocketEndpoint {
++            host: RELAY.into(),
++            port: 443,
++        }),
 +        backend: Arc::new(child),
 +    }]);
 +    let mut root = Backend::create(
@@ -1641,6 +2396,7 @@ index f4e4d21..674d1e8 100644
 +    assert!(
 +        root.http
 +            .set(build(Proxy {
++                downstream_write_timeout: None,
 +                backend: Arc::downgrade(&root),
 +                requests: TaskTracker::new(),
 +                peers: Default::default(),
@@ -1812,7 +2568,7 @@ index 900a3a3..ba2d830 100644
      pub backend: P,
      pub server_name: String,
 diff --git a/src/native_plane.rs b/src/native_plane.rs
-index 01505b8..7a9f73a 100644
+index 01505b8..df0771f 100644
 --- a/src/native_plane.rs
 +++ b/src/native_plane.rs
 @@ -11,12 +11,8 @@ use std::sync::{
@@ -1828,9 +2584,16 @@ index 01505b8..7a9f73a 100644
  use crate::{
      Config, Error, Failure, FailureCode, ObservationContext, Result, Stage,
      backend::Backend,
-@@ -486,7 +482,14 @@ impl Session {
+@@ -485,8 +481,21 @@ impl Session {
+         self.cancel.cancel();
          *self.accepting.lock() = false;
          self.sockets.close();
++        self.backend.drain_carrier_dials().await;
++        if let Some(routes) = &self.backend.routes {
++            for route in &routes.routes {
++                route.backend.drain_carrier_dials().await;
++            }
++        }
          #[cfg(feature = "reverse-proxy")]
 -        http_proxy::shutdown(&self.backend).await;
 +        {
@@ -1844,7 +2607,7 @@ index 01505b8..7a9f73a 100644
          self.tasks.close();
          self.tasks.wait().await;
          // Stop host interception before releasing stack/TUN resources. Keep
-@@ -576,203 +579,38 @@ async fn choose_backend(
+@@ -576,203 +585,38 @@ async fn choose_backend(
      _tasks: TaskTracker,
      cancel: CancellationToken,
  ) -> Result<Arc<Backend>> {
@@ -2079,310 +2842,6 @@ index 01505b8..7a9f73a 100644
 -        }
 -    }
  }
-diff --git a/src/websocket.rs b/src/websocket.rs
-index d906c65..21bf168 100644
---- a/src/websocket.rs
-+++ b/src/websocket.rs
-@@ -55,6 +55,19 @@ pub(crate) struct ByteStream {
-     closed: bool,
- }
- 
-+#[cfg(test)]
-+impl ByteStream {
-+    pub(crate) fn from_socket(socket: WebSocketStream<ManagedStream>) -> Self {
-+        Self {
-+            socket,
-+            buffered: Bytes::new(),
-+            heartbeat: Box::pin(tokio::time::sleep(Duration::from_secs(15))),
-+            ping: false,
-+            closed: false,
-+        }
-+    }
-+}
-+
- fn io_error(error: WsError) -> io::Error {
-     match error {
-         WsError::Io(error) => error,
-diff --git a/tests/policy_lifecycle.rs b/tests/policy_lifecycle.rs
-index 43bad4d..fea779c 100644
---- a/tests/policy_lifecycle.rs
-+++ b/tests/policy_lifecycle.rs
-@@ -156,6 +156,150 @@ async fn canceled_parent_never_constructs_data_plane() {
-     assert_eq!(calls.load(Ordering::SeqCst), 0);
- }
- 
-+#[derive(Clone, Default)]
-+struct RestartFactory {
-+    starts: Arc<parking_lot::Mutex<Vec<String>>>,
-+    fail_close: Arc<std::sync::atomic::AtomicBool>,
-+}
-+
-+struct RestartPlane {
-+    name: String,
-+    factory: RestartFactory,
-+    state: parking_lot::Mutex<State>,
-+}
-+
-+#[async_trait]
-+impl DataPlaneFactory for RestartFactory {
-+    async fn create(&self, config: Config, _: &Dependencies) -> Result<Arc<dyn DataPlane>> {
-+        Ok(Arc::new(RestartPlane {
-+            name: config.profile_id,
-+            factory: self.clone(),
-+            state: parking_lot::Mutex::new(State::Created),
-+        }))
-+    }
-+}
-+
-+#[async_trait]
-+impl DataPlane for RestartPlane {
-+    async fn start(&self, _: CancellationToken) -> Result<()> {
-+        self.factory.starts.lock().push(self.name.clone());
-+        if self.name == "bad-start" {
-+            *self.state.lock() = State::Failed;
-+            return Err(Error::Transport);
-+        }
-+        *self.state.lock() = State::Running;
-+        Ok(())
-+    }
-+    async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
-+        Err(Error::Transport)
-+    }
-+    async fn request(&self, _: http::Request<Body>) -> Result<http::Response<Body>> {
-+        Err(Error::Http)
-+    }
-+    async fn wait(&self) -> Result<()> {
-+        Ok(())
-+    }
-+    async fn close(&self) -> Result<()> {
-+        if self.factory.fail_close.load(Ordering::SeqCst) {
-+            return Err(Error::System);
-+        }
-+        *self.state.lock() = State::Closed;
-+        Ok(())
-+    }
-+    fn status(&self) -> Status {
-+        Status {
-+            kind: Kind::RemoteReverse,
-+            state: *self.state.lock(),
-+            active_sockets: 0,
-+        }
-+    }
-+}
-+
-+fn restart_config(name: &str) -> Config {
-+    Profile::new(
-+        name,
-+        Routes {
-+            payload: Payload::Tcp,
-+            reverse: vec![],
-+            direct: true,
-+            tunnel: vec![],
-+        },
-+        Whitelist::steam(),
-+    )
-+    .into_dynamic()
-+}
-+
-+#[tokio::test]
-+async fn restart_validates_first_and_keeps_old_handle_when_close_fails() {
-+    let plane = RestartFactory::default();
-+    let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
-+        .create(restart_config("old"))
-+        .unwrap();
-+    mode.start(Default::default()).await.unwrap();
-+    let old = mode.clone();
-+    assert!(
-+        mode.restart(restart_config(""), Default::default())
-+            .await
-+            .is_err()
-+    );
-+    assert_eq!(old.status().await.state, State::Running);
-+    plane.fail_close.store(true, Ordering::SeqCst);
-+    assert!(matches!(
-+        mode.restart(restart_config("next"), Default::default())
-+            .await,
-+        Err(Error::System)
-+    ));
-+    assert_eq!(*plane.starts.lock(), ["old"]);
-+    plane.fail_close.store(false, Ordering::SeqCst);
-+    mode.close().await.unwrap();
-+    assert_eq!(old.status().await.state, State::Closed);
-+}
-+
-+#[tokio::test]
-+async fn restart_replaces_inner_and_old_clones_remain_closed_on_success_and_failure() {
-+    for (name, succeeds) in [("next", true), ("bad-start", false), ("canceled", false)] {
-+        let plane = RestartFactory::default();
-+        let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
-+            .create(restart_config("old"))
-+            .unwrap();
-+        mode.start(Default::default()).await.unwrap();
-+        let old = mode.clone();
-+        let cancel = CancellationToken::new();
-+        if name == "canceled" {
-+            cancel.cancel();
-+        }
-+        assert_eq!(
-+            mode.restart(restart_config(name), cancel).await.is_ok(),
-+            succeeds
-+        );
-+        assert_eq!(old.status().await.state, State::Closed);
-+        assert!(old.connect("store.steampowered.com", 443).await.is_err());
-+        assert_eq!(mode.status().await.state == State::Running, succeeds);
-+        mode.close().await.unwrap();
-+    }
-+}
-+
-+#[cfg(feature = "vless-xhttp")]
-+#[tokio::test]
-+async fn restart_rejects_invalid_tunnel_encryption_without_closing_old() {
-+    let plane = RestartFactory::default();
-+    let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
-+        .create(restart_config("old"))
-+        .unwrap();
-+    mode.start(Default::default()).await.unwrap();
-+    let mut next = restart_config("invalid-encryption");
-+    next.mode = ModeConfig::ForwardProxy {
-+        protocol: ForwardConfig::parse(
-+            "vless://00000000-0000-0000-0000-000000000001@access.example.test?type=xhttp&security=tls&encryption=invalid",
-+        )
-+        .unwrap(),
-+    };
-+    assert!(mode.restart(next, Default::default()).await.is_err());
-+    assert_eq!(mode.status().await.state, State::Running);
-+    assert_eq!(*plane.starts.lock(), ["old"]);
-+    mode.close().await.unwrap();
-+}
-+
- #[test]
- fn policy_is_exact_and_revalidated_after_deserialization() {
-     let policy = Whitelist::new(BTreeMap::from([(
-@@ -185,7 +329,11 @@ impl TcpDialer for RejectRelayDial {
-     async fn connect(&self, server: &str, port: u16) -> Result<BoxStream> {
-         assert!(matches!(server, "relay.example.com" | "127.0.0.1"));
-         assert_eq!(port, 443);
--        self.0.fetch_add(1, Ordering::SeqCst);
-+        if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
-+            let (stream, peer) = tokio::io::duplex(16);
-+            drop(peer);
-+            return Ok(Box::new(stream));
-+        }
-         Err(Error::Transport)
-     }
-     async fn resolve(&self, server: &str, port: u16) -> Result<Vec<std::net::SocketAddr>> {
-@@ -221,7 +369,11 @@ async fn edgeone_origin_uses_shared_lifecycle_and_only_dials_for_allowed_traffic
-     let mode = factory.create(config).unwrap();
-     mode.start(CancellationToken::new()).await.unwrap();
-     assert_eq!(mode.status().await.state, State::Running);
--    assert_eq!(calls.load(Ordering::SeqCst), 0, "startup must not probe");
-+    assert_eq!(
-+        calls.load(Ordering::SeqCst),
-+        1,
-+        "startup probes only the configured access socket"
-+    );
-     let denied = http::Request::get("https://denied.example.com/")
-         .body(body(""))
-         .unwrap();
-@@ -229,12 +381,12 @@ async fn edgeone_origin_uses_shared_lifecycle_and_only_dials_for_allowed_traffic
-         mode.request(denied).await,
-         Err(Error::DomainDenied)
-     ));
--    assert_eq!(calls.load(Ordering::SeqCst), 0);
-+    assert_eq!(calls.load(Ordering::SeqCst), 1);
-     let allowed = http::Request::get("https://app.example.com/")
-         .body(body(""))
-         .unwrap();
-     assert!(mode.request(allowed).await.is_err());
--    assert_eq!(calls.load(Ordering::SeqCst), 1);
-+    assert_eq!(calls.load(Ordering::SeqCst), 2);
-     mode.close().await.unwrap();
-     mode.close().await.unwrap();
-     assert_eq!(mode.status().await.state, State::Closed);
-@@ -296,9 +448,9 @@ async fn websocket_ingress_starts_without_ca_state_or_credentials() {
-     let mode = Factory::new(dependencies).create(config).unwrap();
-     mode.start(CancellationToken::new()).await.unwrap();
-     assert_eq!(mode.status().await.state, State::Running);
--    assert_eq!(calls.load(Ordering::SeqCst), 0);
--    assert!(mode.connect("app.example.com", 443).await.is_err());
-     assert_eq!(calls.load(Ordering::SeqCst), 1);
-+    assert!(mode.connect("app.example.com", 443).await.is_err());
-+    assert_eq!(calls.load(Ordering::SeqCst), 2);
-     mode.close().await.unwrap();
-     mode.close().await.unwrap();
-     assert_eq!(mode.status().await.state, State::Closed);
-diff --git a/tests/serve_connection.rs b/tests/serve_connection.rs
-index 7af6aa6..271191f 100644
---- a/tests/serve_connection.rs
-+++ b/tests/serve_connection.rs
-@@ -19,7 +19,11 @@ struct NoNetwork(Arc<AtomicUsize>);
- #[async_trait]
- impl TcpDialer for NoNetwork {
-     async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
--        self.0.fetch_add(1, Ordering::SeqCst);
-+        if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
-+            let (stream, peer) = tokio::io::duplex(16);
-+            drop(peer);
-+            return Ok(Box::new(stream));
-+        }
-         Err(Error::Transport)
-     }
-     async fn resolve(&self, _: &str, _: u16) -> Result<Vec<std::net::SocketAddr>> {
-@@ -101,7 +105,7 @@ async fn denied_hostname_and_unregistered_port_do_not_dial() {
-             Err(Error::DomainDenied)
-         ));
-     }
--    assert_eq!(attempts.load(Ordering::SeqCst), 0);
-+    assert_eq!(attempts.load(Ordering::SeqCst), 1);
-     mode.close().await.unwrap();
- }
- 
-diff --git a/tests/tunnel_ingress.rs b/tests/tunnel_ingress.rs
-index 7fca8e8..d16df26 100644
---- a/tests/tunnel_ingress.rs
-+++ b/tests/tunnel_ingress.rs
-@@ -21,6 +21,11 @@ impl TcpDialer for NodeOnly {
-     async fn connect(&self, host: &str, port: u16) -> Result<BoxStream> {
-         assert_eq!((host, port), ("node.example.test", 443));
-         self.0.lock().push((host.into(), port));
-+        if self.0.lock().len() == 1 {
-+            let (stream, peer) = tokio::io::duplex(16);
-+            drop(peer);
-+            return Ok(Box::new(stream));
-+        }
-         Err(Error::Canceled)
-     }
- 
-@@ -74,7 +79,7 @@ fn hello() -> Vec<u8> {
- }
- 
- #[tokio::test]
--async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
-+async fn each_tunnel_starts_without_ca_and_only_probes_the_node_before_handoff() {
-     for protocol in protocols() {
-         let dialer = Arc::new(NodeOnly::default());
-         let mut dependencies = Dependencies::new();
-@@ -84,7 +89,10 @@ async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
-         assert!(!config.configuration_policy().unwrap().requires_local_ca);
-         let mode = Factory::new(dependencies).create(config).unwrap();
-         mode.start(Default::default()).await.unwrap();
--        assert!(dialer.0.lock().is_empty(), "startup dialed a node");
-+        assert_eq!(
-+            dialer.0.lock().as_slice(),
-+            &[("node.example.test".into(), 443)]
-+        );
- 
-         for port in [80, 443, 27018, 27038] {
-             let bytes = if port == 80 {
-@@ -103,7 +111,7 @@ async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
-                 .await;
-             assert!(matches!(result, Err(Error::Canceled)));
-         }
--        assert_eq!(dialer.0.lock().len(), 4);
-+        assert_eq!(dialer.0.lock().len(), 5);
-         mode.close().await.unwrap();
-         assert_eq!(mode.status().await.active_sockets, 0);
-     }
 diff --git a/src/outbound.rs b/src/outbound.rs
 new file mode 100644
 index 0000000..8286b2f
@@ -2958,10 +3417,10 @@ index 0000000..22d577b
 +}
 diff --git a/src/routing.rs b/src/routing.rs
 new file mode 100644
-index 0000000..05194ad
+index 0000000..1533365
 --- /dev/null
 +++ b/src/routing.rs
-@@ -0,0 +1,964 @@
+@@ -0,0 +1,1028 @@
 +use std::{
 +    collections::{BTreeSet, HashMap, VecDeque},
 +    hash::{Hash, Hasher},
@@ -3023,6 +3482,7 @@ index 0000000..05194ad
 +    fn usable(&self, route: &Route, traffic: &Traffic<'_>, now: Instant) -> bool {
 +        route.payload == traffic.payload
 +            && (!traffic.download || route.downloads)
++            && route.backend.config.edgeone_origin(traffic.host).is_ok()
 +            && self.eligibility == Eligibility::Available
 +            && !self.isolated
 +            && (route.endpoint.is_none()
@@ -3135,7 +3595,7 @@ index 0000000..05194ad
 +#[async_trait::async_trait]
 +pub(crate) trait Executor: Send + Sync {
 +    type Output: Send;
-+    async fn execute(&self, backend: &Arc<Backend>) -> Result<Self::Output>;
++    async fn execute(&self, backend: &Arc<Backend>, deadline: Instant) -> Result<Self::Output>;
 +}
 +
 +pub(crate) trait OutcomeClassifier {
@@ -3180,12 +3640,13 @@ index 0000000..05194ad
 +            let result = tokio::select! {
 +                biased;
 +                _ = cancel.cancelled() => Err(Error::Canceled),
-+                result = tokio::time::timeout_at(attempt.deadline, self.executor.execute(&backend)) =>
++                result = tokio::time::timeout_at(attempt.deadline, self.executor.execute(&backend, attempt.deadline)) =>
 +                    result.unwrap_or_else(|_| Err(Error::Operation(crate::Failure::new(
 +                        crate::Stage::Connect, crate::FailureCode::Timeout)))),
 +            };
 +            match result {
 +                Ok(output) => {
++                    registry.access_success(index, traffic.host);
 +                    attempt.committed = true;
 +                    return Ok(output);
 +                }
@@ -3209,8 +3670,10 @@ index 0000000..05194ad
 +#[async_trait::async_trait]
 +impl Executor for StreamExecutor<'_> {
 +    type Output = crate::BoxStream;
-+    async fn execute(&self, backend: &Arc<Backend>) -> Result<Self::Output> {
-+        Box::pin(backend.connect_observed(self.host, self.port, self.observation)).await
++    async fn execute(&self, backend: &Arc<Backend>, deadline: Instant) -> Result<Self::Output> {
++        backend
++            .connect_until(self.host, self.port, self.observation, deadline)
++            .await
 +    }
 +}
 +
@@ -3572,25 +4035,35 @@ index 0000000..05194ad
 +        self.failure_at(index, host, error, false);
 +    }
 +
-+    pub fn failure_at(&self, index: usize, host: &str, error: &Error, target: bool) {
-+        if matches!(error, Error::Canceled) {
-+            return;
-+        }
++    fn target_connection(&self, index: usize, host: &str) -> bool {
 +        let route = &self.routes[index];
-+        let target_failure = target
-+            || route.tier == Tier::C
++        route.tier == Tier::C
 +            || route
 +                .backend
 +                .config
 +                .edgeone_origin(host)
 +                .is_ok_and(|alias| alias.is_some())
-+            || (route.tier == Tier::D
-+                && matches!(error, Error::Operation(failure)
-+                if failure.stage == crate::Stage::Connect && matches!(failure.code,
-+                    crate::FailureCode::Certificate | crate::FailureCode::TlsProtocol)));
++            || (matches!(route.backend.config.mode, ModeConfig::LocalReverse { .. })
++                && route
++                    .backend
++                    .config
++                    .whitelist
++                    .rule(host)
++                    .is_ok_and(|rule| rule.via == crate::DomainRoute::Direct))
++    }
++
++    pub fn failure_at(&self, index: usize, host: &str, error: &Error, target: bool) {
++        if matches!(error, Error::Canceled) {
++            return;
++        }
++        let target_failure = target || self.target_connection(index, host);
 +        let mut health = self.health.write();
 +        if let Error::Operation(failure) = error {
-+            if matches!(failure.stage, crate::Stage::Connect | crate::Stage::Resolve)
++            if (matches!(failure.stage, crate::Stage::Connect | crate::Stage::Resolve)
++                || (matches!(
++                    failure.stage,
++                    crate::Stage::ProxyHandshake | crate::Stage::Tls
++                ) && failure.code == crate::FailureCode::Timeout))
 +                && !matches!(
 +                    failure.code,
 +                    crate::FailureCode::Certificate
@@ -3630,7 +4103,10 @@ index 0000000..05194ad
 +        }
 +    }
 +
-+    pub fn access_success(&self, index: usize) {
++    pub fn access_success(&self, index: usize, host: &str) {
++        if self.target_connection(index, host) {
++            return;
++        }
 +        let mut health = self.health.write();
 +        for (route, state) in self.routes.iter().zip(health.iter_mut()) {
 +            if route.endpoint == self.routes[index].endpoint {
@@ -3865,10 +4341,57 @@ index 0000000..05194ad
 +
 +    struct SlowExecutor(std::sync::atomic::AtomicUsize);
 +
++    struct AlternatingExecutor(std::sync::atomic::AtomicUsize);
++
++    #[async_trait::async_trait]
++    impl Executor for AlternatingExecutor {
++        type Output = ();
++        async fn execute(&self, _: &Arc<Backend>, _: Instant) -> Result<()> {
++            if self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst) % 2 == 0 {
++                Err(Error::Operation(crate::Failure::new(
++                    crate::Stage::Connect,
++                    crate::FailureCode::Refused,
++                )))
++            } else {
++                Ok(())
++            }
++        }
++    }
++
++    #[tokio::test]
++    async fn successful_stream_attempts_reset_consecutive_access_failures() {
++        let (mut routes, _) = routes().await;
++        routes.truncate(1);
++        let registry = Registry::available(routes);
++        let runner = AttemptLoop {
++            executor: AlternatingExecutor(std::sync::atomic::AtomicUsize::new(0)),
++            outcomes: BeforeCommit,
++        };
++        let traffic = Traffic {
++            host: "target",
++            payload: Payload::Tcp,
++            download: false,
++        };
++        for index in 0..5 {
++            let result = runner
++                .run(
++                    &registry,
++                    &traffic,
++                    &mut Attempt::new(Duration::from_secs(1)),
++                    &CancellationToken::new(),
++                )
++                .await;
++            assert_eq!(result.is_ok(), index % 2 == 1);
++            let health = registry.health.read();
++            assert_eq!(health[0].failures, if index % 2 == 0 { 1 } else { 0 });
++            assert_eq!(health[0].eligibility, Eligibility::Available);
++        }
++    }
++
 +    #[async_trait::async_trait]
 +    impl Executor for SlowExecutor {
 +        type Output = ();
-+        async fn execute(&self, _: &Arc<Backend>) -> Result<()> {
++        async fn execute(&self, _: &Arc<Backend>, _: Instant) -> Result<()> {
 +            self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 +            tokio::time::sleep(Duration::from_millis(600)).await;
 +            Err(Error::Operation(crate::Failure::new(
@@ -3926,12 +4449,244 @@ index 0000000..05194ad
 +        }
 +    }
 +}
+diff --git a/src/websocket.rs b/src/websocket.rs
+index d906c65..21bf168 100644
+--- a/src/websocket.rs
++++ b/src/websocket.rs
+@@ -55,6 +55,19 @@ pub(crate) struct ByteStream {
+     closed: bool,
+ }
+ 
++#[cfg(test)]
++impl ByteStream {
++    pub(crate) fn from_socket(socket: WebSocketStream<ManagedStream>) -> Self {
++        Self {
++            socket,
++            buffered: Bytes::new(),
++            heartbeat: Box::pin(tokio::time::sleep(Duration::from_secs(15))),
++            ping: false,
++            closed: false,
++        }
++    }
++}
++
+ fn io_error(error: WsError) -> io::Error {
+     match error {
+         WsError::Io(error) => error,
+diff --git a/tests/policy_lifecycle.rs b/tests/policy_lifecycle.rs
+index 43bad4d..fea779c 100644
+--- a/tests/policy_lifecycle.rs
++++ b/tests/policy_lifecycle.rs
+@@ -156,6 +156,150 @@ async fn canceled_parent_never_constructs_data_plane() {
+     assert_eq!(calls.load(Ordering::SeqCst), 0);
+ }
+ 
++#[derive(Clone, Default)]
++struct RestartFactory {
++    starts: Arc<parking_lot::Mutex<Vec<String>>>,
++    fail_close: Arc<std::sync::atomic::AtomicBool>,
++}
++
++struct RestartPlane {
++    name: String,
++    factory: RestartFactory,
++    state: parking_lot::Mutex<State>,
++}
++
++#[async_trait]
++impl DataPlaneFactory for RestartFactory {
++    async fn create(&self, config: Config, _: &Dependencies) -> Result<Arc<dyn DataPlane>> {
++        Ok(Arc::new(RestartPlane {
++            name: config.profile_id,
++            factory: self.clone(),
++            state: parking_lot::Mutex::new(State::Created),
++        }))
++    }
++}
++
++#[async_trait]
++impl DataPlane for RestartPlane {
++    async fn start(&self, _: CancellationToken) -> Result<()> {
++        self.factory.starts.lock().push(self.name.clone());
++        if self.name == "bad-start" {
++            *self.state.lock() = State::Failed;
++            return Err(Error::Transport);
++        }
++        *self.state.lock() = State::Running;
++        Ok(())
++    }
++    async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
++        Err(Error::Transport)
++    }
++    async fn request(&self, _: http::Request<Body>) -> Result<http::Response<Body>> {
++        Err(Error::Http)
++    }
++    async fn wait(&self) -> Result<()> {
++        Ok(())
++    }
++    async fn close(&self) -> Result<()> {
++        if self.factory.fail_close.load(Ordering::SeqCst) {
++            return Err(Error::System);
++        }
++        *self.state.lock() = State::Closed;
++        Ok(())
++    }
++    fn status(&self) -> Status {
++        Status {
++            kind: Kind::RemoteReverse,
++            state: *self.state.lock(),
++            active_sockets: 0,
++        }
++    }
++}
++
++fn restart_config(name: &str) -> Config {
++    Profile::new(
++        name,
++        Routes {
++            payload: Payload::Tcp,
++            reverse: vec![],
++            direct: true,
++            tunnel: vec![],
++        },
++        Whitelist::steam(),
++    )
++    .into_dynamic()
++}
++
++#[tokio::test]
++async fn restart_validates_first_and_keeps_old_handle_when_close_fails() {
++    let plane = RestartFactory::default();
++    let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
++        .create(restart_config("old"))
++        .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    let old = mode.clone();
++    assert!(
++        mode.restart(restart_config(""), Default::default())
++            .await
++            .is_err()
++    );
++    assert_eq!(old.status().await.state, State::Running);
++    plane.fail_close.store(true, Ordering::SeqCst);
++    assert!(matches!(
++        mode.restart(restart_config("next"), Default::default())
++            .await,
++        Err(Error::System)
++    ));
++    assert_eq!(*plane.starts.lock(), ["old"]);
++    plane.fail_close.store(false, Ordering::SeqCst);
++    mode.close().await.unwrap();
++    assert_eq!(old.status().await.state, State::Closed);
++}
++
++#[tokio::test]
++async fn restart_replaces_inner_and_old_clones_remain_closed_on_success_and_failure() {
++    for (name, succeeds) in [("next", true), ("bad-start", false), ("canceled", false)] {
++        let plane = RestartFactory::default();
++        let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
++            .create(restart_config("old"))
++            .unwrap();
++        mode.start(Default::default()).await.unwrap();
++        let old = mode.clone();
++        let cancel = CancellationToken::new();
++        if name == "canceled" {
++            cancel.cancel();
++        }
++        assert_eq!(
++            mode.restart(restart_config(name), cancel).await.is_ok(),
++            succeeds
++        );
++        assert_eq!(old.status().await.state, State::Closed);
++        assert!(old.connect("store.steampowered.com", 443).await.is_err());
++        assert_eq!(mode.status().await.state == State::Running, succeeds);
++        mode.close().await.unwrap();
++    }
++}
++
++#[cfg(feature = "vless-xhttp")]
++#[tokio::test]
++async fn restart_rejects_invalid_tunnel_encryption_without_closing_old() {
++    let plane = RestartFactory::default();
++    let mut mode = Factory::new(Dependencies::new().with_data_plane(plane.clone()))
++        .create(restart_config("old"))
++        .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    let mut next = restart_config("invalid-encryption");
++    next.mode = ModeConfig::ForwardProxy {
++        protocol: ForwardConfig::parse(
++            "vless://00000000-0000-0000-0000-000000000001@access.example.test?type=xhttp&security=tls&encryption=invalid",
++        )
++        .unwrap(),
++    };
++    assert!(mode.restart(next, Default::default()).await.is_err());
++    assert_eq!(mode.status().await.state, State::Running);
++    assert_eq!(*plane.starts.lock(), ["old"]);
++    mode.close().await.unwrap();
++}
++
+ #[test]
+ fn policy_is_exact_and_revalidated_after_deserialization() {
+     let policy = Whitelist::new(BTreeMap::from([(
+@@ -185,7 +329,11 @@ impl TcpDialer for RejectRelayDial {
+     async fn connect(&self, server: &str, port: u16) -> Result<BoxStream> {
+         assert!(matches!(server, "relay.example.com" | "127.0.0.1"));
+         assert_eq!(port, 443);
+-        self.0.fetch_add(1, Ordering::SeqCst);
++        if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            return Ok(Box::new(stream));
++        }
+         Err(Error::Transport)
+     }
+     async fn resolve(&self, server: &str, port: u16) -> Result<Vec<std::net::SocketAddr>> {
+@@ -221,7 +369,11 @@ async fn edgeone_origin_uses_shared_lifecycle_and_only_dials_for_allowed_traffic
+     let mode = factory.create(config).unwrap();
+     mode.start(CancellationToken::new()).await.unwrap();
+     assert_eq!(mode.status().await.state, State::Running);
+-    assert_eq!(calls.load(Ordering::SeqCst), 0, "startup must not probe");
++    assert_eq!(
++        calls.load(Ordering::SeqCst),
++        1,
++        "startup probes only the configured access socket"
++    );
+     let denied = http::Request::get("https://denied.example.com/")
+         .body(body(""))
+         .unwrap();
+@@ -229,12 +381,12 @@ async fn edgeone_origin_uses_shared_lifecycle_and_only_dials_for_allowed_traffic
+         mode.request(denied).await,
+         Err(Error::DomainDenied)
+     ));
+-    assert_eq!(calls.load(Ordering::SeqCst), 0);
++    assert_eq!(calls.load(Ordering::SeqCst), 1);
+     let allowed = http::Request::get("https://app.example.com/")
+         .body(body(""))
+         .unwrap();
+     assert!(mode.request(allowed).await.is_err());
+-    assert_eq!(calls.load(Ordering::SeqCst), 1);
++    assert_eq!(calls.load(Ordering::SeqCst), 2);
+     mode.close().await.unwrap();
+     mode.close().await.unwrap();
+     assert_eq!(mode.status().await.state, State::Closed);
+@@ -296,9 +448,9 @@ async fn websocket_ingress_starts_without_ca_state_or_credentials() {
+     let mode = Factory::new(dependencies).create(config).unwrap();
+     mode.start(CancellationToken::new()).await.unwrap();
+     assert_eq!(mode.status().await.state, State::Running);
+-    assert_eq!(calls.load(Ordering::SeqCst), 0);
+-    assert!(mode.connect("app.example.com", 443).await.is_err());
+     assert_eq!(calls.load(Ordering::SeqCst), 1);
++    assert!(mode.connect("app.example.com", 443).await.is_err());
++    assert_eq!(calls.load(Ordering::SeqCst), 2);
+     mode.close().await.unwrap();
+     mode.close().await.unwrap();
+     assert_eq!(mode.status().await.state, State::Closed);
 diff --git a/tests/routes.rs b/tests/routes.rs
 new file mode 100644
-index 0000000..3cf7a0b
+index 0000000..be5f4e0
 --- /dev/null
 +++ b/tests/routes.rs
-@@ -0,0 +1,315 @@
+@@ -0,0 +1,368 @@
 +#![cfg(any(feature = "reverse-proxy", feature = "tunnel-proxy"))]
 +
 +use std::{collections::BTreeMap, net::SocketAddr, sync::Arc, time::Duration};
@@ -4171,6 +4926,59 @@ index 0000000..3cf7a0b
 +    mode.close().await.unwrap();
 +}
 +
++#[cfg(feature = "reverse-proxy")]
++#[tokio::test]
++async fn partial_edgeone_mapping_skips_candidate_but_keeps_global_whitelist_denial() {
++    let calls = Arc::new(Mutex::new(Vec::new()));
++    let requests = Arc::new(Mutex::new(Vec::new()));
++    let routes = Routes {
++        reverse: vec![modes::RemoteReverse {
++            backend: RemoteBackend::EdgeOneOrigin,
++            server_name: "cdn.example.test".into(),
++        }],
++        ..direct(Payload::Http)
++    };
++    let whitelist = Whitelist::new(BTreeMap::from([
++        ("app.example.test".into(), "origin.example.test".into()),
++        (
++            "other.example.test".into(),
++            "other-origin.example.test".into(),
++        ),
++    ]))
++    .unwrap();
++    let mut config = Profile::new("partial-mapping", routes, whitelist).into_dynamic();
++    config.runtime.edgeone_origins =
++        BTreeMap::from([("other.example.test".into(), "cdn.example.test".into())]);
++    let mode = Factory::new(Dependencies::new().with_dialer(HttpDialer {
++        calls: calls.clone(),
++        requests: requests.clone(),
++    }))
++    .create(config)
++    .unwrap();
++    mode.start(Default::default()).await.unwrap();
++    let response = mode
++        .request(
++            http::Request::get("http://app.example.test:80/asset")
++                .body(body(""))
++                .unwrap(),
++        )
++        .await
++        .unwrap();
++    assert_eq!(response.status(), 429);
++    assert_eq!(*calls.lock(), ["cdn.example.test", "192.0.2.2"]);
++    assert_eq!(requests.lock().len(), 1);
++    assert!(matches!(
++        mode.request(
++            http::Request::get("http://denied.example.test:80/")
++                .body(body(""))
++                .unwrap()
++        )
++        .await,
++        Err(Error::DomainDenied)
++    ));
++    mode.close().await.unwrap();
++}
++
 +#[cfg(all(feature = "reverse-proxy", feature = "websocket"))]
 +#[tokio::test]
 +async fn edgeone_websocket_is_filtered_from_http_candidates_before_probing() {
@@ -4247,3 +5055,75 @@ index 0000000..3cf7a0b
 +    mode.close().await.unwrap();
 +    assert_eq!(mode.status().await.active_sockets, 0);
 +}
+diff --git a/tests/serve_connection.rs b/tests/serve_connection.rs
+index 7af6aa6..271191f 100644
+--- a/tests/serve_connection.rs
++++ b/tests/serve_connection.rs
+@@ -19,7 +19,11 @@ struct NoNetwork(Arc<AtomicUsize>);
+ #[async_trait]
+ impl TcpDialer for NoNetwork {
+     async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
+-        self.0.fetch_add(1, Ordering::SeqCst);
++        if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            return Ok(Box::new(stream));
++        }
+         Err(Error::Transport)
+     }
+     async fn resolve(&self, _: &str, _: u16) -> Result<Vec<std::net::SocketAddr>> {
+@@ -101,7 +105,7 @@ async fn denied_hostname_and_unregistered_port_do_not_dial() {
+             Err(Error::DomainDenied)
+         ));
+     }
+-    assert_eq!(attempts.load(Ordering::SeqCst), 0);
++    assert_eq!(attempts.load(Ordering::SeqCst), 1);
+     mode.close().await.unwrap();
+ }
+ 
+diff --git a/tests/tunnel_ingress.rs b/tests/tunnel_ingress.rs
+index 7fca8e8..d16df26 100644
+--- a/tests/tunnel_ingress.rs
++++ b/tests/tunnel_ingress.rs
+@@ -21,6 +21,11 @@ impl TcpDialer for NodeOnly {
+     async fn connect(&self, host: &str, port: u16) -> Result<BoxStream> {
+         assert_eq!((host, port), ("node.example.test", 443));
+         self.0.lock().push((host.into(), port));
++        if self.0.lock().len() == 1 {
++            let (stream, peer) = tokio::io::duplex(16);
++            drop(peer);
++            return Ok(Box::new(stream));
++        }
+         Err(Error::Canceled)
+     }
+ 
+@@ -74,7 +79,7 @@ fn hello() -> Vec<u8> {
+ }
+ 
+ #[tokio::test]
+-async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
++async fn each_tunnel_starts_without_ca_and_only_probes_the_node_before_handoff() {
+     for protocol in protocols() {
+         let dialer = Arc::new(NodeOnly::default());
+         let mut dependencies = Dependencies::new();
+@@ -84,7 +89,10 @@ async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
+         assert!(!config.configuration_policy().unwrap().requires_local_ca);
+         let mode = Factory::new(dependencies).create(config).unwrap();
+         mode.start(Default::default()).await.unwrap();
+-        assert!(dialer.0.lock().is_empty(), "startup dialed a node");
++        assert_eq!(
++            dialer.0.lock().as_slice(),
++            &[("node.example.test".into(), 443)]
++        );
+ 
+         for port in [80, 443, 27018, 27038] {
+             let bytes = if port == 80 {
+@@ -103,7 +111,7 @@ async fn each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff() {
+                 .await;
+             assert!(matches!(result, Err(Error::Canceled)));
+         }
+-        assert_eq!(dialer.0.lock().len(), 4);
++        assert_eq!(dialer.0.lock().len(), 5);
+         mode.close().await.unwrap();
+         assert_eq!(mode.status().await.active_sockets, 0);
+     }

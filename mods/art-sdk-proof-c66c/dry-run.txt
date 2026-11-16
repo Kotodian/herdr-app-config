@@ -1,0 +1,40 @@
+SDK checks: current checkout only; per-command limit 300s
+Environment: CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 GOWORK=off GOENV=off GOFLAGS= GOPROXY=off GOSUMDB=off GONOPROXY=none 'GONOSUMDB=*' GOPRIVATE= GOTOOLCHAIN=local GOTELEMETRY=off
+
+[rust/lockfile] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk
+$ git ls-files --error-unmatch Cargo.lock
+
+[rust/default] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk
+$ cargo test --offline --locked
+
+[rust/no-default-features] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk
+$ cargo test --offline --locked --no-default-features
+
+[go/default] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s ./...
+
+[go/race] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=1 go test -mod=readonly -count=1 -timeout=300s -race ./...
+
+[go/reverse_proxy] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy ./...
+
+[go/tunnel_proxy] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags tunnel_proxy ./...
+
+[go/vless_xhttp] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags vless_xhttp ./...
+
+[go/websocket] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags websocket ./...
+
+[go/shadowsocks] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags shadowsocks ./...
+
+[go/reverse-vless] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy,vless_xhttp ./...
+
+[go/combined] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy,vless_xhttp,websocket,shadowsocks ./...
+
+DRY RUN: 12 commands; no tool or cache availability verified.

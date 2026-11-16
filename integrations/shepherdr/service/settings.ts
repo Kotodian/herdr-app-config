@@ -14,7 +14,7 @@ import * as APc from "../core/autopilot.js";
 import type { SettingRow, SettingSection } from "../web/shared/types.ts";
 
 const { TASK_ROWS, DEFAULTS, wordFor, valueFor, ROLES: CORE_ROLES, NOTES: CORE_NOTES, ABOUT, BACKUP, REACTIONS, SUGGESTIONS, FEEDBACK, feedbackRepo, upgradeReactions, BASE, BRANCH, branchPattern, MACHINES, OLD_NAMES, SECTIONS,
-  WEB, modelLabel, roleSel, otherCli, otherCliWords, backupProblem, homeAbout, webState, fromWord, LOADING_AGENTS, RESET, machineLabel } = C as any;
+  WEB, modelLabel, roleSel, roleChoices, otherCli, otherCliWords, backupProblem, homeAbout, webState, fromWord, LOADING_AGENTS, CHOOSE_DECIDER, RESET, machineLabel } = C as any;
 const AP = APc as any;
 /** Autopilot as Everywhere has it now (herdr-task's view: what Settings keeps, else what it kept before, else the
  *  defaults): its schedule's words, events, heartbeat words and what wakes it in plain words */
@@ -190,14 +190,14 @@ export class Settings {
   private agents(s: Scope | null): SettingSection {
     const scope = s?.id ?? null;
     const worker = this.pick(scope, "worker", null).value?.agent ?? "claude";
-    const menus = this.choices?.menus;
     const rows: SettingRow[] = ROLES.map((r) => {
+      const menus = roleChoices(this.choices, r.id)?.menus;
       const p = this.pick(scope, r.id, null);
       // as the window's model button: what it runs, "Opus 5.5 · 1M · High"; an unset Reviewer says "Other CLI (Codex)"
       const button = (v: any) => {
         if (!this.choices) return LOADING_AGENTS;
         const { sel, unset } = roleSel(r.id, v ?? null, this.choices, worker);
-        return unset && r.id === "reviewer" && sel ? otherCliWords(otherCli(worker)) : sel ? modelLabel(menus, sel) : LOADING_AGENTS;
+        return unset && r.id === "decider" ? CHOOSE_DECIDER : unset && r.id === "reviewer" && sel ? otherCliWords(otherCli(worker)) : sel ? modelLabel(menus, sel) : LOADING_AGENTS;
       };
       const { sel, unset } = roleSel(r.id, p.value ?? null, this.choices, worker);
       // on Everywhere its row has "Edit instructions" too (the same for every space), and a set Reviewer "Use other CLI"
@@ -445,7 +445,8 @@ export class Settings {
       if (word !== null) {
         try { v = JSON.parse(word); } catch { throw new Error("Not an agent."); }
         const ok = (x: unknown) => x == null || (typeof x === "string" && /^[\w.\[\]-]{1,60}$/.test(x));
-        if (!["claude", "codex"].includes(v?.agent) || !ok(v.model) || !ok(v.effort)) throw new Error("Pick Claude Code or Codex.");
+        const modelOk = v?.model == null || (typeof v.model === "string" && /^[\w./:[\]-]{1,200}$/.test(v.model));
+        if (!["claude", "codex"].includes(v?.agent) || !modelOk || !ok(v.effort)) throw new Error("Pick Claude Code or Codex.");
         // its permission mode, as the window's Permissions pick (one of the CLI's modes; none: the CLI's own default)
         const PERM: Record<string, string[]> = { claude: ["manual", "auto", "acceptEdits", "plan", "bypassPermissions"], codex: ["read-only", "auto", "full"] };
         if (v.perm != null && !PERM[v.agent].includes(v.perm)) throw new Error("Not one of its permission modes.");

@@ -35,6 +35,7 @@ from .output import line, minutes, say, view
 from .scheduler import ensure_scheduler
 from .proof import evidence, find_proof
 from .when import when_from
+from .workflow import policy as git_workflow, require_base, require_task_base, task_base
 
 
 # ---- commands -------------------------------------------------------------------------------
@@ -98,6 +99,9 @@ def cmd_add(args):
         with open(args.prompt_file) as f:
             prompt = f.read()
     at = scheduled_at(args)  # refused before anything is added
+    from . import decision
+    space = bare(args.space) if args.space else caller_space()
+    classified = decision.prepare(args, prompt, space)
     with open_store(args) as s:
         repo = s.loc["kind"] == "repo"
         wrong = None if repo else bare_by_mistake(s.loc["folder"])
@@ -108,8 +112,8 @@ def cmd_add(args):
         # The person's setting wins: worktrees off for this repo means in the folder, --worktree or not.
         mode = "here" if args.here or not worktrees_on(s) else "worktree"
         t = s.new(args.title.strip(), prompt, mode)
+        decision.apply(t, classified, getattr(args, "workflow", None))
         set_opts(t, args)
-        space = bare(args.space) if args.space else caller_space()
         set_base(s, t, args.base, space, new=True)
         set_branch(s, t, getattr(args, "branch", None))
         set_notes(t, args)
@@ -171,9 +175,9 @@ def set_base(s, t, base, space=None, new=False):
     as Shepherdr's space.base: captured when added, so a later change only touches new tasks);
     unset, the folder's current branch, kept unmarked. "" goes back to the folder's."""
     if base is None:
-        own = space_base(s, space) if new and t.get("mode") == "worktree" else ""
+        own = (task_base(t) if git_workflow() else space_base(s, space)) if new and t.get("mode") == "worktree" else ""
         main = s.loc["folder"]
-        if own and own != current_base(main):
+        if own and (own != current_base(main) or git_workflow()):
             try:
                 base_ref(main, own)
             except Fail as e:
@@ -183,7 +187,17 @@ def set_base(s, t, base, space=None, new=False):
         return
     t.pop("base_by", None)
     base = base.strip()
+    require_base(base, t)
     if t.get("worktree"):
+        # Retarget an existing task only when both branch names denote exactly the same
+        # commit. Its worktree, uncommitted files, history and review evidence stay intact.
+        main = s.loc["folder"]
+        base_ref(main, base)
+        old_ok, old, _ = git(main, "rev-parse", "--verify", f"refs/heads/{t.get('base') or 'main'}")
+        new_ok, new_tip, _ = git(main, "rev-parse", "--verify", f"refs/heads/{base}")
+        if t["state"] != "done" and not t.get("pr") and old_ok and new_ok and old == new_tip:
+            t["base"], t["base_set"] = base, True
+            return
         raise Fail(f"{s.ref(t)} already has its worktree from {t.get('base')}; its base can't change now.")
     if not base:
         t.pop("base", None)
@@ -193,7 +207,7 @@ def set_base(s, t, base, space=None, new=False):
         raise Fail("--base is for tasks in a worktree; this one works in the folder itself.")
     main = s.loc["folder"]
     base_ref(main, base)
-    if base == current_base(main):
+    if base == current_base(main) and not git_workflow():
         t.pop("base", None)
         t.pop("base_set", None)
     else:
@@ -708,6 +722,7 @@ READY_BUT = "is ready, but:"  # finalize() couldn't push or open its pull reques
 def finalize(s, t):
     """Ready: on GitHub its pull request opens; then the merge policy in Settings decides who
     merges: auto (now), checks (once its checks pass) or ask (the person). Returns what to say."""
+    require_task_base(t)
     wt = t.get("worktree")
     local = t.get("mode") != "worktree" or not wt or t.get("nothing_to_merge")
     repo = github(s) if not local and os.path.isdir(wt) else None
@@ -847,6 +862,12 @@ def cmd_edit(args):
             with open(args.prompt_file) as f:
                 t["prompt"] = f.read()
         pick = [t.get(k) for k in ("agent", "model", "effort")]
+        workflow = getattr(args, "workflow", None)
+        if workflow and workflow != t.get("workflow"):
+            from .decision import apply
+            if t.get("worktree") and args.base is None:
+                raise Fail("Changing a started task's workflow also needs --base; only equivalent bases without a PR can be retargeted.")
+            apply(t, None, workflow)
         set_opts(t, args)
         if [t.get(k) for k in ("agent", "model", "effort")] != pick:
             # The next agent started for it runs on the new choice (start_again), a queued one too.
@@ -854,7 +875,10 @@ def cmd_edit(args):
             q = t.get("queue") or {}
             if q.get("argv") and not q.get("custom"):
                 q["argv"] = worker_argv(s, t, q.get("space"))
-        set_base(s, t, args.base)
+        base = args.base
+        if workflow and base is None and not t.get("worktree") and t.get("mode") == "worktree" and git_workflow():
+            base = task_base(t)
+        set_base(s, t, base)
         set_notes(t, args)
         if args.after is not None:
             set_after(s, t, *parse_after(s, args.after))
@@ -1051,6 +1075,7 @@ def tell(s, t, msg, args):
 
 
 def local_merge_msg(s, t):
+    require_task_base(t)
     main, wt, br, base = s.loc["folder"], t["worktree"], t["branch"], t.get("base") or "main"
     q = shlex.quote
     return (f"Merge task {s.ref(t)} \"{t['title']}\" now:\n"
@@ -1072,11 +1097,13 @@ def merge_now(s, t):
     couldn't, or None when it's merged (and the task done). A base branch with GitHub's merge
     queue (#742, #801, #802): the pull request joins the queue and the task stays Merging until
     GitHub merged it (the tick finishes it then, and deletes its branch there)."""
+    require_task_base(t)
     n, repo = str(t["pr"]["number"]), t["pr"]["repo"]
     v = pr_view(t)
-    s.dirty = True
     if not v:
         return f"Couldn't reach pull request #{n} on GitHub."
+    require_base(v.get("baseRefName"), t)
+    s.dirty = True
     note_checks(s, t, v)
     if v.get("state") != "MERGED":
         problem = pr_problem(v)
@@ -1149,6 +1176,7 @@ def cmd_merge(args):
     error = None
     with open_store(args) as s:
         t = s.find(args.id)
+        require_task_base(t)
         if t.get("mode") != "worktree" or not t.get("worktree"):
             raise Fail(f"{s.ref(t)} works in the folder itself; there is nothing to merge.")
         sent, started, how = None, False, "agent"
@@ -1195,6 +1223,7 @@ def ff_merge(s, t):
     """Lands a task's branch in its base branch here when that is a fast-forward (the base is
     checked out in the main folder and the branch already holds it: exactly the tested work, no
     new combination). Returns whether it did; git refuses to touch uncommitted files."""
+    require_task_base(t)
     main, br, base = s.loc["folder"], t.get("branch"), t.get("base") or "main"
     ok, cur, _ = git(main, "symbolic-ref", "--short", "HEAD")
     if not (br and git(main, "merge-base", "--is-ancestor", base, br)[0]):
@@ -1214,6 +1243,7 @@ def cmd_accept(args):
     error, how, sent, started, back = None, "done", None, False, False
     with open_store(args) as s:
         t = s.find(args.id)
+        require_task_base(t)
         if t["state"] != "ready":
             raise Fail(f"{s.ref(t)} isn't ready ({t['state']}); only a Ready task can be accepted.")
         # Its agent at work again since it said ready: never accepted half done. Working again
@@ -1235,6 +1265,7 @@ def cmd_accept(args):
         t = s.find(args.id)
         if t["state"] != "ready":
             raise Fail(f"{s.ref(t)} isn't ready ({t['state']}); only a Ready task can be accepted.")
+        require_task_base(t)
         t.pop("attention", None)
         wt = t.get("worktree") if t.get("mode") == "worktree" else None
         t["accepted_at"] = now()

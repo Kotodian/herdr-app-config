@@ -41,7 +41,7 @@ import { dirs } from "./dirs.js";
 // herdr-task's merge policy (MERGE): "ask" waits for the person's Accept (which merges), the others merge without it.
 // NOTES: what a task's agent is told to do first and last (tasks.start_notes / finish_notes): herdr-task puts them
 // into its starting prompt; Herdr runs nothing itself.
-import { SECTIONS, ROLES, NOTES, MERGE, MUST_FIX, ROUNDS, ARCHIVE, ABOUT, BACKUP, REACTIONS, upgradeReactions, NOTIFY_ABOUT, TITLE, SPACE_TITLE,
+import { SECTIONS, ROLES, roleChoices, CHOOSE_DECIDER, NOTES, MERGE, MUST_FIX, ROUNDS, ARCHIVE, ABOUT, BACKUP, REACTIONS, upgradeReactions, NOTIFY_ABOUT, TITLE, SPACE_TITLE,
   EVERYWHERE, CHANGED_HERE, RESET, EDIT_INSTRUCTIONS, USE_OTHER_CLI, LOADING_AGENTS, SAVED, sameAs as sameAsWords,
   spacesOwn, otherCliWords, backupProblem, notifyMachineAbout, machineLabel, TASK_ROWS, LEVEL } from "./core/settings.js";
 
@@ -120,7 +120,7 @@ export default class ShepherdrSettings extends View {
     }
     cx.spawn(async (cx) => {
       await this.load();
-      try { this.data = await models.loadChoices(null); } catch { this.data = null; }
+      try { this.data = await models.loadChoices(null, true); } catch { this.data = null; }
       this.resetRoles();
       this.resetNotes();
       if (this.scope) await this.folderOf(this.scope);
@@ -328,7 +328,7 @@ export default class ShepherdrSettings extends View {
         sel = { agent: o, model: this.data.menus[o].models[0]?.id ?? null, effort: null, fast: false, perm: this.data.permDefault?.[o] ?? null };
       }
       sel ??= this.data?.defaults ?? null;
-      this.roles[r.id] = { ...(this.roles[r.id] ?? {}), sel: sel ? { ...sel } : null, data: this.data, saved: JSON.stringify(sel), unset };
+      this.roles[r.id] = { ...(this.roles[r.id] ?? {}), sel: sel ? { ...sel } : null, data: roleChoices(this.data, r.id), saved: JSON.stringify(sel), unset, chosen: false };
     }
   }
 
@@ -338,7 +338,7 @@ export default class ShepherdrSettings extends View {
       const c = this.roles[r.id];
       if (!c?.sel) continue;
       const now = JSON.stringify(c.sel);
-      if (now === c.saved) continue;
+      if (now === c.saved && !(c.unset && c.chosen)) continue;
       c.saved = now;
       c.unset = false;
       this.set(r.id, null, { ...c.sel }, cx);
@@ -495,7 +495,7 @@ export default class ShepherdrSettings extends View {
   // An unset Reviewer's button says what runs: "Other CLI (Codex)".
   roleRow(t, r, cx) {
     const c = this.roles[r.id];
-    const label = r.id === "reviewer" && c?.unset ? otherCliWords(this.otherCli()) : undefined;
+    const label = r.id === "decider" && c?.unset ? CHOOSE_DECIDER : r.id === "reviewer" && c?.unset ? otherCliWords(this.otherCli()) : undefined;
     const control = h_flex().gap(8).items_center()
       .child(c?.sel ? models.modelButton(t, c, { label }, cx) : div().text_size(TEXT.label).text_color(t.dim).child(LOADING_AGENTS))
       .when(!this.scope && r.id === "reviewer" && c && !c.unset,
@@ -638,7 +638,7 @@ export default class ShepherdrSettings extends View {
     const shown = q ? all.filter((s) => s.name.toLowerCase().includes(q)) : all;
     const own = (id) => {
       const l = this.cfg.spaces?.[id] ?? {};
-      return ["coordinator", "worker", "reviewer"].filter((k) => l[k] != null).length
+      return ROLES.filter((r) => l[r.id] != null).length
         + ["tasks", "automations", "backup", "autopilot", "agents"].reduce((n, k) => n + Object.keys(l[k] ?? {}).length, 0);
     };
     const pick = (id) => (_e, cx) => this.pickScope(id, cx);

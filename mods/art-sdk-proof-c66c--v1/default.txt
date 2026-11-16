@@ -1,0 +1,1021 @@
+SDK checks: current checkout only; per-command limit 300s
+Environment: CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 GOWORK=off GOENV=off GOFLAGS= GOPROXY=off GOSUMDB=off GONOPROXY=none 'GONOSUMDB=*' GOPRIVATE= GOTOOLCHAIN=local GOTELEMETRY=off
+
+[rust/lockfile] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk
+$ git ls-files --error-unmatch Cargo.lock
+Cargo.lock
+
+[rust/lockfile] PASS (exit 0, 0.0s)
+
+[rust/default] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk
+$ cargo test --offline --locked
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling syn v3.0.10
+   Compiling syn v2.0.119
+   Compiling cfg-if v1.0.5
+   Compiling serde_core v1.0.229
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling zeroize_derive v1.5.0
+   Compiling typenum v1.20.1
+   Compiling zeroize v1.9.1
+   Compiling jobserver v0.1.35
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling cc v1.11.1
+   Compiling cmov v0.5.4
+   Compiling smallvec v1.16.5
+   Compiling ctutils v0.4.8
+   Compiling rand_core v0.10.1
+   Compiling memchr v2.8.3
+   Compiling getrandom v0.4.3
+   Compiling hybrid-array v0.4.15
+   Compiling pin-project-lite v0.2.17
+   Compiling scopeguard v1.2.0
+   Compiling parking_lot_core v0.9.12
+   Compiling crypto-common v0.2.2
+   Compiling bytes v1.12.1
+   Compiling lock_api v0.4.14
+   Compiling portable-atomic v1.15.0
+   Compiling autocfg v1.5.1
+   Compiling parking_lot v0.12.5
+   Compiling critical-section v1.2.0
+   Compiling block-buffer v0.12.1
+   Compiling version_check v0.9.5
+   Compiling once_cell v1.21.4
+   Compiling errno v0.3.14
+   Compiling socket2 v0.6.5
+   Compiling pkg-config v0.3.34
+   Compiling signal-hook-registry v1.4.8
+   Compiling cmake v0.1.58
+   Compiling tokio-macros v2.7.2
+   Compiling mio v1.2.4
+   Compiling tokio v1.54.1
+   Compiling num-traits v0.2.19
+   Compiling displaydoc v0.2.7
+   Compiling futures-core v0.3.34
+   Compiling itoa v1.0.19
+   Compiling getrandom v0.2.17
+   Compiling cpufeatures v0.3.1
+   Compiling const-oid v0.10.3
+   Compiling digest v0.11.3
+   Compiling zerocopy v0.8.63
+   Compiling slab v0.4.12
+   Compiling thiserror v2.0.21
+   Compiling thiserror-impl v2.0.21
+   Compiling futures-sink v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling fs_extra v1.3.0
+   Compiling dunce v1.0.5
+   Compiling aws-lc-sys v0.45.0
+   Compiling futures-channel v0.3.34
+   Compiling futures-macro v0.3.34
+   Compiling synstructure v0.14.0
+   Compiling subtle v2.6.1
+   Compiling futures-task v0.3.34
+   Compiling futures-util v0.3.34
+   Compiling zerofrom-derive v0.1.8
+   Compiling ring v0.17.14
+   Compiling time-core v0.1.9
+   Compiling foldhash v0.2.0
+   Compiling aws-lc-rs v1.18.1
+   Compiling num-conv v0.2.2
+   Compiling equivalent v1.0.3
+   Compiling strsim v0.11.1
+   Compiling allocator-api2 v0.2.21
+   Compiling hashbrown v0.17.1
+   Compiling time-macros v0.2.32
+   Compiling zerofrom v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling ppv-lite86 v0.2.21
+   Compiling http v1.5.0
+   Compiling rustls-pki-types v1.16.0
+   Compiling synstructure v0.13.2
+   Compiling getrandom v0.3.4
+   Compiling stable_deref_trait v1.2.1
+   Compiling alloc-no-stdlib v2.0.4
+   Compiling powerfmt v0.2.1
+   Compiling minimal-lexical v0.2.1
+   Compiling log v0.4.35
+   Compiling deranged v0.5.9
+   Compiling time v0.3.55
+   Compiling nom v7.1.3
+   Compiling alloc-stdlib v0.2.4
+   Compiling yoke v0.8.4
+   Compiling keccak v0.2.2
+   Compiling inout v0.2.6
+   Compiling untrusted v0.9.0
+   Compiling cfg_aliases v0.2.2
+   Compiling thiserror v1.0.69
+   Compiling rusticata-macros v4.1.0
+   Compiling tracing-core v0.1.36
+   Compiling asn1-rs-impl v0.2.0
+   Compiling thiserror-impl v1.0.69
+   Compiling tracing-attributes v0.1.31
+   Compiling zerovec-derive v0.11.7
+   Compiling crossbeam-utils v0.8.23
+   Compiling zerovec v0.11.9
+   Compiling tracing v0.1.44
+   Compiling cipher v0.5.2
+   Compiling crunchy v0.2.4
+   Compiling sponge-cursor v0.1.0
+   Compiling shake v0.1.0
+   Compiling brotli-decompressor v5.0.3
+   Compiling indexmap v2.14.2
+   Compiling rand_core v0.6.4
+   Compiling generic-array v0.14.7
+   Compiling rustls v0.23.40 ([redacted URL]
+   Compiling ident_case v1.0.1
+   Compiling syn v1.0.109
+   Compiling tiny-keccak v2.0.2
+   Compiling brotli v8.0.4
+   Compiling num-integer v0.1.47
+   Compiling zstd-sys v2.1.2+zstd.1.5.7
+   Compiling arrayvec v0.7.8
+   Compiling lazy_static v1.5.1
+   Compiling data-encoding v2.11.1
+   Compiling crc32fast v1.5.5
+   Compiling zlib-rs v0.6.8
+   Compiling rustls-webpki v0.103.16
+   Compiling httparse v1.10.1
+   Compiling fnv v1.0.7
+   Compiling num-bigint v0.4.8
+   Compiling rand_chacha v0.3.1
+   Compiling tinystr v0.8.5
+   Compiling libz-ng-sys v1.1.33
+   Compiling aho-corasick v1.1.5
+   Compiling bitflags v2.13.2
+   Compiling litemap v0.8.3
+   Compiling heck v0.5.0
+   Compiling utf_types v1.0.0
+   Compiling regex-syntax v0.8.11
+   Compiling writeable v0.6.4
+   Compiling icu_locale_core v2.4.0
+   Compiling regex-automata v0.4.18
+   Compiling utf8_iter v1.1.0
+   Compiling const-random-macro v0.1.16
+   Compiling rand v0.8.8
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling tokio-util v0.7.20
+   Compiling ahash v0.8.12
+   Compiling icu_normalizer_data v2.4.0
+   Compiling icu_properties_data v2.4.0
+   Compiling simd-adler32 v0.3.10
+   Compiling zstd-safe v8.2.0
+   Compiling core-foundation-sys v0.8.7
+   Compiling adler2 v2.0.1
+   Compiling miniz_oxide v0.9.1
+   Compiling icu_provider v2.4.0
+   Compiling icu_collections v2.4.0
+   Compiling const-random v0.1.18
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling chacha20 v0.10.2
+   Compiling asn1-rs-derive v0.5.1
+   Compiling futures-executor v0.3.34
+   Compiling proc-macro2-diagnostics v0.10.1
+   Compiling universal-hash v0.6.1
+   Compiling thread_local v1.1.10
+   Compiling semver v1.0.28
+   Compiling utf8parse v0.2.2
+   Compiling cpubits v0.1.1
+   Compiling rustversion v1.0.23
+   Compiling atomic-waker v1.1.2
+   Compiling ryu v1.0.23
+   Compiling h2 v0.4.20 ([redacted URL]
+   Compiling anstyle-parse v1.0.0
+   Compiling rustc_version v0.4.1
+   Compiling asn1-rs v0.6.2
+   Compiling futures v0.3.34
+   Compiling digest v0.10.7
+   Compiling flate2 v1.1.11
+   Compiling core-foundation v0.9.4
+   Compiling security-framework-sys v2.17.0
+   Compiling regex v1.13.1
+   Compiling darling_core v0.24.1
+   Compiling crossbeam-queue v0.3.14
+   Compiling asn1-rs-derive v0.6.0
+   Compiling memoffset v0.9.1
+   Compiling pingora-error v0.9.1
+   Compiling zmij v1.0.23
+   Compiling colorchoice v1.0.5
+   Compiling oid-registry v0.7.1
+   Compiling yansi v1.0.1
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling percent-encoding v2.3.2
+   Compiling rust_decimal v1.43.0
+   Compiling anstyle v1.0.14
+   Compiling parking v2.2.1
+   Compiling anyhow v1.0.104
+   Compiling anstyle-query v1.1.5
+   Compiling anstream v1.0.0
+   Compiling event-listener v5.4.2
+   Compiling darling_macro v0.24.1
+   Compiling asn1-rs v0.7.2
+   Compiling security-framework v2.11.1
+   Compiling icu_properties v2.4.0
+   Compiling icu_normalizer v2.4.0
+   Compiling zstd v0.14.3
+   Compiling curve25519-dalek v4.1.3
+   Compiling tokio-rustls v0.26.6
+   Compiling darling_core v0.23.0
+   Compiling rand_core v0.9.5
+   Compiling nix v0.31.3
+   Compiling quinn-udp v0.5.16
+   Compiling rustls-pemfile v2.2.0
+   Compiling blake3 v1.8.5 ([redacted URL]
+   Compiling async-trait v0.1.92
+   Compiling num_cpus v1.17.0
+   Compiling serde_json v1.0.154
+   Compiling either v1.19.0
+   Compiling tinyvec v1.13.3
+   Compiling oid-registry v0.8.1
+   Compiling typeid v1.0.3
+   Compiling fixedbitset v0.5.9
+   Compiling clap_lex v1.1.1
+   Compiling protobuf v3.7.2
+   Compiling heck v0.4.1
+   Compiling base64 v0.23.1
+   Compiling seize v0.3.3
+   Compiling httpdate v1.0.3
+   Compiling base64 v0.22.1
+   Compiling hashbrown v0.14.5
+   Compiling fastrand v2.5.0
+   Compiling flurry v0.5.2
+   Compiling dashmap v5.5.3
+   Compiling ouroboros_macro v0.18.5
+   Compiling clap_builder v4.6.7
+   Compiling petgraph v0.7.1
+   Compiling itertools v0.14.0
+   Compiling darling_macro v0.23.0
+   Compiling rustls-native-certs v0.7.3
+   Compiling rand_chacha v0.9.0
+   Compiling strum_macros v0.26.4
+   Compiling idna_adapter v1.2.2
+   Compiling darling v0.24.1
+   Compiling event-listener-strategy v0.5.4
+   Compiling pingora-http v0.9.1
+   Compiling der-parser v9.0.0
+   Compiling aes v0.9.4
+   Compiling pingora-timeout v0.9.1
+   Compiling rand v0.10.3
+   Compiling clap_derive v4.6.7
+   Compiling prometheus-client-derive-text-encode v0.3.0
+   Compiling concurrent-queue v2.5.0
+   Compiling protobuf-support v3.7.2
+   Compiling quinn v0.11.9 ([redacted URL]
+   Compiling aead v0.6.1
+   Compiling brotli-decompressor v2.5.1
+   Compiling lru v0.18.5
+   Compiling tokio-stream v0.1.19
+   Compiling indexmap v1.9.3
+   Compiling lock_api v0.5.0
+   Compiling rand_pcg v0.10.2
+   Compiling parking_lot_core v0.10.0
+   Compiling arrayref v0.3.9
+   Compiling prometheus v0.14.0
+   Compiling lru-slab v0.1.3
+   Compiling rustc-hash v2.1.3
+   Compiling static_assertions v1.1.0
+   Compiling constant_time_eq v0.4.2
+   Compiling crossbeam-epoch v0.9.21
+   Compiling no_debug v3.1.0
+   Compiling unsafe-libyaml v0.2.11
+   Compiling aliasable v0.1.3
+   Compiling erased-serde v0.4.11
+   Compiling dtoa v1.0.11
+   Compiling prometheus-client v0.18.1
+   Compiling serde_yaml v0.9.34+deprecated
+   Compiling ouroboros v0.18.5
+   Compiling pingora-rustls v0.9.1
+   Compiling quinn-proto v0.11.16 ([redacted URL]
+   Compiling parking_lot v0.13.0
+   Compiling brotli v3.5.0
+   Compiling tokio-test v0.4.6
+   Compiling pingora-pool v0.9.1
+   Compiling clap v4.6.7
+   Compiling async-channel v2.5.0
+   Compiling x509-parser v0.16.0
+   Compiling prost-derive v0.14.5
+   Compiling serde_with_macros v3.24.0
+   Compiling sfv v0.10.4
+   Compiling strum v0.26.3
+   Compiling idna v1.1.0
+   Compiling rand v0.9.5
+   Compiling darling v0.23.0
+   Compiling daggy v0.8.1
+   Compiling der-parser v10.0.0
+   Compiling polyval v0.7.3
+   Compiling pingora-runtime v0.9.1
+   Compiling poly1305 v0.9.1
+   Compiling bstr v1.13.1
+   Compiling derivative v2.2.0
+   Compiling ctr v0.10.1
+   Compiling http-body v1.1.0
+   Compiling chrono v0.4.45
+   Compiling rmp v0.8.15
+   Compiling uncased v0.9.10
+   Compiling daemonix v0.1.0
+   Compiling foundations v5.12.0
+   Compiling unicase v2.10.0
+   Compiling openssl-probe v0.1.6
+   Compiling hashbrown v0.12.3
+   Compiling compression-core v0.4.34
+   Compiling compression-codecs v0.4.47
+   Compiling pingora-core v0.9.1
+   Compiling rmp-serde v1.3.1
+   Compiling chacha20poly1305 v0.11.0
+   Compiling x509-parser v0.18.1
+   Compiling ghash v0.6.0
+   Compiling foundations-macros v5.12.0
+   Compiling x25519-dalek v2.0.1
+   Compiling serde_with v3.24.0
+   Compiling prost v0.14.5
+   Compiling pingora-lru v0.9.1
+   Compiling prometools v0.2.3
+   Compiling pingora-header-serde v0.9.1
+   Compiling h3 v0.0.8 ([redacted URL]
+   Compiling form_urlencoded v1.2.2
+   Compiling xray-routing v0.9.0 ([redacted URL]
+   Compiling blake2 v0.10.6
+   Compiling sha3 v0.11.0
+   Compiling md-5 v0.11.0
+   Compiling sha2 v0.11.1
+   Compiling hmac v0.13.0
+   Compiling signature v3.0.0
+   Compiling module-lattice v0.2.4
+   Compiling figment v0.10.19
+   Compiling uuid v1.29.0
+   Compiling cpufeatures v0.2.17
+   Compiling try-lock v0.2.5
+   Compiling rustix v1.1.6
+   Compiling hex v0.4.3
+   Compiling pingora-cache v0.9.1
+   Compiling want v0.3.2
+   Compiling xray-proxy v0.9.0 ([redacted URL]
+   Compiling sha1 v0.10.7
+   Compiling ml-dsa v0.1.2
+   Compiling hkdf v0.13.0
+   Compiling h3-quinn v0.0.10 ([redacted URL]
+   Compiling url v2.5.8
+   Compiling crossbeam v0.8.5
+   Compiling aes-gcm v0.11.1
+   Compiling async-compression v0.4.42
+   Compiling pem v4.0.0
+   Compiling enum-as-inner v0.6.1
+   Compiling yasna v0.6.0
+   Compiling webpki-roots v1.0.12
+   Compiling sha1 v0.11.0
+   Compiling blake2 v0.11.0
+   Compiling ipnet v2.12.2
+   Compiling xray-utls v0.9.0 ([redacted URL]
+   Compiling hickory-proto v0.25.2
+   Compiling xray-transport v0.9.0 ([redacted URL]
+   Compiling rcgen v0.14.10
+   Compiling buffer-pool v0.2.1
+   Compiling tungstenite v0.29.0
+   Compiling pingora-proxy v0.9.1
+   Compiling hyper v1.12.0
+   Compiling xray-vless-encryption v0.9.0 ([redacted URL]
+   Compiling http-body-util v0.1.5
+   Compiling backon v1.6.0
+   Compiling pem v3.0.6
+   Compiling pingora-limits v0.9.1
+   Compiling tempfile v3.27.0
+   Compiling hyper-util v0.1.21
+   Compiling tokio-tungstenite v0.29.0
+   Compiling steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk)
+warning: unused imports: `DiagnosticRecorder`, `Kind`, and `ObservationContext`
+ --> src/inspection_tests.rs:2:13
+  |
+2 | use crate::{DiagnosticRecorder, Kind, ObservationContext};
+  |             ^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bytes::Bytes`
+ --> src/inspection_tests.rs:3:5
+  |
+3 | use bytes::Bytes;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `sync::Arc`
+ --> src/inspection_tests.rs:4:34
+  |
+4 | use std::{collections::BTreeMap, sync::Arc};
+  |                                  ^^^^^^^^^
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `cipher` and `password` are never read
+  --> src/tunnel_url.rs:16:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- fields in this struct
+...
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+[redacted credential line]
+   |                ^^^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: field `path` is never read
+  --> src/tunnel_url.rs:25:16
+   |
+21 | pub struct WebSocketUrl {
+   |            ------------ field in this struct
+...
+25 |     pub(crate) path: String,
+   |                ^^^^
+   |
+   = note: `WebSocketUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: variants `CacheSized`, `CacheVary`, and `CacheRange` are never constructed
+   --> src/http_proxy_tests.rs:123:5
+    |
+117 | enum ResponseMode {
+    |      ------------ variants in this enum
+...
+123 |     CacheSized,
+    |     ^^^^^^^^^^
+...
+127 |     CacheVary,
+    |     ^^^^^^^^^
+128 |     CacheRange,
+    |     ^^^^^^^^^^
+    |
+    = note: `ResponseMode` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+
+warning: field `cipher` is never read
+  --> src/tunnel_url.rs:16:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- field in this struct
+...
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `steam-proxy` (lib) generated 3 warnings
+warning: `steam-proxy` (lib test) generated 6 warnings (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 57s
+     Running unittests src/lib.rs (target/debug/build/steam-proxy/eb362c8af8a72f71/out/steam_proxy-eb362c8af8a72f71)
+
+running 52 tests
+test cache::tests::default_has_no_storage_eviction_or_maintenance ... ok
+test bandwidth::tests::disabled_limits_and_empty_chunks_do_not_delay ... ok
+test backend::vless_tests::wire_preserves_domain_for_remote_dns_and_original_target_port ... ok
+test config::tests::http1_ingress_matches_dns_suffix_boundaries ... ok
+test bandwidth::tests::concurrent_streams_share_one_budget_and_idle_refills_only_one_burst ... ok
+test buffer::tests::same_generic_buffer_supports_distinct_storage_types ... ok
+test buffer::tests::allocation_returns_only_after_the_final_bytes_reader ... ok
+test buffer::tests::canceling_a_borrower_returns_its_buffer ... ok
+test config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes ... ok
+test config::tests::single_domain_reverse_and_default_cm_ports ... ok
+test backend::vless_tests::url_uses_embedded_credentials_and_only_dials_proxy_hostname ... ok
+test ca::tests::ingress_policy_selects_http1_without_disabling_other_h2_hosts ... ok
+test cache::tests::maintenance_repeats_and_joins_on_host_cancellation ... ok
+test http_proxy::tests::business_websocket_rejection_is_not_replayed ... ok
+test http_proxy::tests::default_cache_forwards_each_cacheable_request_to_upstream ... ok
+test http_proxy::tests::close_cancels_requests_even_when_the_host_holds_a_response ... ok
+test http_proxy::tests::caller_mapped_websocket_uses_alias_tls_and_preserves_frames ... ok
+test http_proxy::tests::authority_and_whitelist_rejection_never_dial_upstream ... ok
+test http_proxy::tests::business_websocket_respects_authority_and_session_shutdown ... ok
+test http_proxy::tests::closing_a_throttled_response_cancels_its_wait ... ok
+test http_proxy::tests::idle_downstream_h2_is_released_after_active_body_finishes ... ok
+test import::tests::edgeone_function_and_origin_profiles_remain_independently_selectable ... ok
+test inspection::tests::inspection_defaults_off_and_respects_build_feature ... ok
+test observation::resource_tests::resource_bytes_include_partial_transfers_but_exclude_probes ... ok
+test pingora_io::tests::downstream_tls_rejection_before_a_request_is_observable ... ok
+test relay::tests::cancellation_interrupts_pending_connect ... ok
+test relay::tests::upstream_eof_never_reconnects_or_replays_tls ... ok
+test http_proxy::tests::business_websocket_upgrades_beside_a_warm_h2_pool ... ok
+test retry::tests::cancel_interrupts_backoff_and_deadline_bounds_pending_attempt ... ok
+test sniff::tests::http_prefix_and_unread_body_are_replayed_in_order ... ok
+test sniff::tests::prefix_limit_accepts_a_complete_head_and_rejects_an_unfinished_one ... ok
+test sniff::tests::tls_records_are_parsed_and_replayed_without_losing_early_data ... ok
+test stream::managed::tests::closing_wakes_a_pending_reader_held_by_the_host ... ok
+test stream::managed::tests::partial_vectored_writes_survive_adapters_and_count_only_accepted_bytes ... ok
+test tunnel_url::tests::invalid_tunnel_urls_fail_without_echoing_private_input ... ok
+test tunnel_url::tests::ss_plain_and_base64_userinfo_roundtrip_without_changing_the_key ... ok
+test tunnel_url::tests::websocket_retains_custom_port_and_path ... ok
+test vless_url::tests::invalid_links_never_echo_credentials_or_url ... ok
+test vless_url::tests::share_url_preserves_encoded_transport_and_private_settings ... ok
+test http_proxy::tests::pingora_h1_reuses_relay_and_preserves_headers_query_and_upload ... ok
+test http_proxy::tests::pingora_h2_multiplexes_cold_large_responses_across_registered_origins ... ok
+test http_proxy::tests::truncated_response_is_a_body_error_and_is_never_replayed ... ok
+test http_proxy::tests::gzip_negotiation_and_encoded_bytes_survive_uncached_proxy ... ok
+test http_proxy::tests::untrusted_tls_is_rejected_and_errors_are_redacted ... ok
+test retry::tests::bounded_retries_record_backoff_and_stop_on_policy_errors ... ok
+test http_proxy::tests::h2_protocol_recovery_has_no_sdk_backoff ... ok
+test http_proxy::tests::native_ingress_uses_pingora_h1_and_h2_without_a_listener ... ok
+test http_proxy::tests::tcp_backoff_recovers_before_tls_and_http_begin ... ok
+test http_proxy::tests::business_websocket_times_out_handshake_idle_and_blocked_writes ... ok
+test http_proxy::tests::pingora_paces_shared_encoded_bytes_without_changing_the_body ... ok
+test http_proxy::tests::caller_mapped_origins_preserve_http_and_isolate_verified_tls_pools ... ok
+test http_proxy::tests::smaller_h2_window_reduces_upstream_bytes_when_media_is_canceled ... ok
+
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.02s
+
+     Running tests/configuration.rs (target/debug/build/steam-proxy/8dcc0dc04df8e699/out/configuration-8dcc0dc04df8e699)
+
+running 8 tests
+test whitelist_matches_label_suffixes_and_preserves_original_hosts ... ok
+test native_source_supports_figment_overrides_and_literal_domains ... ok
+test shared_settings_replace_host_policy_and_extract_each_profile_once ... ok
+test http1_ingress_domains_are_caller_owned_and_scoped_to_the_whitelist ... ok
+test websocket_timeout_bounds_are_validated_by_figment_configuration ... ok
+test malformed_and_empty_policy_never_falls_back_to_product_domains ... ok
+test builtin_domains_and_additions_are_sdk_owned_and_isolated ... ok
+test tunnel_profiles_use_one_url_in_native_and_multi_profile_settings ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/policy_lifecycle.rs (target/debug/build/steam-proxy/2f7cd884b34946dc/out/policy_lifecycle-2f7cd884b34946dc)
+
+running 6 tests
+test policy_is_exact_and_revalidated_after_deserialization ... ok
+test canceled_parent_never_constructs_data_plane ... ok
+test admission_precedes_data_plane_construction ... ok
+test native_factory_rejects_disabled_backends_before_startup ... ok
+test bandwidth_configuration_is_imported_and_validated ... ok
+test edgeone_origin_uses_shared_lifecycle_and_only_dials_for_allowed_traffic ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+     Running tests/serve_connection.rs (target/debug/build/steam-proxy/70d8be53071d1f67/out/serve_connection-70d8be53071d1f67)
+
+running 4 tests
+test close_cancels_incomplete_client_handshakes_and_future_entry ... ok
+test denied_hostname_and_unregistered_port_do_not_dial ... ok
+test real_destination_http_enters_protocol_without_capture ... ok
+test client_owned_tls_identity_is_used_without_a_state_directory ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running tests/steam_policy.rs (target/debug/build/steam-proxy/9bc7576fe5baf90f/out/steam_policy-9bc7576fe5baf90f)
+
+running 2 tests
+test steam_suffix_boundaries_reject_unrelated_domains ... ok
+test steam_suffixes_preserve_complete_original_hostname ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tun_stack.rs (target/debug/build/steam-proxy/0e134f128c8697be/out/tun_stack-0e134f128c8697be)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tunnel_ingress.rs (target/debug/build/steam-proxy/2b707f9622f82381/out/tunnel_ingress-2b707f9622f82381)
+
+running 1 test
+test each_tunnel_starts_without_ca_and_only_dials_the_node_after_handoff ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests steam_proxy
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+[rust/default] PASS (exit 0, 128.6s)
+
+[rust/no-default-features] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk
+$ cargo test --offline --locked --no-default-features
+   Compiling libc v0.2.191
+   Compiling syn v2.0.119
+   Compiling errno v0.3.14
+   Compiling serde_core v1.0.229
+   Compiling lock_api v0.4.14
+   Compiling parking_lot_core v0.9.12
+   Compiling futures-util v0.3.34
+   Compiling parking_lot v0.12.5
+   Compiling getrandom v0.3.4
+   Compiling signal-hook-registry v1.4.8
+   Compiling getrandom v0.2.17
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling serde v1.0.229
+   Compiling typenum v1.20.1
+   Compiling generic-array v0.14.7
+   Compiling tokio v1.54.1
+   Compiling rand_core v0.9.5
+   Compiling synstructure v0.13.2
+   Compiling cc v1.11.1
+   Compiling tracing v0.1.44
+   Compiling asn1-rs-derive v0.6.0
+   Compiling rand_chacha v0.9.0
+   Compiling asn1-rs-impl v0.2.0
+   Compiling asn1-rs v0.7.2
+   Compiling rand v0.9.5
+   Compiling tokio-util v0.7.20
+   Compiling ring v0.17.14
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling futures-channel v0.3.34
+   Compiling hashbrown v0.17.1
+   Compiling digest v0.10.7
+   Compiling indexmap v2.14.2
+   Compiling idna v1.1.0
+   Compiling zeroize v1.9.1
+   Compiling rand_core v0.6.4
+   Compiling cpufeatures v0.2.17
+   Compiling getrandom v0.4.3
+   Compiling h2 v0.4.20 ([redacted URL]
+   Compiling sha1 v0.10.7
+   Compiling rand_chacha v0.3.1
+   Compiling serde_json v1.0.154
+   Compiling url v2.5.8
+   Compiling der-parser v10.0.0
+   Compiling oid-registry v0.8.1
+   Compiling enum-as-inner v0.6.1
+   Compiling base64 v0.23.1
+   Compiling futures-io v0.3.34
+   Compiling hickory-proto v0.25.2
+   Compiling pem v4.0.0
+   Compiling rustix v1.1.6
+   Compiling tungstenite v0.29.0
+   Compiling hyper v1.12.0
+   Compiling x509-parser v0.18.1
+   Compiling figment v0.10.19
+   Compiling rand v0.8.8
+   Compiling rustls-pki-types v1.16.0
+   Compiling tempfile v3.27.0
+   Compiling rcgen v0.14.10
+   Compiling hyper-util v0.1.21
+   Compiling tokio-tungstenite v0.29.0
+   Compiling steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk)
+warning: unused imports: `DiagnosticRecorder`, `Kind`, and `ObservationContext`
+ --> src/inspection_tests.rs:2:13
+  |
+2 | use crate::{DiagnosticRecorder, Kind, ObservationContext};
+  |             ^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bytes::Bytes`
+ --> src/inspection_tests.rs:3:5
+  |
+3 | use bytes::Bytes;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `sync::Arc`
+ --> src/inspection_tests.rs:4:34
+  |
+4 | use std::{collections::BTreeMap, sync::Arc};
+  |                                  ^^^^^^^^^
+
+warning: method `connection_endpoints` is never used
+   --> src/config.rs:228:19
+    |
+218 | impl ModeConfig {
+    | --------------- method in this implementation
+...
+228 |     pub(crate) fn connection_endpoints(&self) -> Cow<'_, [String]> {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `endpoint` is never used
+   --> src/config.rs:336:19
+    |
+335 | impl ForwardConfig {
+    | ------------------ method in this implementation
+336 |     pub(crate) fn endpoint(&self) -> (&str, u16) {
+    |                   ^^^^^^^^
+
+warning: method `http1_only` is never used
+   --> src/config.rs:423:19
+    |
+422 | impl RuntimeConfig {
+    | ------------------ method in this implementation
+423 |     pub(crate) fn http1_only(&self, host: &str) -> bool {
+    |                   ^^^^^^^^^^
+
+warning: methods `handshake`, `idle`, and `write` are never used
+   --> src/config.rs:463:19
+    |
+462 | impl WebSocketTimeouts {
+    | ---------------------- methods in this implementation
+463 |     pub(crate) fn handshake(self) -> Duration {
+    |                   ^^^^^^^^^
+...
+470 |     pub(crate) fn idle(self) -> Duration {
+    |                   ^^^^
+...
+477 |     pub(crate) fn write(self) -> Duration {
+    |                   ^^^^^
+
+warning: method `edgeone_origin` is never used
+   --> src/config.rs:559:19
+    |
+545 | impl Config {
+    | ----------- method in this implementation
+...
+559 |     pub(crate) fn edgeone_origin(&self, host: &str) -> Result<Option<&str>> {
+    |                   ^^^^^^^^^^^^^^
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+
+warning: fields `server`, `port`, `cipher`, and `password` are never read
+  --> src/tunnel_url.rs:14:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- fields in this struct
+13 |     original: Zeroizing<String>,
+14 |     pub(crate) server: String,
+   |                ^^^^^^
+15 |     pub(crate) port: u16,
+   |                ^^^^
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+[redacted credential line]
+   |                ^^^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: fields `server`, `port`, and `path` are never read
+  --> src/tunnel_url.rs:23:16
+   |
+21 | pub struct WebSocketUrl {
+   |            ------------ fields in this struct
+22 |     original: Zeroizing<String>,
+23 |     pub(crate) server: String,
+   |                ^^^^^^
+24 |     pub(crate) port: u16,
+   |                ^^^^
+25 |     pub(crate) path: String,
+   |                ^^^^
+   |
+   = note: `WebSocketUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: multiple fields are never read
+  --> src/vless_url.rs:13:16
+   |
+11 | pub struct VlessXhttpUrl {
+   |            ------------- fields in this struct
+12 |     original: Zeroizing<String>,
+13 |     pub(crate) server: String,
+   |                ^^^^^^
+14 |     pub(crate) port: u16,
+   |                ^^^^
+15 |     pub(crate) server_name: String,
+   |                ^^^^^^^^^^^
+16 |     pub(crate) path: String,
+   |                ^^^^
+17 |     pub(crate) mode: String,
+   |                ^^^^
+18 |     pub(crate) uuid: Zeroizing<String>,
+   |                ^^^^
+19 |     pub(crate) encryption: Option<Zeroizing<String>>,
+   |                ^^^^^^^^^^
+   |
+   = note: `VlessXhttpUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: method `endpoint` is never used
+   --> src/config.rs:336:19
+    |
+335 | impl ForwardConfig {
+    | ------------------ method in this implementation
+336 |     pub(crate) fn endpoint(&self) -> (&str, u16) {
+    |                   ^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `connection` is never used
+   --> src/observation.rs:334:19
+    |
+297 | impl ObservationContext {
+    | ----------------------- method in this implementation
+...
+334 |     pub(crate) fn connection(
+    |                   ^^^^^^^^^^
+
+warning: fields `server` and `cipher` are never read
+  --> src/tunnel_url.rs:14:16
+   |
+12 | pub struct ShadowsocksUrl {
+   |            -------------- fields in this struct
+13 |     original: Zeroizing<String>,
+14 |     pub(crate) server: String,
+   |                ^^^^^^
+15 |     pub(crate) port: u16,
+16 |     pub(crate) cipher: String,
+   |                ^^^^^^
+   |
+   = note: `ShadowsocksUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: field `uuid` is never read
+  --> src/vless_url.rs:18:16
+   |
+11 | pub struct VlessXhttpUrl {
+   |            ------------- field in this struct
+...
+18 |     pub(crate) uuid: Zeroizing<String>,
+   |                ^^^^
+   |
+   = note: `VlessXhttpUrl` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `steam-proxy` (lib) generated 9 warnings
+warning: `steam-proxy` (lib test) generated 10 warnings (3 duplicates) (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.43s
+     Running unittests src/lib.rs (target/debug/build/steam-proxy/e4b0156d26a4acf9/out/steam_proxy-e4b0156d26a4acf9)
+
+running 11 tests
+test config::tests::http1_ingress_matches_dns_suffix_boundaries ... ok
+test observation::resource_tests::resource_bytes_include_partial_transfers_but_exclude_probes ... ok
+test vless_url::tests::share_url_preserves_encoded_transport_and_private_settings ... ok
+test inspection::tests::inspection_defaults_off_and_respects_build_feature ... ok
+test vless_url::tests::invalid_links_never_echo_credentials_or_url ... ok
+test tunnel_url::tests::websocket_retains_custom_port_and_path ... ok
+test tunnel_url::tests::invalid_tunnel_urls_fail_without_echoing_private_input ... ok
+test tunnel_url::tests::ss_plain_and_base64_userinfo_roundtrip_without_changing_the_key ... ok
+test config::tests::single_domain_reverse_and_default_cm_ports ... ok
+test config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes ... ok
+test import::tests::edgeone_function_and_origin_profiles_remain_independently_selectable ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/configuration.rs (target/debug/build/steam-proxy/95a436027a144608/out/configuration-95a436027a144608)
+
+running 8 tests
+test whitelist_matches_label_suffixes_and_preserves_original_hosts ... ok
+test native_source_supports_figment_overrides_and_literal_domains ... ok
+test shared_settings_replace_host_policy_and_extract_each_profile_once ... ok
+test http1_ingress_domains_are_caller_owned_and_scoped_to_the_whitelist ... ok
+test websocket_timeout_bounds_are_validated_by_figment_configuration ... ok
+test malformed_and_empty_policy_never_falls_back_to_product_domains ... ok
+test builtin_domains_and_additions_are_sdk_owned_and_isolated ... ok
+test tunnel_profiles_use_one_url_in_native_and_multi_profile_settings ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/policy_lifecycle.rs (target/debug/build/steam-proxy/d64e214250d8b8a9/out/policy_lifecycle-d64e214250d8b8a9)
+
+running 5 tests
+test canceled_parent_never_constructs_data_plane ... ok
+test admission_precedes_data_plane_construction ... ok
+test policy_is_exact_and_revalidated_after_deserialization ... ok
+test native_factory_rejects_disabled_backends_before_startup ... ok
+test bandwidth_configuration_is_imported_and_validated ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/serve_connection.rs (target/debug/build/steam-proxy/9971f141d4dda783/out/serve_connection-9971f141d4dda783)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/steam_policy.rs (target/debug/build/steam-proxy/f369022d216327db/out/steam_policy-f369022d216327db)
+
+running 2 tests
+test steam_suffix_boundaries_reject_unrelated_domains ... ok
+test steam_suffixes_preserve_complete_original_hostname ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tun_stack.rs (target/debug/build/steam-proxy/91529f62520f4b49/out/tun_stack-91529f62520f4b49)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tunnel_ingress.rs (target/debug/build/steam-proxy/68bfbe7dfec32588/out/tunnel_ingress-68bfbe7dfec32588)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests steam_proxy
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+[rust/no-default-features] PASS (exit 0, 21.0s)
+
+[go/default] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/default] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[go/race] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=1 go test -mod=readonly -count=1 -timeout=300s -race ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/race] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[go/reverse_proxy] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/reverse_proxy] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[go/tunnel_proxy] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags tunnel_proxy ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/tunnel_proxy] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[go/vless_xhttp] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags vless_xhttp ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/vless_xhttp] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[go/websocket] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags websocket ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/websocket] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[go/shadowsocks] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags shadowsocks ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/shadowsocks] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[go/reverse-vless] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy,vless_xhttp ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/reverse-vless] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[go/combined] cwd=__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/bindings/go
+$ CGO_ENABLED=0 go test -mod=readonly -count=1 -timeout=300s -tags reverse_proxy,vless_xhttp,websocket,shadowsocks ./...
+# github.com/gamesir123/steam-proxy
+open __HERDR_SYNC_HOME__/Library/Caches/go-build/02/0245ae02cbeb986f63fd1d0a61e0f68dc260654b0723fbd49f8e5817fccecff6-d: operation not permitted
+FAIL	github.com/gamesir123/steam-proxy [setup failed]
+FAIL
+
+[go/combined] FAIL (exit 1, 0.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+Result: 12 commands completed, 9 failed, 0 not run.

@@ -1,0 +1,51 @@
+SPS-1 formal commit review, round 1
+Reviewed commit: c50f76b4ac833c1f31b3292af986ee35a7bf4d37
+Reviewer: interactive read-only Codex auto/gpt-6-astra, child sps-1-review (t5c).
+Recorded by herdr-task reviewed: round 1/1 (subsequently parent added round 2).
+The earlier uncommitted-diff pre-review is separately preserved in review.txt.
+
+Final reviewer findings:
+
+1. BLOCKER: candidate-specific EdgeOne mapping rejection prevents valid fallback.
+   src/http_proxy.rs:555 called http_route after selecting B; an unmapped but globally whitelisted target returned DomainDenied, and C was not tried.
+   Fix: Health::usable excludes candidate-specific unavailable mappings before tier selection. Integration regression preserves global whitelist rejection and verifies one actual C HTTP request after the B access-only probe.
+
+2. BLOCKER: successful raw TCP connections do not reset consecutive access failures.
+   src/routing.rs:224 only committed and returned successful executor output; access_success was called only by HTTP.
+   Fix: AttemptLoop records attributable access success before returning. Alternating failure/success execution regression verifies failures remain consecutive and never isolate the working endpoint.
+
+3. BLOCKER: VLESS/XHTTP detached carrier dialing can outlive the shared attempt deadline.
+   src/backend.rs:478 captured a full new timeout and session-only cancellation; pinned xray H2 pool launches the dial closure in tokio::spawn.
+   Fix: StreamExecutor propagates the absolute deadline to Backend::connect_until. Carrier dialing and TLS use that deadline and an acquisition child cancellation token canceled on drop. Carrier tasks are tracked and drained during SDK close. A guarded carrier I/O wrapper keeps detached H2 establishment within the acquisition budget, then disarms once the logical stream is acquired so pooled live traffic does not inherit an expired request budget.
+   Regressions exercise the actual XHTTP acquisition with a pending fake dialer, cancellation before SDK close, a shorter remaining deadline, and pending/acquired carrier I/O behavior.
+
+4. BLOCKER: HTTP acquisition watchdog misclassifies A/B access timeouts as target failures.
+   src/http_proxy.rs:103 always recorded HttpHeaders timeout, bypassing access counters.
+   Fix: shared request acquisition phase distinguishes resolution/access, local pool waits and inner-target TLS. A shared settled flag prevents duplicate feedback from watchdog/connector paths. Pool waiting does not penalize node health. Existing inner-target TLS regression now uses a real configured access endpoint in its registry.
+
+5. BLOCKER: acquisition watchdog truncates cache-hit responses.
+   Only connected_to_upstream disarmed timing; cache hits bypass it.
+   Fix: retain the watch sender in RequestContext, disarm on fresh cache selection and response header commit (including stale-response paths). Regression warms the real memory cache and serves a slow native HTTP response past the acquisition budget with continued progress. The fixture separately allows a longer downstream write timeout so this check isolates acquisition timing from the existing whole-write timeout.
+
+Independent checks: cargo fmt and base-to-final diff whitespace check passed; 17 existing binary tests rerun successfully, not fresh compilation. Loopback bind independently failed with EPERM in the review sandbox; fresh compilation and full feature matrices were not run there. Worker ran actual full-source checks after fixes.
+
+All five findings were reproduced by failing local regression tests before their corresponding fix; actual outputs are formal-before-lib.txt, formal-before-mapping.txt, formal-before-cache.txt. The first cache test attempt also hit an existing downstream whole-write timeout; the final before/after cache regression separates the two budgets and retains its actual failing output.
+
+Post-fix commit: 4e5abf6 (fix(routing): bound acquisitions and preserve route outcomes).
+Final full-source validation: default100, no-default31, reverse93, memory-cache+websocket+shadowsocks116, puretunnels59 with2existingHTTP-assumptiontests filtered. Formatting and diff whitespace checks passed. Commands ran sequentially with errexit and pipefail and returned exit0.
+Formal round2 on 4e5abf6631eeee0ae23899851fadd1e6b1ca064b:
+Two blockers confirmed by independent source tracing:
+1. Successful XHTTP acquisition unconditionally canceled its retained dial callback; packet-up carrier replacement also retained an expired acquisition deadline.
+2. LocalReverse DomainRoute::Direct origin failures were attributed to the tier A reverse endpoint, including permanent certificate isolation; direct success incorrectly refreshed access evidence.
+Reviewer independently ran 25 previously compiled tests before the latest user rule; all passed. Read-only loopback binding failed EPERM. Reviewer fmt and diff checks passed. No fresh compilation or network regressions were run by reviewer.
+
+Corrections committed b156ccd1dd7d2feeeffaba64a6d7cb0391d6c655:
+1. Transfer acquisition cancellation guard to returned XhttpSession only after encryption and VLESS header flush finish. Session drop/mode close cancel retained dials; abandoned acquisitions still cancel. Initial dials retain shared absolute deadline; carrier callbacks invoked after acquisition get a fresh configured connection budget.
+2. Registry::target_connection accounts for C, CDN aliases and LocalReverse Direct policy, and is shared by failure feedback and access-success accounting. Direct-origin failures cool only their target; success cannot refresh configured reverse endpoint evidence.
+User changed dev validation policy: no further regression runs or full matrices. After these changes worker ran cargo check --offline --lib (exit0, four existing dead_code warnings), cargo fmt --all -- --check (exit0), git diff --check (exit0). Original full-source test matrix belongs to 4e5abf6 and is not a rerun on b156ccd.
+Follow-up b53b1c9e9d95883d6d5b20ae0b5fd67ab4c24d93 completes the same carrier boundary: the pinned h2 handshake awaits a 24-byte HTTP/2 preface after the dial callback returns. AcquiringCarrier now independently retains its cancellation/deadline until those bytes are written, including replacement carriers created after initial logical acquisition. Pooled live traffic after preface/acquisition does not inherit an expired budget. Existing acquired-carrier test setup was adjusted to send the real preface; not executed under the latest user rule.
+After this last source change cargo check --offline --lib returned exit0, cargo fmt was applied, no tests run.
+Same reviewer's final report, actual HEAD b53b1c9e9d95883d6d5b20ae0b5fd67ab4c24d93:
+"No blocker, major, or minor findings in the scoped correction diff 4e5abf6..b53b1c9. Neither of the two previously reported blockers remains. Those findings remain valid for 4e5abf6; the corrections resolve them at this final HEAD."
+Reviewer confirmed SHA and read all three correction files; source tracing confirms cancellation guard transfer, fresh post-acquisition carrier budgets, partial-preface guards and effective-target health classification. Worktree clean. No tests, feature matrices or fresh compilation rerun under latest user dev rule.
+Formal round2 recorded using herdr-task reviewed --commit b53b1c9e9d95883d6d5b20ae0b5fd67ab4c24d93, command succeeded "review round 2 of 2 recorded for commit b53b1c9".

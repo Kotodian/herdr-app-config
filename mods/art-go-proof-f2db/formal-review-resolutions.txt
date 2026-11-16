@@ -1,0 +1,26 @@
+Worker follow-up to formal round 1, not an independent review:
+
+ca5de67 fixes all four major findings from review of 24ed87f.
+
+1. VLESS initial physical dials use the Attempt establishment context.
+   Once established, new physical dials use the live upload request context,
+   bounded by the packet timeout and tunnel lifetime. A real TLS/H2 frame peer
+   sends GOAWAY and then PING; the test waits for its ACK before sending another
+   packet on a new physical connection while the original download stays open.
+
+2. H2 retained is initialized inside the pool mutex before publishing the pointer.
+   Concurrent cold first-use plus cancellation is covered under race.
+
+3. StrictMaxConcurrentStreams queues requests on the same H2 connection when
+   peer capacity is exhausted. The single-stream peer test acquires twice before
+   submitting either request, reproducing the old unusable-connection failure.
+   Idle expiration also excludes active, pending and reserved streams.
+
+4. Packet upload checks 401/403 before reading body. Successful response drain
+   is byte-limited, time-bounded and propagates read errors. TCP and HTTP ingress
+   identity regressions now include flushed rejection headers with no EOF.
+
+final-review-before.txt contains actual new tests failing before these fixes.
+final-review-after.txt contains corresponding passing race runs.
+default/race/features/all-features-race/behaviors logs were refreshed after all
+production changes. No Steam or real node was contacted.

@@ -1,0 +1,84 @@
+=== RUN   TestHTTP2AcquisitionsQueueAtSingleStreamLimit
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50386: EOF
+--- PASS: TestHTTP2AcquisitionsQueueAtSingleStreamLimit (0.03s)
+=== RUN   TestHTTP2ConcurrentFirstUseAndCancellation
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50389: EOF
+--- PASS: TestHTTP2ConcurrentFirstUseAndCancellation (0.03s)
+=== RUN   TestVLESSPacketUploadAfterGoAwayKeepsDownloadStream
+--- PASS: TestVLESSPacketUploadAfterGoAwayKeepsDownloadStream (0.01s)
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/download-401
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50418: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50420: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50421: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/download-401
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50423: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50425: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50426: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/download-403
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50428: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50430: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50431: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/download-403
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50433: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50435: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50436: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-401
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50438: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50440: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50441: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-401
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50443: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50445: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50446: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-403
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50448: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50450: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50451: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-403
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50453: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50455: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50456: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-401-open-body
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50458: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50460: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50461: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-401-open-body
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50463: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50465: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50466: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-403-open-body
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50468: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50470: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50471: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-403-open-body
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50473: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50475: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50476: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/outer-TLS
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50478: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50479: remote error: tls: bad certificate
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50480: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50481: EOF
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/outer-TLS
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50483: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50484: remote error: tls: bad certificate
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50485: EOF
+2026/11/16 00:32:05 http: TLS handshake error from 127.0.0.1:50486: EOF
+--- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated (0.11s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/download-401 (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/download-401 (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/download-403 (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/download-403 (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-401 (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-401 (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-403 (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-403 (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-401-open-body (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-401-open-body (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-403-open-body (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-403-open-body (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/outer-TLS (0.01s)
+    --- PASS: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/outer-TLS (0.01s)
+PASS
+ok  	github.com/gamesir123/steam-proxy	1.687s

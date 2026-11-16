@@ -31,8 +31,8 @@ export function RoleSheet() {
 }
 
 /** the agents on offer here (read once, as the window's settings read them when they open) */
-let offered: Promise<(ModelMenus & { picks?: { pinned: string[]; recent: string[] } }) | null> | null = null
-const menusNow = () => (offered ??= act({ type: 'role-info' } as never).then((r: any) => (r?.menus && Object.keys(r.menus).length ? { menus: r.menus, permDefault: r.permDefault ?? {}, picks: r.picks } : (offered = null)), () => (offered = null)))
+const menusNow = (role: string) => act({ type: 'role-info', role } as never).then((r: any) =>
+  r?.menus && Object.keys(r.menus).length ? { menus: r.menus, permDefault: r.permDefault ?? {}, picks: r.picks } : null, () => null)
 /** a model typed by id joins its agent's list, so the menu's levels and label know it */
 const withTyped = (menus: ModelMenus['menus'], x: { agent: string; id: string; typed?: boolean }) =>
   x.typed && !menus[x.agent]?.models.some((m) => m.id === x.id) ? { ...menus, [x.agent]: { ...menus[x.agent], models: [x as never, ...menus[x.agent].models] } } : menus
@@ -64,7 +64,7 @@ export function ModelButton({ row, level }: { row: SettingRow; level: string }) 
         <span className="truncate">{row.value}</span>
         <DownIcon className={clsx(ic, 'size-3.5')} />
       </button>
-      {open && sel ? <ModelMenu start={sel} up={up} onClose={() => setOpen(false)} save={(next) => act({ type: 'setting', key: row.key, value: JSON.stringify(next), place: level } as never)} /> : null}
+      {open && sel ? <ModelMenu role={row.agent?.role ?? ''} start={sel} up={up} onClose={() => setOpen(false)} save={(next) => act({ type: 'setting', key: row.key, value: JSON.stringify(next), place: level } as never)} /> : null}
     </span>
   )
 }
@@ -72,14 +72,14 @@ export function ModelButton({ row, level }: { row: SettingRow; level: string }) 
 /** the window's model menu in settings mode: the model list as the chat's (restart.tsx ModelList: agent tabs,
  *  search, pinned and recent; picking another CLI's switches agent), Reasoning (that model's levels), Fast (where the model has it), Permissions (a small list); no Restart, each change
  *  saved as it is made */
-function ModelMenu({ start, up, onClose, save }: { start: AgentPick; up: boolean; onClose: () => void; save: (sel: AgentPick) => Promise<any> }) {
+function ModelMenu({ role, start, up, onClose, save }: { role: string; start: AgentPick; up: boolean; onClose: () => void; save: (sel: AgentPick) => Promise<any> }) {
   const [data, setData] = useState<ModelMenus | null>(null)
   const [sel, setSel] = useState<AgentPick>(start)
   const [perms, setPerms] = useState(false)
   const [error, setError] = useState('')
   const [picks, setPicks] = useState<{ pinned: string[]; recent: string[] } | undefined>()
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
-  useEffect(() => { void menusNow().then((m) => (m ? (setData(m), setPicks(m.picks)) : setError('Could not read the agents.'))) }, [])
+  useEffect(() => { void menusNow(role).then((m) => (m ? (setData(m), setPicks(m.picks)) : setError('Could not read the agents.'))) }, [role])
   const change = (next: AgentPick) => {
     setSel(next)
     setError('')
@@ -96,9 +96,9 @@ function ModelMenu({ start, up, onClose, save }: { start: AgentPick; up: boolean
       {!data ? <p className={clsx('px-3 py-2 text-fg3', error && 'text-need-fg')}>{error || ST.LOADING_AGENTS}</p> : (
         <>
           <ModelList menus={data.menus as never} agent={sel.agent} picks={picks} chosen={{ agent: sel.agent, model: sel.model ?? null }} autoFocus={!coarse}
-            onPick={(x) => { if (x.agent === sel.agent && x.id === sel.model) return; const menus = withTyped(data.menus, x); if (menus !== data.menus) setData({ ...data, menus }); change(chooseModel(menus, data.permDefault, sel, x.agent, x.id)) }}
+            onPick={(x) => { const menus = withTyped(data.menus, x); if (menus !== data.menus) setData({ ...data, menus }); change(chooseModel(menus, data.permDefault, sel, x.agent, x.id)) }}
             onPin={(agent, id) => void act({ type: 'model-pin', agent, model: id } as never).then((r: any) => r?.picks && setPicks(r.picks), () => undefined)} />
-          <MenuSeparator />
+          {model?.efforts.length ? <><MenuSeparator />
           <MenuLabel>{MODEL_MENU.reasoning}</MenuLabel>
           <div className="px-2 pb-1 phone:px-3">
             <Tabs label={MODEL_MENU.reasoning} className="flex! w-full">
@@ -106,7 +106,7 @@ function ModelMenu({ start, up, onClose, save }: { start: AgentPick; up: boolean
                 <Tab key={e} fill on={level === e} onClick={() => level !== e && change({ ...sel, effort: e })}>{levelName(e)}</Tab>
               ))}
             </Tabs>
-          </div>
+          </div></> : null}
           {fast ? <MenuSwitch name={MODEL_MENU.fast} icon={<SpeedIcon className={ic} />} on={!!sel.fast} onClick={() => change({ ...sel, fast: !sel.fast })} /> : null}
           {menu?.perms.length ? (
             <>

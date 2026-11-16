@@ -18,6 +18,7 @@ import urllib.request
 from pathlib import Path, PurePosixPath
 
 REPO='Kotodian/herdr-app-config'
+SYNC_BRANCH='dev'
 SOURCE=Path(__file__).resolve().parent
 APP=Path.home()/'.config/herdr-app'
 STATE=Path.home()/'.config/herdr-app-sync/native-state.json'
@@ -97,7 +98,7 @@ def collect(app):
     for p in (app/'layouts').glob('*.json'):
         if 'layout:'+p.stem not in installed and not p.name.startswith('.'):sources.append(p)
     sources.extend(p for p in (app/'themes').glob('*.json') if p.stem!='atom-one-dark' and p.stem not in installed)
-    sources.extend(app/name for name in ('keys.json','settings.json','programs.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore') if (app/name).exists())
+    sources.extend(app/name for name in ('keys.json','settings.json','programs.json','git-workflow.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore') if (app/name).exists())
     coordinator=app.joinpath(*COORDINATOR.parts)
     if coordinator.exists() and not (shepherdr/'bin/shepherdr').exists():
         for folder in ('src','plugin'):
@@ -151,7 +152,7 @@ def validate(folder=None):
         if rel.is_absolute() or '..' in rel.parts or not rel.parts:raise RuntimeError('Unsafe snapshot path')
         shepherdr=shepherdr_source(rel)
         integration=coordinator_source(rel) or shepherdr
-        allowed=integration or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore')
+        allowed=integration or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','git-workflow.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore')
         if not allowed or any((x.startswith('.') and name!='.gitignore' and not integration) or
                               (x in OMIT and not (shepherdr and x in ('bin','dist'))) for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
         if rel.parts[0]=='mods' and (rel.suffix not in TEXT|ASSETS and rel.name not in ('LICENSE','NOTICE')):raise RuntimeError('Unexpected mod file')
@@ -480,14 +481,15 @@ def auto_sync(app):
     try:
         if not STATE.exists():
             _,initial=validate();save_state(initial)
-        if git('branch','--show-current')!='main':raise RuntimeError('Expected main branch')
+        if git('branch','--show-current')!=SYNC_BRANCH:raise RuntimeError('Expected '+SYNC_BRANCH+' branch; main is reserved for an explicit release')
         if git('status','--porcelain','--untracked-files=no'):raise RuntimeError('Repository has pending edits; automatic sync paused')
-        git('fetch','origin','main')
-        ahead,behind=map(int,git('rev-list','--left-right','--count','HEAD...origin/main').split())
+        git('fetch','origin',SYNC_BRANCH)
+        remote_ref='origin/'+SYNC_BRANCH
+        ahead,behind=map(int,git('rev-list','--left-right','--count','HEAD...'+remote_ref).split())
         if ahead:
-            _,remote=revision_files('origin/main')
+            _,remote=revision_files(remote_ref)
         else:
-            git('merge','--ff-only','origin/main')
+            git('merge','--ff-only',remote_ref)
             _,remote=validate()
         local,_=collect(app);baseline=read_json(STATE,{}).get('files',{})
         resolved=[]
@@ -503,7 +505,7 @@ def auto_sync(app):
         if ahead and behind:
             # File-level reconciliation above decided the content. Preserve both histories;
             # the temporary ours tree is replaced by that validated content before committing.
-            git('merge','--no-commit','--no-ff','--strategy=ours','origin/main')
+            git('merge','--no-commit','--no-ff','--strategy=ours',remote_ref)
             history_merge_started=True
         _,checkout=validate()
         if hashes(merged)!=hashes(checkout) or history_merge_started:
@@ -511,10 +513,10 @@ def auto_sync(app):
             snapshot(merged,mods);validate()
             git('add','-A','--','.')
             if git('diff','--cached','--name-only') or history_merge_started:
-                git('commit','-m','Automatically sync Herdr App configuration')
+                git('commit','-m','chore(herdr): 同步应用配置')
             history_merge_started=False
         # Push before applying incoming changes. A failed push leaves the base intact.
-        git('push','origin','HEAD:main')
+        git('push','origin','HEAD:'+SYNC_BRANCH)
         # Kanso can save a new terminal/panel layout while the push is in flight.
         # Record the bytes that actually reached Git before checking the live files again.
         remember_bases({name:data for name,data in merged.items() if local.get(name)==data})
@@ -547,11 +549,21 @@ def ensure_repo(app):
         gh=shutil.which('gh')
         if gh and subprocess.run([gh,'auth','status'],capture_output=True).returncode==0:
             args+=['-c','credential.helper=','-c','credential.helper=!'+gh+' auth git-credential']
-        run(*args,'clone',url,str(ROOT),cwd=ROOT.parent)
+        run(*args,'clone','--branch',SYNC_BRANCH,url,str(ROOT),cwd=ROOT.parent)
         git('config','user.name','Herdr App Sync');git('config','user.email','22030659+Kotodian@users.noreply.github.com');git('config','commit.gpgsign','false')
         if len(args)>1:
             git('config','credential.helper','');git('config','--add','credential.helper','!'+gh+' auth git-credential')
     if git('config','--get','remote.origin.url') not in expected:raise RuntimeError('Unexpected configuration repository')
+    if git('branch','--show-current')!=SYNC_BRANCH:
+        if git('branch','--show-current')!='main' or git('status','--porcelain'):
+            raise RuntimeError('Switch the clean configuration checkout to '+SYNC_BRANCH+' before syncing')
+        git('fetch','origin')
+        refs=set(git('for-each-ref','--format=%(refname)','refs/heads/'+SYNC_BRANCH,'refs/remotes/origin/'+SYNC_BRANCH).splitlines())
+        if 'refs/heads/'+SYNC_BRANCH in refs:git('switch',SYNC_BRANCH)
+        elif 'refs/remotes/origin/'+SYNC_BRANCH in refs:git('switch','--track','-c',SYNC_BRANCH,'origin/'+SYNC_BRANCH)
+        else:
+            git('switch','-c',SYNC_BRANCH)
+            git('push','--set-upstream','origin','HEAD:refs/heads/'+SYNC_BRANCH)
 
 def register_agent(app):
     import plistlib,sys

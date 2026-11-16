@@ -48,6 +48,24 @@ test("the model button says what the window's does", () => {
     .toMatchObject({ agent: "codex", model: "gpt-5", effort: null, perm: "full" });
 });
 
+test("Typesafe models appear with their icon in both decision agent tabs, and choosing them clears reasoning and Fast", () => {
+  const choices = S.choicesFrom({ claude: { model: "opus" }, codex: { models: [] },
+    decisionModels: [{ id: "typesafe/jev-latest", name: "Typesafe · jev-latest" },
+      { id: "typesafe/jev-preview", name: "Typesafe · jev-preview" }] });
+  const decision = S.roleChoices(choices, "decider");
+  expect(Object.keys(decision.menus)).toEqual(["claude", "codex"]);
+  for (const agent of ["claude", "codex"]) {
+    const models = decision.menus[agent].models.filter((m) => m.id.startsWith("typesafe/"));
+    expect(models.map((m) => m.id)).toEqual(["typesafe/jev-latest", "typesafe/jev-preview"]);
+    expect(models.every((m) => m.icon === "typesafe" && !m.fast && !m.efforts.length)).toBe(true);
+    expect(S.chooseModel(decision.menus, decision.permDefault,
+      { agent, model: "before", effort: "high", fast: true }, agent, models[0].id))
+      .toMatchObject({ agent, model: models[0].id, effort: null, fast: false });
+  }
+  expect(S.roleChoices(choices, "worker")).toBe(choices);
+  expect(choices.menus.claude.models.some((m) => m.id.startsWith("typesafe/"))).toBe(false);
+});
+
 test("switching the worker's agent there and back keeps auto (#758)", () => {
   const { menus, permDefault } = S.choicesFrom({ claude: { model: "opus", per: {} }, codex: { models: [{ id: "gpt-5", label: "GPT-5", efforts: ["low", "high"] }] } });
   expect(permDefault.claude).toBe("manual");

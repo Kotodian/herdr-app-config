@@ -87,8 +87,11 @@ export class Agents {
 
   /** Each CLI's own settings here (Settings › Agents' model menu: core/settings.js choicesFrom). */
   async ownDefaults() {
-    const [claude, codex] = await Promise.all([this.defaults("claude", null), this.defaults("codex", null)]);
-    return { claude, codex };
+    const [claude, codex, result] = await Promise.all([this.defaults("claude", null), this.defaults("codex", null),
+      run(["herdr-task", "decision-models", "--json"]).catch(() => null)]);
+    let decisionModels = [];
+    try { if (result?.code === 0) decisionModels = JSON.parse(result.out).models ?? []; } catch {}
+    return { claude, codex, decisionModels };
   }
 
   /** What an unset role runs, in the window's words ("Opus 5.5 · 1M · High"): each CLI's own defaults here. */

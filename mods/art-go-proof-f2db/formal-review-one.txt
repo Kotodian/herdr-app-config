@@ -1,0 +1,43 @@
+Formal round 1: sps-2-review / t5d
+Actual reviewed SHA: 24ed87f8297dcb8f8f8d42f028d307307ef06623
+Recorded on that SHA only. Four major findings, no blockers. Superseded by follow-up ca5de67.
+
+Reviewed committed HEAD `24ed87f` against `fdd883aae27b5534426dd1dd11aedd28946603d7`, including every added file under `bindings/go`, the complete brief/design, and all eight reported fixes. **Four major findings remain. No blocker or minor findings.** These are source-traced findings; I could not execute their reproductions in this sandbox.
+
+1. **Major — Established VLESS streams retain a canceled context for subsequent physical dials.**
+
+   Locations: [tunnel_vless.go:124](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel_vless.go:124), [tunnel_vless.go:458](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel_vless.go:458), [tunnel.go:377](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel.go:377).
+
+   `DialContext` stores `handshake` in the long-lived stream context as `establishmentKey`, then cancels that handshake when it returns successfully. Subsequent packet-upload requests inherit this value, and `dialTLS` always restores it as the physical dial’s parent. Consequently, any later upload requiring another physical connection receives an already-canceled context. A concrete trigger is a packet-up stream whose server sends GOAWAY while keeping the existing download stream open: the next new upload packet cannot establish its connection, and the logical stream fails.
+
+   **Fix:** distinguish establishment from established-stream transport work. Preserve the original shared deadline during establishment; give later physical upload dials a bounded context tied to the live stream and tunnel lifetime. Add a local test that retains the download stream across GOAWAY and successfully sends the next packet through a new physical connection.
+
+2. **Major — H2 pool admission publishes the connection before initializing its retention flag.**
+
+   Locations: [pool.go:195](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:195), [pool.go:136](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:136), [http.go:114](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/http.go:114).
+
+   In `pooled.retained = m.pool.admit(pooled)`, `admit` inserts the pointer into the shared pool and releases its mutex before the assignment to `retained`. Another request can acquire that connection and read `retained` concurrently with the assignment. Besides the data race, observing its initial `false` value makes cancellation or cleanup treat the shared connection as unretained and close it, interrupting other H2 streams. The existing multiplexing test warms the connection before introducing concurrency, so it does not exercise this publication window.
+
+   **Fix:** initialize retention state before publishing the connection, under the same synchronization that protects admission. Add a race regression with concurrent first-use requests and cancellation of one request.
+
+3. **Major — H2 acquisition checks stream capacity without reserving it.**
+
+   Locations: [pool.go:65](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:65), [pool.go:183](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:183), [http.go:211](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/http.go:211).
+
+   Two callers can both pass `CanTakeNewRequest()` for the final available stream slot before either starts `RoundTrip`. With the current transport settings, the pinned HTTP/2 implementation rejects the second request as unusable when it subsequently finds the connection full; see [transport.go:1697](__HERDR_SYNC_HOME__/go/pkg/mod/golang.org/x/net@v0.44.0/http2/transport.go:1697). The SDK reports a committed-exchange failure and applies a target cooldown even though that request sent no headers. A peer advertising `MAX_CONCURRENT_STREAMS=1` makes this possible with just two concurrent requests.
+
+   **Fix:** reserve capacity during acquisition, including the initial request before publishing a new connection, or deliberately queue requests using the transport’s strict concurrency behavior. Preserve the no-replay boundary after submission. Test concurrent requests against a local peer advertising one stream and verify successful queuing/additional connection acquisition without a false cooldown.
+
+4. **Major — Packet-upload credential rejection waits for an unbounded response-body drain.**
+
+   Location: [tunnel_vless.go:465](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel_vless.go:465).
+
+   The upload worker calls `io.Copy(io.Discard, response.Body)` before inspecting the status for 401/403. A peer can flush a definitive rejection header and leave the response body open. Because established packet requests use the stream-lifetime context, the worker can remain blocked indefinitely without calling `stream.fail(errExitIdentity)`. The known credential failure therefore does not reach the bridge or isolate the exit. The regression tests use completed `http.Error` responses, which conceal this case.
+
+   **Fix:** classify rejection statuses immediately after receiving headers, record the identity failure, and close the response without waiting for EOF. Any success-body drain should have a suitable bound and handle read errors. Add 401/403 tests that flush headers while withholding EOF and assert prompt error propagation and persistent exit isolation.
+
+`git diff --check fdd883aae27b5534426dd1dd11aedd28946603d7 HEAD -- bindings/go` completed without whitespace diagnostics. The working tree remained clean.
+
+**Not run in my sandbox:** executable Go tests. My attempt to run `GOWORK=off CGO_ENABLED=0 go test -count=1 -timeout 60s ./...` failed before execution because creation of the temporary `go-build` directory was denied. I therefore did not independently run race, feature-tag, behavior, or new reproduction tests. `herdr-app check` and `shepherdr doctor` were not run because their required services are unavailable in this sandbox.
+
+I read the successful final post-fix worker logs for [default tests](/private/tmp/sps-2-proof/default.txt), [race tests](/private/tmp/sps-2-proof/race.txt), [all nine feature combinations](/private/tmp/sps-2-proof/features.txt), [all-tags race tests](/private/tmp/sps-2-proof/all-features-race.txt), and [behavior tests](/private/tmp/sps-2-proof/behaviors.txt). Those are actual worker runs, not tests I executed; they do not establish coverage of the cases above.

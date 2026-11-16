@@ -27,6 +27,8 @@ from .home import cmd_home
 from .assistant_settings import cmd_session_note
 from .feedback import cmd_feedback
 from .sandbox import cmd_sandbox
+from .decision import cmd_decide
+from .decision_provider import cmd_models as cmd_decision_models
 
 
 # ---- another machine ------------------------------------------------------------------------
@@ -180,6 +182,8 @@ def main():
         c.add_argument("--finish-notes", help="this task's own \"When a task finishes\" notes, replacing the folder's (\"\": the folder's)")
 
     def task_opts(c):
+        c.add_argument("--workflow", choices=["development", "hotfix"],
+                       help="override the workflow: normal development, or a confirmed main-to-main production bug fix")
         c.add_argument("--agent", help="the CLI its agent runs (claude, codex, ...; default: Settings' Workers)")
         c.add_argument("--model", help="its agent's model, an id or alias (default: Settings'; \"default\": the CLI's own)")
         c.add_argument("--effort", help="its agent's effort: low, medium, high, xhigh, max... (default: Settings')")
@@ -213,6 +217,7 @@ def main():
     c.add_argument("title")
     c.add_argument("--prompt")
     c.add_argument("--prompt-file")
+    c.add_argument("--decision-file", help="reuse decide --json for this exact title, prompt and folder")
     task_opts(c)
     notes_opts(c)
     g = c.add_mutually_exclusive_group()
@@ -222,6 +227,12 @@ def main():
                                    "machine's with the machine first (vm-b:HAT-12)")
     c.add_argument("--space", help="the space it's for, whose settings it takes (default: yours)")
     when_opts(c)
+    c = cmd("decide", cmd_decide, "classify a request using Settings' independent Decision model (no task is created)", id=False)
+    c.add_argument("title", help="the request to classify")
+    c.add_argument("--prompt")
+    c.add_argument("--prompt-file")
+    c.add_argument("--space")
+    cmd("decision-models", cmd_decision_models, "list Typesafe classifiers offered by the configured agents", id=False)
     c = cmd("show", cmd_show, "one task")
     c.add_argument("--evidence", action="store_true", help="with what its Accept card shows: commits, changed files, checks and its proof")
     c = cmd("start", cmd_start, "start a task's agent (no tab: an hc child of the space's coordinator)")

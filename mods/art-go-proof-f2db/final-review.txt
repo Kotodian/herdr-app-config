@@ -1,0 +1,13 @@
+Formal round 2: sps-2-review / t5g
+Actual reviewed SHA: ca5de67063ea4a8b1e4a683dcb2bd38fe908b147
+
+**No blocking findings in the narrowed final-review scope.** Formal round 2 of 2 reviewed HEAD **`ca5de67063ea4a8b1e4a683dcb2bd38fe908b147`**. The four first-round major findings are addressed in the reviewed source:
+
+- **VLESS context lifetime:** [tunnel.go:386](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel.go:386) switches established-stream physical dials to the live request context. The GOAWAY regression waits for the subsequent PING acknowledgment, verifies a new upload connection, and checks that the original download stream survives.
+- **H2 retention publication:** [pool.go:139](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:139) initializes `retained` under the pool mutex before publishing the pointer. The added concurrency test exercises cold first use and cancellation.
+- **H2 stream capacity:** [pool.go:184](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/pool.go:184) enables `StrictMaxConcurrentStreams`. I checked the pinned HTTP/2 implementation’s queuing behavior and the regression that acquires twice before submitting against a peer advertising one stream. Pool expiration also excludes active, pending, and reserved streams.
+- **VLESS upload rejection:** [tunnel_vless.go:470](__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-2-go/bindings/go/tunnel_vless.go:470) classifies 401/403 before reading the body. Successful-response draining is limited to 4096 bytes, uses the packet timeout, and propagates read failures. The regressions include rejection headers with withheld EOF.
+
+`git diff --check` passed. I read all seven specified proof files: the developer’s refreshed test matrix records successful runs, and the before/after logs record the regression failures followed by passes. Those are supplied developer executions, not tests I independently ran.
+
+**Not run in my sandbox:** executable Go checks. My default test attempt failed before execution because creating the temporary `go-build` directory was denied (`operation not permitted`). Consequently, I could not independently rerun race, feature, or behavior tests. `herdr-app check` and `shepherdr doctor` were not run because their required services are unavailable in this sandbox.

@@ -1,0 +1,31 @@
+=== RUN   TestHTTP2AcquisitionsQueueAtSingleStreamLimit
+2026/11/16 00:26:58 http: TLS handshake error from 127.0.0.1:65466: EOF
+    pool_concurrency_test.go:81: capacity race failed an unsubmitted request instead of queuing: http2: client conn not usable
+--- FAIL: TestHTTP2AcquisitionsQueueAtSingleStreamLimit (0.00s)
+=== RUN   TestVLESSPacketUploadAfterGoAwayKeepsDownloadStream
+    tunnel_vless_goaway_test.go:185: established upload could not dial after GOAWAY
+--- FAIL: TestVLESSPacketUploadAfterGoAwayKeepsDownloadStream (1.00s)
+FAIL
+FAIL	github.com/gamesir123/steam-proxy	1.536s
+FAIL
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-401-open-body
+2026/11/16 00:31:01 http: TLS handshake error from 127.0.0.1:50039: EOF
+    tunnel_vless_test.go:85: bridge lost classified terminal error: read pipe: i/o timeout
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-401-open-body
+2026/11/16 00:31:02 http: TLS handshake error from 127.0.0.1:50053: EOF
+    tunnel_vless_test.go:93: VLESS credential/TLS exit was not isolated
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-403-open-body
+2026/11/16 00:31:03 http: TLS handshake error from 127.0.0.1:50058: EOF
+    tunnel_vless_test.go:85: bridge lost classified terminal error: read pipe: i/o timeout
+=== RUN   TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-403-open-body
+2026/11/16 00:31:04 http: TLS handshake error from 127.0.0.1:50074: EOF
+    tunnel_vless_test.go:93: VLESS credential/TLS exit was not isolated
+--- FAIL: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated (2.61s)
+    --- FAIL: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-401-open-body (1.00s)
+    --- FAIL: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-401-open-body (0.30s)
+    --- FAIL: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/tcp/packet-upload-403-open-body (1.00s)
+    --- FAIL: TestVLESSIdentityFailuresSurviveBridgeAndRemainIsolated/http/packet-upload-403-open-body (0.30s)
+FAIL
+FAIL	github.com/gamesir123/steam-proxy	2.865s
+FAIL

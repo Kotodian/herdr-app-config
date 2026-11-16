@@ -81,6 +81,8 @@ export default class ModelMenu extends View {
       if (menu && !menu.models.some((m) => m.id === r.id)) menu.models = [r, ...menu.models];
     }
     this.choose(r);
+    // Picking the initial model also counts as an explicit choice for an unset role.
+    if (this.settingsMode) { this.told = JSON.stringify(this.sel); this.tell(); }
     this.tab = r.agent;
     this.input.set_value("");
     this.cursor = 0;
@@ -333,7 +335,7 @@ export default class ModelMenu extends View {
       .text_color(t.foreground)
       .cursor_pointer().hover((s) => s.bg(t.selected))
       .when(at, (el) => el.bg(t.selected))
-      .child(this.icon(x.agent, t))
+      .child(x.icon === "typesafe" ? image("mods/chat-models/typesafe.png").size(14).flex_none() : this.icon(x.agent, t))
       .child(div().flex_1().min_w(0).truncate().child(x.typed ? `Use ${x.id}` : x.name))
       .when(Boolean(x.typed), (el) => el.child(div().flex_none().text_size(11).text_color(t.dim).child(`${this.p.menus?.[x.agent]?.name ?? x.agent} id`)))
       .child(this.check(t, chosen))

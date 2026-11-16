@@ -13,6 +13,17 @@ SPEC.loader.exec_module(sync)
 
 
 class PublishedBaselineTests(unittest.TestCase):
+    def test_automatic_sync_refuses_main_without_pushing(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(sync, "STATE", Path(directory) / "state.json"), \
+             patch.object(sync, "validate", return_value=({}, {})), \
+             patch.object(sync, "save_state"), \
+             patch.object(sync, "record_status"), \
+             patch.object(sync, "git", return_value="main") as git:
+            with self.assertRaisesRegex(RuntimeError, "main is reserved"):
+                sync.auto_sync(Path(directory))
+            self.assertEqual(git.call_args_list, [unittest.mock.call("branch", "--show-current")])
+
     def test_divergent_git_histories_merge_json_and_keep_both_commits(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory).resolve()
@@ -24,7 +35,7 @@ class PublishedBaselineTests(unittest.TestCase):
                 self.assertEqual(result.returncode,0,result.stderr)
                 return result.stdout.strip()
             git("init","--bare","-q",str(origin))
-            git("init","-q","-b","main",str(repo))
+            git("init","-q","-b","dev",str(repo))
             for key,value in (("user.name","Sync test"),("user.email","sync@example.invalid"),("commit.gpgsign","false")):
                 git("config",key,value,cwd=repo)
             git("remote","add","origin",str(origin),cwd=repo)
@@ -34,8 +45,8 @@ class PublishedBaselineTests(unittest.TestCase):
             with patch.object(sync,"ROOT",repo),patch.object(sync,"STATE",root/"state.json"):
                 sync.snapshot(original,[])
                 git("add",".",cwd=repo);git("commit","-qm","base",cwd=repo)
-                git("push","-qu","origin","main",cwd=repo)
-                git("clone","-q","-b","main",str(origin),str(other))
+                git("push","-qu","origin","dev",cwd=repo)
+                git("clone","-q","-b","dev",str(origin),str(other))
                 for key,value in (("user.name","Sync test"),("user.email","sync@example.invalid"),("commit.gpgsign","false")):
                     git("config",key,value,cwd=other)
                 sync.save_state(original)
@@ -43,12 +54,12 @@ class PublishedBaselineTests(unittest.TestCase):
                 git("add",".",cwd=repo);git("commit","-qm","local font change",cwd=repo)
                 with patch.object(sync,"ROOT",other):sync.snapshot(remote,[])
                 git("add",".",cwd=other);git("commit","-qm","remote theme change",cwd=other)
-                git("push","-q","origin","main",cwd=other)
+                git("push","-q","origin","dev",cwd=other)
                 (app/"settings.json").write_bytes(local["settings.json"])
                 sync.auto_sync(app)
                 self.assertEqual(json.loads((app/"settings.json").read_text()),{"font":16,"theme":"light"})
                 self.assertEqual(len(git("rev-list","--parents","-n","1","HEAD",cwd=repo).split()),3)
-                self.assertEqual(git("rev-parse","HEAD",cwd=repo),git("rev-parse","origin/main",cwd=repo))
+                self.assertEqual(git("rev-parse","HEAD",cwd=repo),git("rev-parse","origin/dev",cwd=repo))
                 status=json.loads((root/"native-status.json").read_text())
                 self.assertEqual(status["status"],"ok")
                 self.assertEqual(status["auto_merged"],["settings.json"])
@@ -174,7 +185,7 @@ class PublishedBaselineTests(unittest.TestCase):
                 sync.save_state(original)
                 def git(*args):
                     if args[:2] == ("branch", "--show-current"):
-                        return "main"
+                        return "dev"
                     if args[0] == "rev-list":
                         return "0 0"
                     if args[0] == "rev-parse":
@@ -204,7 +215,7 @@ class PublishedBaselineTests(unittest.TestCase):
                 sync.save_state(original)
                 def git(*args):
                     if args[:2] == ("branch", "--show-current"):
-                        return "main"
+                        return "dev"
                     if args[0] == "rev-list":
                         return "0 0"
                     if args[0] == "push":
@@ -232,6 +243,19 @@ class ShepherdrSyncTests(unittest.TestCase):
         (source/"lib").mkdir()
         (source/"lib/addons.json").write_text('{"core":{"mods":["chat"]},"addons":[]}')
         return app,source
+
+    def test_workflow_policy_survives_snapshot_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve()
+            app,_=self.make_app(root)
+            policy=b'{"version":1,"development_branch":"dev","production_branch":"main"}\n'
+            (app/"git-workflow.json").write_bytes(policy)
+            files,mods=sync.collect(app)
+            self.assertEqual(files["git-workflow.json"],policy)
+            with patch.object(sync,"ROOT",root/"checkout"):
+                sync.snapshot(files,mods)
+                _,restored=sync.validate()
+            self.assertEqual(restored["git-workflow.json"],policy)
 
     def test_release_round_trip_keeps_helpers_and_assets_but_omits_runtime(self):
         with tempfile.TemporaryDirectory() as directory:

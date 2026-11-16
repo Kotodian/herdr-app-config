@@ -4,29 +4,29 @@ export default {
   "blocks": [
     {
       "type": "text",
-      "md": "Rust SDK 已加入多候选路由、独立接入探测、健康与重试策略，以及可失败的实例重启。\nHTTP 请求各自选路，直连和隧道复用现有 Pingora，并保留实际目标的 TLS 身份。\n所有改动保留在 SPS-1 工作树，尚未提交或推送。"
+      "md": "Rust SDK 已加入多候选路由、独立接入探测、健康与重试策略，以及可失败的实例重启。\nHTTP 请求各自选路，直连和隧道复用现有 Pingora，并保留实际目标的 TLS 身份。\n最终修复提交 b53b1c9，任务目标已核实为 dev；已有测试结果属于此前提交，最后两项阻断修复仅做静态检查及同轮独立代码核对。"
     },
     {
       "type": "stats",
       "items": [
-        {"label": "默认测试", "value": "94", "note": "全部通过"},
-        {"label": "完整传输组合", "value": "100", "note": "全部通过"},
-        {"label": "独立只读评审", "value": "1", "note": "阻断项已修复"}
+        {"label": "此前默认测试", "value": "100", "note": "4e5abf6 全部通过"},
+        {"label": "此前含缓存组合", "value": "116", "note": "4e5abf6 全部通过"},
+        {"label": "正式评审", "value": "2", "note": "最终修复无剩余发现"}
       ]
     },
     {
       "type": "text",
-      "md": "证明一：本次工作实际运行的特性矩阵；全部使用离线依赖、本地服务或假 dialer，没有访问 Steam。"
+      "md": "证明一：4e5abf6 上实际运行的特性矩阵；全部使用离线依赖、本地服务或假 dialer，没有访问 Steam。按用户最新要求，目标 dev 不再追加回归，以下结果不冒称是最终 b53b1c9 上的重新运行。"
     },
     {
       "type": "table",
       "columns": ["构建组合", "实际结果"],
       "rows": [
-        ["默认", "94 通过"],
+        ["默认", "100 通过"],
         ["无默认特性", "31 通过"],
-        ["独立反代与透明入口", "90 通过"],
-        ["默认 + WebSocket + SS", "100 通过"],
-        ["仅隧道与透明入口", "55 通过，排除两项旧 HTTP 测试；未排除运行失败记录保留"]
+        ["独立反代与透明入口", "93 通过"],
+        ["默认 + memory-cache + WebSocket + SS", "116 通过"],
+        ["仅隧道与透明入口", "59 通过，排除两项旧 HTTP 测试；未排除运行失败记录保留"]
       ]
     },
     {
@@ -36,11 +36,11 @@ export default {
         {
           "type": "code",
           "lang": "text",
-          "text": "rustc 1.100.0 (0ef1bc386 2026-11-09)\n项目声明：Rust 1.96 / edition 2024；没有升级工具链或依赖版本。\n\ncargo test --offline\ncargo test --offline --no-default-features\ncargo test --offline --no-default-features --features reverse-proxy,transparent-proxy\ncargo test --offline --features websocket,shadowsocks\ncargo test --offline --no-default-features --features transparent-proxy,vless-xhttp,websocket,shadowsocks -- --skip config::tests::single_domain_reverse_and_default_cm_ports --skip config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes\n\ncargo fmt --all -- --check  → exit 0\ngit diff --check           → exit 0"
+            "text": "rustc 1.100.0 (0ef1bc386 2026-11-09)\n项目声明：Rust 1.96 / edition 2024；没有升级工具链或依赖版本。\n\n4e5abf6 的实际命令：\ncargo test --offline\ncargo test --offline --no-default-features\ncargo test --offline --no-default-features --features reverse-proxy,transparent-proxy\ncargo test --offline --features memory-cache,websocket,shadowsocks\ncargo test --offline --no-default-features --features transparent-proxy,vless-xhttp,websocket,shadowsocks -- --skip config::tests::single_domain_reverse_and_default_cm_ports --skip config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes\n\ncargo fmt --all -- --check  → exit 0\ngit diff --check           → exit 0\n上述五个测试命令顺序运行，set -e 与 pipefail 开启，整个验证命令 exit 0。\n\nb156ccd 最后两项修复后仅执行：\ncargo check --offline --lib → exit 0（4 个既有 dead_code 警告）\ncargo fmt --all -- --check → exit 0\ngit diff --check → exit 0\n未重新运行回归或特性矩阵，遵循用户最新 dev 规则。"
         },
         {
           "type": "text",
-          "md": "原始命令输出保存在本证明的同目录文本文件：default-final.txt、no-default-final.txt、reverse-final.txt、combined-final.txt、tunnels-filtered-final.txt。未过滤的隧道失败输出为 tunnels.txt。"
+          "md": "最新修复提交的原始命令输出保存在本证明同目录：formal-fixed-default.txt、formal-fixed-no-default.txt、formal-fixed-reverse.txt、formal-fixed-combined.txt、formal-fixed-tunnels.txt。此前验证输出也保留；未过滤的隧道失败输出为 tunnels.txt。"
         },
         {
           "type": "code",
@@ -83,7 +83,7 @@ export default {
         {
           "type": "list",
           "items": [
-            "共 19 个文件：仅 src、非绑定 tests、Cargo.toml 和根 README 的 Rust 设计说明。完整工作树差异为 changes.txt，包括四个未跟踪的新文件。",
+            "共 19 个文件：仅 src、非绑定 tests、Cargo.toml 和根 README 的 Rust 设计说明。完整实现差异为 changes.txt，包括四个新增文件；最终修复提交 b53b1c9，提交后工作树干净。",
             "新增内部模块 probe、routing、outbound；移除旧的 Steam 业务启动验证路径。A/B/C/D 共用现有 HTTP 处理，不复制 HTTP 栈。",
             "Rust 新配置：Routes { payload: Payload, reverse: Vec<modes::RemoteReverse>, direct: bool, tunnel: Vec<ForwardConfig> }，可直接传给 Profile::new，或转换为 ModeConfig。",
             "新增 Mode::restart(&mut self, next_config, cancel)。旧克隆保留旧 Inner，调用方重取新克隆。",
@@ -105,11 +105,11 @@ export default {
     },
     {
       "type": "details",
-      "summary": "一次独立评审及处理结果",
+      "summary": "独立预审、正式评审及修复",
       "blocks": [
         {
           "type": "text",
-          "md": "指定 Codex reviewer 以交互式只读子进程完成一轮，发现一个 blocker、四个 major。blocker 已复现并修复；另外补齐完整获取连接的 deadline 守卫、桥接生命周期和隧道内目标超时归因。完整处理记录为 review.txt。"
+          "md": "最初对未提交 diff 的独立预审发现一个 blocker、四个 major，处理记录为 review.txt。正式第一轮独立审查 c50f76b，发现五个 blocker，已真实记录于该受审提交；全部已有失败回归及修复。第二轮审查 4e5abf6，确认两个阻断：XHTTP 成功获取后取消了后续 carrier 的回调，以及旧 LocalReverse 的 Direct 域名失败会污染反代健康。已用 b156ccd 修复，再用 b53b1c9 保证替换 carrier 的 H2 前言握手也受预算约束。同一 reviewer 已在本轮完成最终 b53b1c9 核对，无剩余发现。详细处理见 formal-review.txt。"
         },
         {
           "type": "text",
@@ -119,9 +119,27 @@ export default {
           "type": "callout",
           "tone": "warn",
           "title": "评审与提交状态",
-          "md": "一轮评审结束后的修复已重新构建和测试，没有再启动第二轮。尚未获提交授权，所以未伪造 commit 评审记录，也未运行会要求提交的 Ready。"
+          "md": "用户已授权合入 dev，任务目标已核实为 dev，并明确 dev 不再跑回归。同一独立 reviewer 已完成最终 b53b1c9 的本轮修复核对：两个阻断均解决，修复差异没有 blocker、major 或 minor。正式第二轮已真实记录在 b53b1c9；尚未推送、创建 PR 或合并。合入 dev 由父 Assistant 按用户授权处理。"
         }
       ]
+    },
+    {
+      "type": "text",
+      "md": "证明五：正式评审五个阻断均有本地失败回归；修复后相同回归通过。缓存测试使用真实内存缓存与原生 HTTP 慢读，单独放宽测试夹具的写入预算，避免把既有整次写入超时误当获取连接超时。"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "text": "修复前实际输出（formal-before-lib.txt / formal-before-mapping.txt / formal-before-cache.txt）：\npartial_edgeone_mapping_skips_candidate_but_keeps_global_whitelist_denial ... FAILED，真实请求返回 DomainDenied\nsuccessful_stream_attempts_reset_consecutive_access_failures ... FAILED，失败数 left: 1 right: 0\ndropping_vless_acquisition_cancels_detached_carrier_dial ... FAILED，活动拨号 left: 1 right: 0\nacquisition_watchdog_counts_access_timeouts_once ... FAILED，接入失败数 left: 0 right: 1\ncached_response_can_stream_past_acquisition_deadline ... FAILED，IncompleteBody，HttpCacheHit Canceled\n\n修复后：\n以上五项全部通过，见 formal-fixed-combined.txt。\nremaining_deadline_bounds_vless_carrier_and_drains_dial_tasks ... ok\ncarrier_budget_bounds_pending_io_but_does_not_expire_acquired_pool ... ok\nhttp_tunnel_target_timeout_preserves_access_health_and_drains_abandoned_bridge ... ok（使用实际配置接入点的健康记录）"
+    },
+    {
+      "type": "text",
+      "md": "证明六：最终 b53b1c9 源码的默认库编译输出；这是静态编译证据，没有将其当作运行时回归通过。"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "text": "$ cargo check --offline --lib\nChecking steam-proxy v0.1.0\nwarning: steam-proxy (lib) generated 4 warnings\nFinished dev profile [unoptimized + debuginfo] target(s) in 0.90s\nexit 0\n完整实际输出：final-static-check.txt。四项既有 dead_code 警告：inspection::matches、Connections::child、ShadowsocksUrl 的 cipher/password、WebSocketUrl::path。\n最后修复后已应用 cargo fmt；此前格式检查与 git diff --check 均 exit 0。未新跑回归或特性矩阵。"
     },
     {"type": "heading", "level": 2, "text": "Not proven"},
     {
@@ -133,8 +151,8 @@ export default {
         "其他语言绑定的编译、候选集合和 restart 接口；本任务没有修改或测试绑定。",
         "大规模流量下回环桥接的性能与资源上限；验证覆盖本地功能与取消回收，不代表压测。",
         "未过滤的纯隧道全套测试完全通过；两项旧 HTTP 默认特性假设测试仍失败，完整输出已保留。",
-        "评审后修复的第二次独立复审；设置最多一轮，本次没有追加。",
-        "提交、推送、PR、合并、部署与正式 Ready；均未执行，等待用户授权。"
+        "最后 b53b1c9 两项修复的运行时回归结果；按用户 dev 规则未重新运行，只做默认库编译、格式与差异静态检查。",
+        "推送、PR、合并与部署；证明发布时均未执行。用户已授权合入 dev，由父 Assistant 处理后续合并。"
       ]
     }
   ]

@@ -1,0 +1,233 @@
+   Compiling steam-proxy v0.1.0 (__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-1-rust)
+warning: unused imports: `DiagnosticRecorder`, `Kind`, and `ObservationContext`
+ --> src/inspection_tests.rs:2:13
+  |
+2 | use crate::{DiagnosticRecorder, Kind, ObservationContext};
+  |             ^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bytes::Bytes`
+ --> src/inspection_tests.rs:3:5
+  |
+3 | use bytes::Bytes;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `sync::Arc`
+ --> src/inspection_tests.rs:4:34
+  |
+4 | use std::{collections::BTreeMap, sync::Arc};
+  |                                  ^^^^^^^^^
+
+warning: variant `CacheRange` is never constructed
+   --> src/http_proxy_tests.rs:170:5
+    |
+155 | enum ResponseMode {
+    |      ------------ variant in this enum
+...
+170 |     CacheRange,
+    |     ^^^^^^^^^^
+    |
+    = note: `ResponseMode` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+
+warning: method `child` is never used
+  --> src/managed_stream.rs:38:12
+   |
+36 | impl Connections {
+   | ---------------- method in this implementation
+37 |     #[cfg(feature = "reverse-proxy")]
+38 |     pub fn child(self: &Arc<Self>) -> crate::Result<Arc<Self>> {
+   |            ^^^^^
+
+warning: method `matches` is never used
+   --> src/inspection.rs:135:19
+    |
+134 | impl ClientIpRule {
+    | ----------------- method in this implementation
+135 |     pub(crate) fn matches(&self, host: &str, path: &str) -> bool {
+    |                   ^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `steam-proxy` (lib) generated 2 warnings (1 duplicate)
+warning: `steam-proxy` (lib test) generated 6 warnings (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.26s
+     Running unittests src/lib.rs (target/debug/build/steam-proxy/5cc28acb7857d657/out/steam_proxy-5cc28acb7857d657)
+
+running 83 tests
+test bandwidth::tests::disabled_limits_and_empty_chunks_do_not_delay ... ok
+test cache::tests::default_has_no_storage_eviction_or_maintenance ... ok
+test bandwidth::tests::concurrent_streams_share_one_budget_and_idle_refills_only_one_burst ... ok
+test backend::vless_tests::wire_preserves_domain_for_remote_dns_and_original_target_port ... ok
+test config::tests::http1_ingress_matches_dns_suffix_boundaries ... ok
+test buffer::tests::allocation_returns_only_after_the_final_bytes_reader ... ok
+test buffer::tests::same_generic_buffer_supports_distinct_storage_types ... ok
+test backend::tests::websocket_upgrade_errors_retain_status_without_response_text ... ok
+test backend::carrier_tests::carrier_budget_bounds_pending_io_but_does_not_expire_acquired_pool ... ok
+test buffer::tests::canceling_a_borrower_returns_its_buffer ... ok
+test config::tests::single_domain_reverse_and_default_cm_ports ... ok
+test http_cache::tests::oversize_and_abandoned_fills_are_not_published ... ok
+test config::tests::remote_reverse_domain_contract_is_shared_by_typed_and_dynamic_modes ... ok
+test http_cache::tests::incorrect_content_length_never_publishes_partial_or_growing_bodies ... ok
+test http_cache::tests::reservations_cover_fills_and_purged_bytes_and_exhaustion_fails_open ... ok
+test http_cache::tests::small_objects_share_budget_and_remain_readable ... ok
+test backend::carrier_tests::remaining_deadline_bounds_vless_carrier_and_drains_dial_tasks ... ok
+test backend::vless_tests::url_uses_embedded_credentials_and_only_dials_proxy_hostname ... ok
+test backend::carrier_tests::dropping_vless_acquisition_cancels_detached_carrier_dial ... ok
+test http_cache::tests::policy_excludes_sensitive_requests_and_respects_age ... ok
+test http_cache::tests::unknown_length_bodies_retain_only_their_allocated_capacity ... ok
+test backend::tests::websocket_uses_verified_relay_tls_and_preserves_original_stream ... ok
+test ca::tests::ingress_policy_selects_http1_without_disabling_other_h2_hosts ... ok
+test cache::tests::maintenance_repeats_and_joins_on_host_cancellation ... ok
+test http_proxy::tests::business_websocket_rejection_is_not_replayed ... ok
+test http_proxy::tests::business_websocket_respects_authority_and_session_shutdown ... ok
+test http_proxy::tests::authority_and_whitelist_rejection_never_dial_upstream ... ok
+test http_proxy::tests::acquisition_watchdog_counts_access_timeouts_once ... ok
+test http_proxy::tests::caller_mapped_websocket_uses_alias_tls_and_preserves_frames ... ok
+test http_proxy::tests::close_cancels_requests_even_when_the_host_holds_a_response ... ok
+test http_proxy::tests::closing_a_throttled_response_cancels_its_wait ... ok
+test http_proxy::tests::default_cache_forwards_each_cacheable_request_to_upstream ... ok
+test http_proxy::tests::business_websocket_upgrades_beside_a_warm_h2_pool ... ok
+test http_proxy::tests::cached_response_can_stream_past_acquisition_deadline ... ok
+test http_proxy::tests::http_over_tunnel_negotiates_origin_tls_and_reuses_only_its_own_pool ... ok
+test http_proxy::tests::http_tunnel_target_timeout_preserves_access_health_and_drains_abandoned_bridge ... ok
+test http_proxy::tests::idle_downstream_h2_is_released_after_active_body_finishes ... ok
+test http_proxy::tests::pingora_h1_reuses_relay_and_preserves_headers_query_and_upload ... ok
+test http_proxy::tests::pingora_h2_multiplexes_cold_large_responses_across_registered_origins ... ok
+test http_proxy::tests::gzip_negotiation_and_encoded_bytes_survive_uncached_proxy ... ok
+test http_proxy::tests::h2_protocol_recovery_has_no_sdk_backoff ... ok
+test import::tests::edgeone_function_and_origin_profiles_remain_independently_selectable ... ok
+test inspection::tests::inspection_defaults_off_and_respects_build_feature ... ok
+test observation::resource_tests::resource_bytes_include_partial_transfers_but_exclude_probes ... ok
+test outbound::tests::direct_addresses_only_learn_from_business_and_history_is_per_generation ... ok
+test outbound::tests::dropping_bridge_connection_drains_half_open_upstream_before_sdk_close ... ok
+test pingora_io::tests::downstream_tls_rejection_before_a_request_is_observable ... ok
+test probe::tests::cancel_drains_running_and_queued_probes ... ok
+test probe::tests::scheduler_summarizes_all_timeouts_and_bounds_concurrency_and_total_budget ... ok
+test probe::tests::tcp_probe_only_opens_access_socket_and_closes_without_writing ... ok
+test relay::tests::cancellation_interrupts_pending_connect ... ok
+test http_proxy::tests::pingora_vary_reuses_assets_across_pages_without_mixing_variants ... ok
+test relay::tests::upstream_eof_never_reconnects_or_replays_tls ... ok
+test retry::tests::cancel_interrupts_backoff_and_deadline_bounds_pending_attempt ... ok
+test routing::tests::attempt_loop_shares_deadline_across_candidates_and_stops_after_commit ... ok
+test routing::tests::delayed_probe_publication_preserves_completion_time_and_ignores_older_evidence ... ok
+test routing::tests::failure_count_then_twenty_percent_window_then_capability_filter ... ok
+test routing::tests::fixed_tiers_exhaust_same_tier_and_hash_is_stable ... ok
+test routing::tests::health_ewma_recovery_backoff_expiry_and_generation ... ok
+test routing::tests::successful_stream_attempts_reset_consecutive_access_failures ... ok
+test sniff::tests::http_prefix_and_unread_body_are_replayed_in_order ... ok
+test sniff::tests::prefix_limit_accepts_a_complete_head_and_rejects_an_unfinished_one ... ok
+test sniff::tests::tls_records_are_parsed_and_replayed_without_losing_early_data ... ok
+test stream::managed::tests::closing_wakes_a_pending_reader_held_by_the_host ... ok
+test stream::managed::tests::partial_vectored_writes_survive_adapters_and_count_only_accepted_bytes ... ok
+test tunnel_url::tests::invalid_tunnel_urls_fail_without_echoing_private_input ... ok
+test tunnel_url::tests::ss_plain_and_base64_userinfo_roundtrip_without_changing_the_key ... ok
+test tunnel_url::tests::websocket_retains_custom_port_and_path ... ok
+test vless_url::tests::invalid_links_never_echo_credentials_or_url ... ok
+test vless_url::tests::share_url_preserves_encoded_transport_and_private_settings ... ok
+test http_proxy::tests::routed_h2_selects_per_request_exhausts_relays_and_isolates_upstream_pools ... ok
+test http_proxy::tests::pooled_h2_capacity_wait_obeys_operation_deadline_without_submitting_again ... ok
+test http_proxy::tests::native_ingress_uses_pingora_h1_and_h2_without_a_listener ... ok
+test http_proxy::tests::truncated_response_is_a_body_error_and_is_never_replayed ... ok
+test http_proxy::tests::untrusted_tls_is_rejected_and_errors_are_redacted ... ok
+test http_proxy::tests::business_websocket_times_out_handshake_idle_and_blocked_writes ... ok
+test http_proxy::tests::caller_mapped_origins_preserve_http_and_isolate_verified_tls_pools ... ok
+test http_proxy::tests::pingora_native_cache_collapses_concurrent_requests_and_preserves_large_streams ... ok
+test http_proxy::tests::tcp_backoff_recovers_before_tls_and_http_begin ... ok
+test retry::tests::bounded_retries_record_backoff_and_stop_on_policy_errors ... ok
+test http_proxy::tests::pingora_paces_shared_encoded_bytes_without_changing_the_body ... ok
+test http_proxy::tests::pingora_keeps_many_small_assets_without_repeating_upstream_requests ... ok
+test http_proxy::tests::smaller_h2_window_reduces_upstream_bytes_when_media_is_canceled ... ok
+
+test result: ok. 83 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.98s
+
+     Running tests/configuration.rs (target/debug/build/steam-proxy/adb8d0d137d835e8/out/configuration-adb8d0d137d835e8)
+
+running 8 tests
+test whitelist_matches_label_suffixes_and_preserves_original_hosts ... ok
+test native_source_supports_figment_overrides_and_literal_domains ... ok
+test http1_ingress_domains_are_caller_owned_and_scoped_to_the_whitelist ... ok
+test shared_settings_replace_host_policy_and_extract_each_profile_once ... ok
+test websocket_timeout_bounds_are_validated_by_figment_configuration ... ok
+test malformed_and_empty_policy_never_falls_back_to_product_domains ... ok
+test builtin_domains_and_additions_are_sdk_owned_and_isolated ... ok
+test tunnel_profiles_use_one_url_in_native_and_multi_profile_settings ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/policy_lifecycle.rs (target/debug/build/steam-proxy/20f8c8dc16913555/out/policy_lifecycle-20f8c8dc16913555)
+
+running 10 tests
+test policy_is_exact_and_revalidated_after_deserialization ... ok
+test canceled_parent_never_constructs_data_plane ... ok
+test admission_precedes_data_plane_construction ... ok
+test restart_validates_first_and_keeps_old_handle_when_close_fails ... ok
+test bandwidth_configuration_is_imported_and_validated ... ok
+test restart_rejects_invalid_tunnel_encryption_without_closing_old ... ok
+test native_factory_rejects_disabled_backends_before_startup ... ok
+test restart_replaces_inner_and_old_clones_remain_closed_on_success_and_failure ... ok
+test websocket_ingress_starts_without_ca_state_or_credentials ... ok
+test edgeone_origin_uses_shared_lifecycle_and_only_dials_for_allowed_traffic ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+     Running tests/routes.rs (target/debug/build/steam-proxy/d9629440aded4784/out/routes-d9629440aded4784)
+
+running 8 tests
+test dynamic_routes_round_trip_and_payload_policy ... ok
+test edgeone_websocket_is_filtered_from_http_candidates_before_probing ... ok
+test canceled_start_drains_probes_and_never_accepts_business_before_publication ... ok
+test startup_collects_failed_and_good_candidates_and_rejects_all_failed ... ok
+test direct_only_start_never_connects_origin_and_close_stops_pending_calls ... ok
+test direct_http_preserves_mapped_identity_and_does_not_replay_business_response ... ok
+test partial_edgeone_mapping_skips_candidate_but_keeps_global_whitelist_denial ... ok
+test known_download_skips_incompatible_cdn_before_http_is_sent ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.47s
+
+     Running tests/serve_connection.rs (target/debug/build/steam-proxy/31c151b8f8ef25fe/out/serve_connection-31c151b8f8ef25fe)
+
+running 4 tests
+test close_cancels_incomplete_client_handshakes_and_future_entry ... ok
+test denied_hostname_and_unregistered_port_do_not_dial ... ok
+test real_destination_http_enters_protocol_without_capture ... ok
+test client_owned_tls_identity_is_used_without_a_state_directory ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running tests/steam_policy.rs (target/debug/build/steam-proxy/edeb483d173b3dbc/out/steam_policy-edeb483d173b3dbc)
+
+running 2 tests
+test steam_suffix_boundaries_reject_unrelated_domains ... ok
+test steam_suffixes_preserve_complete_original_hostname ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tun_stack.rs (target/debug/build/steam-proxy/c1381ff15541af1d/out/tun_stack-c1381ff15541af1d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tunnel_ingress.rs (target/debug/build/steam-proxy/c0b1d31fcc0c3a67/out/tunnel_ingress-c0b1d31fcc0c3a67)
+
+running 1 test
+test each_tunnel_starts_without_ca_and_only_probes_the_node_before_handoff ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests steam_proxy
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

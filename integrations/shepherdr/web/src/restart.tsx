@@ -224,7 +224,7 @@ function SpeedWords({ speed }: { speed: Worn }) {
 
 /* ---------- the window's model button and menu (mods/chat pickParts, mods/chat-models) ---------- */
 
-export type MenuModel = { id: string; name: string; efforts: string[]; defaultEffort?: string | null; fast?: boolean }
+export type MenuModel = { id: string; name: string; icon?: string; efforts: string[]; defaultEffort?: string | null; fast?: boolean }
 export type AgentMenu = { name: string; models: MenuModel[]; perms?: { id: string; label: string }[] }
 type MenuPick = { agent: string; model: string | null; effort: string | null; fast: boolean; perm: string | null }
 type MenuData = { current: MenuPick; menus: Record<string, AgentMenu>; permDefault: Record<string, string>; picks?: Picks; offline?: string | null }
@@ -326,7 +326,7 @@ export function ModelList({ menus, agent, picks, chosen, disabled, phone, onPick
                 <div key={`${x.agent}-${x.id}`} className="group relative flex items-center">
                   <button type="button" role="menuitemradio" aria-checked={on} disabled={disabled} className={clsx(row, onPin && 'pr-9')} onClick={() => pick(x)}>
                     {/* the agent's own mark, Herdr's icon (web/public/agents, from the window's icons) */}
-                    <img src={`agents/${x.agent}.svg`} alt="" aria-hidden className="size-3.5 shrink-0" />
+                    <img src={x.icon === 'typesafe' ? 'providers/typesafe.png' : `agents/${x.agent}.svg`} alt="" aria-hidden className="size-3.5 shrink-0" />
                     <span className="min-w-0 flex-1 truncate">{x.typed ? <>Use <span className="font-medium">{x.id}</span></> : x.name}</span>
                     {x.typed ? <span className="shrink-0 text-[0.6875rem] text-fg3">{menus[x.agent]?.name} id</span> : null}
                     <span className="grid size-3.5 shrink-0 place-items-center">{on ? <CheckIcon className="size-3.5" /> : null}</span>

@@ -1,0 +1,24 @@
+usage: check-sdk.py [-h] [--suite {rust,go,all}] [--dry-run]
+                    [--timeout SECONDS] [--extended]
+                    [--rust-features FEATURES]
+
+Offline SDK tests for this checkout (Python standard library only).
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --suite {rust,go,all}
+                        test Rust, pure Go, or both (default: all)
+  --dry-run             print commands, directories and environment; run
+                        nothing
+  --timeout SECONDS     wall time per command (default: 300, max: 86400)
+  --extended            also test Rust's combined protocols and Go's combined
+                        tags with race
+  --rust-features FEATURES
+                        append an unfiltered Rust --no-default-features
+                        combination; repeatable; allowed: transparent-
+                        proxy,reverse-proxy,tunnel-proxy,vless-
+                        xhttp,websocket,shadowsocks
+
+Requires POSIX process groups, installed Rust/Go toolchains and cached
+dependencies. No downloads or dependency repairs. Tests may listen on
+loopback. See docs/testing.md for limits and failure diagnosis.

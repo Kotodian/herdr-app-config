@@ -1,0 +1,35 @@
+test_interrupt_during_timeout_cleanup_is_not_lost (test_check_sdk.CheckSDKTests) ... FAIL
+
+======================================================================
+FAIL: test_interrupt_during_timeout_cleanup_is_not_lost (test_check_sdk.CheckSDKTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/tools/test_check_sdk.py", line 274, in test_interrupt_during_timeout_cleanup_is_not_lost
+    self.assertEqual(process.returncode, 130, output)
+AssertionError: 124 != 130 : SDK checks: current checkout only; per-command limit 2s
+Environment: CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 GOWORK=off GOENV=off GOFLAGS= GOPROXY=off GOSUMDB=off GONOPROXY=none 'GONOSUMDB=*' GOPRIVATE= GOTOOLCHAIN=local GOTELEMETRY=off
+
+[rust/lockfile] cwd=/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-qt66h0l_/checkout with spaces
+$ git ls-files --error-unmatch Cargo.lock
+
+[rust/lockfile] PASS (exit 0, 0.3s)
+
+[rust/default] cwd=/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-qt66h0l_/checkout with spaces
+$ cargo test --offline --locked
+
+[rust/default] TIMEOUT; process-group cleanup requested (exit 124, 3.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+[rust/no-default-features] cwd=/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-qt66h0l_/checkout with spaces
+$ cargo test --offline --locked --no-default-features
+
+[rust/no-default-features] TIMEOUT; process-group cleanup requested (exit 124, 3.0s)
+Offline failure: check installed toolchain, cached dependencies, compiler diagnostics and test failures; no repair was attempted.
+
+Result: 3 commands completed, 2 failed, 0 not run.
+
+
+----------------------------------------------------------------------
+Ran 1 test in 6.386s
+
+FAILED (failures=1)

@@ -1,0 +1,47 @@
+test_child_signal_exit_is_reported (test_check_sdk.CheckSDKTests) ... ok
+test_default_matrix_directories_arguments_and_offline_environment (test_check_sdk.CheckSDKTests) ... ok
+test_escaped_session_cannot_extend_cleanup_wait (test_check_sdk.CheckSDKTests) ... FAIL
+test_first_failure_is_preserved_and_all_go_checks_run (test_check_sdk.CheckSDKTests) ... ok
+test_help_and_dry_run_do_not_require_tools_or_lockfile (test_check_sdk.CheckSDKTests) ... ok
+test_interrupt_stops_descendants_and_stops_matrix (test_check_sdk.CheckSDKTests) ... ok
+test_invalid_options_fail_before_any_command (test_check_sdk.CheckSDKTests) ... ok
+test_missing_tool_fails (test_check_sdk.CheckSDKTests) ... ok
+test_nonexecutable_tool_fails_to_start (test_check_sdk.CheckSDKTests) ... ok
+test_output_redacts_urls_and_credential_lines_but_keeps_failure (test_check_sdk.CheckSDKTests) ... ok
+test_rust_only_and_extra_combination_is_unfiltered (test_check_sdk.CheckSDKTests) ... ok
+test_success_also_cleans_detached_output_descendants (test_check_sdk.CheckSDKTests) ... ok
+test_timeout_stops_stubborn_child_even_after_parent_exits (test_check_sdk.CheckSDKTests) ... ok
+test_untracked_or_deleted_lockfile_blocks_only_rust (test_check_sdk.CheckSDKTests) ... ok
+
+======================================================================
+FAIL: test_escaped_session_cannot_extend_cleanup_wait (test_check_sdk.CheckSDKTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-4-sdk/tools/test_check_sdk.py", line 216, in test_escaped_session_cannot_extend_cleanup_wait
+    self.assertEqual(result.returncode, 124, result.stdout)
+AssertionError: 1 != 124 : SDK checks: current checkout only; per-command limit 2s
+Environment: CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 GOWORK=off GOENV=off GOFLAGS= GOPROXY=off GOSUMDB=off GONOPROXY=none 'GONOSUMDB=*' GOPRIVATE= GOTOOLCHAIN=local GOTELEMETRY=off
+
+[rust/lockfile] cwd=/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-lxoreg6u/checkout with spaces
+$ git ls-files --error-unmatch Cargo.lock
+
+[rust/lockfile] PASS (exit 0, 0.1s)
+
+[rust/default] cwd=/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-lxoreg6u/checkout with spaces
+$ cargo test --offline --locked
+Traceback (most recent call last):
+  File "/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-lxoreg6u/checkout with spaces/tools/check-sdk.py", line 259, in <module>
+    sys.exit(main())
+  File "/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-lxoreg6u/checkout with spaces/tools/check-sdk.py", line 223, in main
+    code, output, result = run(command, directory, {**environment, **overrides}, args.timeout)
+  File "/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-lxoreg6u/checkout with spaces/tools/check-sdk.py", line 182, in run
+    group_signal(process, signal.SIGKILL)
+  File "/private/var/folders/7x/877jq96j3mb5zgrk152k2jch0000gn/T/sdk-check-lxoreg6u/checkout with spaces/tools/check-sdk.py", line 128, in group_signal
+    os.killpg(process.pid, signum)
+PermissionError: [Errno 1] Operation not permitted
+
+
+----------------------------------------------------------------------
+Ran 14 tests in 20.538s
+
+FAILED (failures=1)

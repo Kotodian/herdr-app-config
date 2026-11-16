@@ -3,9 +3,9 @@ import { hc } from "herdr";
 
 export const id = "go-proof-f2db";
 export const title = "SPS-2: \u5b9e\u73b0 Go \u591a\u7ebf\u8def\u8def\u7531\u4e0e\u7b56\u7565\u5f15\u64ce \u00b7 Proof";
-export const version = 1;
+export const version = 4;
 /** The newest version when this one was installed (an older version shows only when picked). */
-export const latest = 1;
+export const latest = 4;
 export const folder = "__HERDR_SYNC_HOME__/go/src/github.com/Kotodian/steam-proxy-sdk";
 /** The machine the artifact (and its agent) is on, null for this one. */
 export const machine = null;
