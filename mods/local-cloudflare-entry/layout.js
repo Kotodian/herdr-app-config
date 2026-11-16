@@ -6,8 +6,9 @@ import { layout, run, shared, setShared } from "herdr";
 export const LAYOUT_INTENT = "kanso.layout";
 export const STRIP_INTENT = "kanso.layout.strip";
 
-// Right after layout.switch, layout() can still read the previous tree, so only Kanso's tree (the one with the strip map) is ever written.
-export const isKansoTree = (n) => n?.id === "strip-map" || (n?.children ?? []).some(isKansoTree);
+// During layout.switch, layout() may still be the old tree. Check the selected layout before writing it.
+const hasKansoTree = (n) => n?.id === "strip-map" || (n?.children ?? []).some(hasKansoTree);
+export const isKansoTree = (n) => shared("layout") === "kanso" && hasKansoTree(n);
 
 export function walkLayout(node, id) {
   if (node?.id === id) return node;
@@ -104,9 +105,9 @@ export function rememberLayout(patch) {
 }
 
 export function commitLayout(patch) {
-  rememberLayout(patch);
   const tree = layout();
-  if (!tree) return false;
+  if (!isKansoTree(tree)) return false;
+  rememberLayout(patch);
   const painted = paintLayout(tree);
   if (isKansoTree(painted)) run("layout.set", { layout: painted });
   return true;

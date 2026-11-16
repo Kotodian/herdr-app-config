@@ -11,6 +11,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import urllib.request
@@ -22,11 +23,39 @@ APP=Path.home()/'.config/herdr-app'
 STATE=Path.home()/'.config/herdr-app-sync/native-state.json'
 ROOT=STATE.parent/'repository'
 MARKER=b'__HERDR_' + b'SYNC_HOME__'
-TEXT={'.js','.mjs','.cjs','.ts','.py','.sh','.json','.md','.txt','.svg','.html','.css'}
+TEXT={'.js','.mjs','.cjs','.ts','.tsx','.jsx','.py','.sh','.swift','.json','.md','.txt','.svg','.html','.css','.toml','.lock','.webmanifest'}
 ASSETS={'.png','.jpg','.jpeg','.webp','.ttf','.otf','.woff','.woff2'}
 OMIT={'node_modules','__pycache__','.git','bin','data','target','dist'}
 SECRET=re.compile(rb'gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9_-]{25,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|Bearer [A-Za-z0-9._-]{30,}')
 COORDINATOR=PurePosixPath('integrations/herdr-project-coordinator')
+SHEPHERDR=PurePosixPath('integrations/shepherdr')
+SHEPHERDR_FOLDERS={'bin','core','docs','guard','layouts','lib','mods','service','templates','web'}
+SHEPHERDR_ROOT_FILES={'package.json','bun.lock','bunfig.toml','install.sh','keys.json','LICENSE','LICENSE-herdr','NOTICE',
+                     'README.md','RECIPE.md','AGENTS.md','tsconfig.json'}
+SHEPHERDR_EXECUTABLES={'install.sh','bin/shepherdr','bin/herdr-browser','bin/herdr-browser-view','bin/herdr-secret',
+                       'bin/sync-shared','guard/herdr-app','mods/tasks/bin/herdr-task','mods/artifacts/bin/herdr-artifact'}
+
+def shepherdr_source(rel):
+    """Portable release code, including helpers and built web assets; never machine data."""
+    if rel.parts[:2]!=SHEPHERDR.parts:return False
+    tail=rel.parts[2:]
+    if len(tail)==1:return tail[0] in SHEPHERDR_ROOT_FILES
+    if len(tail)<2 or tail[0] not in SHEPHERDR_FOLDERS:return False
+    if any(x in OMIT-{'bin','dist'} or x.startswith('.') for x in tail):return False
+    if 'dist' in tail and tail[:2]!=('web','dist'):return False
+    name=PurePosixPath(*tail).as_posix()
+    return rel.suffix in TEXT|ASSETS or name in SHEPHERDR_EXECUTABLES or rel.name in ('LICENSE','NOTICE','COPIES')
+
+def text_file(path):
+    rel=PurePosixPath(path.as_posix()) if isinstance(path,Path) else path
+    return rel.suffix in TEXT or rel.name in ('LICENSE','LICENSE-herdr','NOTICE','COPIES') or (
+        shepherdr_source(rel) and not rel.suffix)
+
+def shepherdr_mods(app):
+    path=app.joinpath(*SHEPHERDR.parts)/'lib/addons.json'
+    if not path.exists():return set()
+    data=read_json(path,{})
+    return set(data.get('core',{}).get('mods',[]))|{m for addon in data.get('addons',[]) for m in addon.get('mods',[])}
 
 def coordinator_source(rel):
     """Only the installed coordinator's program and bundled skill, never its cache or state."""
@@ -53,7 +82,10 @@ def native(data):return data.replace(MARKER,str(Path.home()).encode())
 
 def collect(app):
     installed=read_json(app/'installed.json',{})
-    mods=[p for p in (app/'mods').iterdir() if p.is_dir() and not p.is_symlink() and not p.name.startswith('.') and p.name not in installed]
+    shepherdr=app.joinpath(*SHEPHERDR.parts)
+    managed=shepherdr_mods(app)
+    if (shepherdr/'bin/shepherdr').exists():managed.add('hcoord')
+    mods=[p for p in (app/'mods').iterdir() if p.is_dir() and not p.is_symlink() and not p.name.startswith('.') and p.name not in installed and p.name not in managed]
     sources=[]
     for mod in mods:
         for p in mod.rglob('*'):
@@ -67,15 +99,33 @@ def collect(app):
     sources.extend(p for p in (app/'themes').glob('*.json') if p.stem!='atom-one-dark' and p.stem not in installed)
     sources.extend(app/name for name in ('keys.json','settings.json','programs.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore') if (app/name).exists())
     coordinator=app.joinpath(*COORDINATOR.parts)
-    if coordinator.exists():
+    if coordinator.exists() and not (shepherdr/'bin/shepherdr').exists():
         for folder in ('src','plugin'):
             sources.extend(p for p in (coordinator/folder).rglob('*') if p.is_file() and coordinator_source(PurePosixPath(p.relative_to(app).as_posix())))
         sources.extend(coordinator/name for name in ('package.json','bun.lock','LICENSE') if (coordinator/name).exists())
+    if shepherdr.exists():
+        for directory,dirs,names in os.walk(shepherdr):
+            dirs[:]=[d for d in dirs if not d.startswith('.') and d not in OMIT-{'bin','dist'}]
+            for name in names:
+                p=Path(directory)/name
+                if p.is_file() and shepherdr_source(PurePosixPath(p.relative_to(app).as_posix())):sources.append(p)
     files={}
     for p in sources:
         if p.is_symlink():raise RuntimeError('Refusing symlink: '+str(p))
         rel=p.relative_to(app).as_posix();data=p.read_bytes()
-        if p.suffix in TEXT or p.name in ('LICENSE','NOTICE'):data=portable(data)
+        if text_file(PurePosixPath(rel)):data=portable(data)
+        if rel=='layouts/shepherdr.json' and (shepherdr/'layouts/shepherdr.json').exists():
+            live=json.loads(data)
+            source=json.loads(portable((shepherdr/'layouts/shepherdr.json').read_bytes()))
+            def nodes(value):
+                yield value
+                for child in value.get('children',[]):yield from nodes(child)
+            defaults={n['id']:n.get('content') for n in nodes(source) if n.get('id') in ('tasks-thread-term','artifacts-view-body')}
+            for n in nodes(live):
+                if n.get('id') in defaults:
+                    if defaults[n['id']] is None:n.pop('content',None)
+                    else:n['content']=defaults[n['id']]
+            data=(json.dumps(live,ensure_ascii=False,indent=2)+'\n').encode()
         if SECRET.search(data):raise RuntimeError('Possible secret; export stopped at '+rel)
         files[rel]=data
     return files,sorted(p.name for p in mods)
@@ -99,9 +149,11 @@ def validate(folder=None):
     for name,info in m['files'].items():
         rel=PurePosixPath(name)
         if rel.is_absolute() or '..' in rel.parts or not rel.parts:raise RuntimeError('Unsafe snapshot path')
-        integration=coordinator_source(rel)
+        shepherdr=shepherdr_source(rel)
+        integration=coordinator_source(rel) or shepherdr
         allowed=integration or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore')
-        if not allowed or any((x.startswith('.') and name!='.gitignore' and not integration) or x in OMIT for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
+        if not allowed or any((x.startswith('.') and name!='.gitignore' and not integration) or
+                              (x in OMIT and not (shepherdr and x in ('bin','dist'))) for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
         if rel.parts[0]=='mods' and (rel.suffix not in TEXT|ASSETS and rel.name not in ('LICENSE','NOTICE')):raise RuntimeError('Unexpected mod file')
         p=folder.joinpath(*rel.parts)
         if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent!=folder.parent):raise RuntimeError('Snapshot contains a symlink')
@@ -130,7 +182,7 @@ def remember_bases(files):
     """Keep the exact exported text needed for a later three-way merge."""
     folder=STATE.parent/'merge-bases'
     for name,data in files.items():
-        if PurePosixPath(name).suffix not in TEXT and PurePosixPath(name).name not in ('LICENSE','NOTICE'):continue
+        if not text_file(PurePosixPath(name)):continue
         path=folder/digest(data)
         if path.exists():continue
         folder.mkdir(parents=True,exist_ok=True)
@@ -166,7 +218,7 @@ def apply(app,overwrite=False,execute=False,expected_local=None):
     for name,data in files.items():
         p=app/name
         if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent!=app.parent):raise RuntimeError('Destination contains symlink: '+name)
-        local=portable(p.read_bytes()) if p.exists() and p.suffix in TEXT else p.read_bytes() if p.exists() else None
+        local=portable(p.read_bytes()) if p.exists() and text_file(PurePosixPath(name)) else p.read_bytes() if p.exists() else None
         current=None if local is None else digest(local);remote=digest(data);old=baseline.get(name)
         if current==remote:continue
         if old is not None and current!=old and remote==old:continue # preserve local-only edits
@@ -182,7 +234,7 @@ def apply(app,overwrite=False,execute=False,expected_local=None):
         if p.exists():
             saved=backup/name;saved.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,saved)
         p.parent.mkdir(parents=True,exist_ok=True)
-        tmp=p.with_name('.'+p.name+'.sync-tmp');tmp.write_bytes(native(data) if p.suffix in TEXT else data);tmp.replace(p)
+        tmp=p.with_name('.'+p.name+'.sync-tmp');tmp.write_bytes(native(data) if text_file(PurePosixPath(name)) else data);tmp.replace(p)
         if p.suffix=='.sh':p.chmod(0o755)
     # Host-specific executable locations are generated locally, never copied from another Mac.
     if (app/'mods/gitview').exists():
@@ -191,7 +243,36 @@ def apply(app,overwrite=False,execute=False,expected_local=None):
         if not config.exists() or config.read_text()!=text:
             if config.exists():shutil.copy2(config,backup/'gitview-config.json')
             config.write_text(text)
-    save_state(files);print('Applied. Backup: '+str(backup));print('Select kanso in Herdr App if needed. Run doctor for checks.')
+    shepherdr_runtime(app)
+    save_state(files);print('Applied. Backup: '+str(backup));print('Select a layout in Herdr App if needed. Run doctor for checks.')
+
+def shepherdr_runtime(app):
+    """Register this machine's helpers, hooks and service from the synchronized checkout."""
+    source=app.joinpath(*SHEPHERDR.parts)
+    if not (source/'bin/shepherdr').is_file():return
+    files,_=collect(app)
+    release={name:digest(data) for name,data in files.items() if shepherdr_source(PurePosixPath(name))}
+    fingerprint=digest(json.dumps(release,sort_keys=True).encode())
+    stamp=STATE.parent/'shepherdr-runtime.json'
+    record=app/'data/shepherdr/installed.json'
+    links=('shepherdr','herdr-task','herdr-artifact','herdr-secret','herdr-browser')
+    if (read_json(stamp,{}).get('source_sha256')==fingerprint and record.exists() and
+        all((Path.home()/'.local/bin'/name).exists() for name in links)):return
+    for name in SHEPHERDR_EXECUTABLES:
+        path=source/name
+        if path.is_file():path.chmod(0o755)
+    command=[sys.executable,str(source/'bin/shepherdr'),'install','--keys','keep','--source',str(source)]
+    result=subprocess.run(command,cwd=source,capture_output=True,text=True,timeout=1200)
+    if result.returncode or 'NOT DONE:' in result.stdout:
+        raise RuntimeError('Shepherdr local installation failed:\n'+'\n'.join((result.stdout+result.stderr).splitlines()[-15:]))
+    result=subprocess.run([sys.executable,str(source/'bin/shepherdr'),'doctor'],cwd=source,capture_output=True,text=True,timeout=120)
+    if result.returncode:raise RuntimeError('Shepherdr doctor failed:\n'+'\n'.join((result.stdout+result.stderr).splitlines()[-15:]))
+    stamp.parent.mkdir(parents=True,exist_ok=True)
+    # A first install may build the web app: acknowledge those generated assets too.
+    files,_=collect(app)
+    release={name:digest(data) for name,data in files.items() if shepherdr_source(PurePosixPath(name))}
+    stamp.write_text(json.dumps({'source_sha256':digest(json.dumps(release,sort_keys=True).encode())})+'\n')
+    print('Shepherdr helpers, hooks and service registered from '+str(source),flush=True)
 
 def runtime(app):
     if platform.system()!='Darwin':raise RuntimeError('This runtime installer supports macOS')
@@ -445,6 +526,7 @@ def auto_sync(app):
             return
         if incoming:apply(app,False,True,expected_local=hashes(local))
         else:save_state(merged)
+        shepherdr_runtime(app)
         commit=git('rev-parse','HEAD')
         record_status('ok',commit=commit,uploaded_files=outgoing,applied_files=incoming,auto_merged=resolved)
         print(f'Auto sync OK: {outgoing} uploaded, {incoming} applied; {commit[:12]}',flush=True)

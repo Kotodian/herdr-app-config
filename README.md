@@ -1,6 +1,6 @@
 # Herdr App：clone 后打开即用
 
-这是 Herdr App 可直接读取的配置目录，包含 kansō 布局、主题、键位，以及 Magpie、Komari、Gitview、Cloudflare、TAPD 原生面板。
+这是 Herdr App 可直接读取的配置目录，包含 kansō、Shepherdr 布局、主题、键位，以及 Magpie、Komari、Gitview、Cloudflare、TAPD 原生面板。
 
 在已经安装 Herdr、Git，并具备此私仓访问权限的新 Mac 上，**在首次启动 Herdr App 前**执行：
 
@@ -10,12 +10,15 @@ git clone git@github.com:Kotodian/herdr-app-config.git ~/.config/herdr-app
 
 然后正常打开 Herdr App。无需运行恢复、runtime、doctor 或 enable-auto 命令。
 
+Shepherdr 的 Assistant、Worker、Reviewer 指令已配置 `gamehub-git-release`：适用项目从 `dev` 开发、PR 指向 `dev`，提交使用团队约定的格式，正式发布先核对实际 tag 工作流和验证结果。Git 操作按具体任务的授权执行。这些指令保存在 `integrations/shepherdr/templates/`，规范副本在 `integrations/shepherdr/docs/gamehub-git-release.md`，会随配置同步并安装到本机角色模板。
+
 首次打开时，原生引导模块会自动：
 
 1. 选择 kansō 布局，保留本机 core 会话。
 2. 下载与本机 Apple Silicon / Intel 架构对应的 Gitview v0.5.0 执行文件，校验固定 SHA256，并生成本机路径配置。
 3. 初始化本机同步基线和独立传输 checkout。
 4. 注册登录时及每 5 分钟执行的自动双向同步任务。
+5. 如果配置中包含 `integrations/shepherdr`，从此目录安装 Shepherdr，并在本机注册辅助命令、Claude/Codex hooks 和后台服务。需要本机已有 herdr-core、Python、Git 和已登录的 Codex 或 Claude；缺少 Bun 时由 Shepherdr 安装器处理。
 
 底部“同步 ✓”显示同步状态，点击可立即同步。断网失败会显示“同步 !”，后续自动重试。另一台电脑初次接入也只需 clone 后打开 App。
 
@@ -30,6 +33,9 @@ Magpie、Cloudflare、TAPD 的账号凭据不会进入 Git。已有本机连接�
 ## 自动同步规则
 
 - 新增、修改的布局、主题、键位和自定义面板源码自动同步。
+- Shepherdr 的完整发行源码与 Web 构建资源位于 `integrations/shepherdr/`，随配置同步；安装出的 mods 由接收端安装器生成，不重复同步半套安装文件。
+- 已修复 Shepherdr 对 Codex 自定义模型目录的读取：优先读取本机 `config.toml` 的 `model_catalog_json`，支持 `CODEX_HOME`；各台机器沿用自己的 Codex 配置与模型目录。
+- Shepherdr 的任务、聊天、令牌、worktree、浏览器登录和本机服务注册不进入 Git。每台机器保留自己的运行数据。
 - 用本机上次成功同步的版本比较两边，合并不同文件上的改动。
 - 同文件两边改成不同内容时停止覆盖，保留双方版本并记录错误。
 - 删除操作不自动传播；涉及删除的差异需要明确处理。

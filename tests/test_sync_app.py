@@ -221,5 +221,154 @@ class PublishedBaselineTests(unittest.TestCase):
                 self.assertEqual(json.loads(state.read_text())["files"], sync.hashes(original))
 
 
+class ShepherdrSyncTests(unittest.TestCase):
+    def make_app(self, root):
+        app=root/"app"
+        for name in ("mods","layouts","themes"):
+            (app/name).mkdir(parents=True)
+        source=app.joinpath(*sync.SHEPHERDR.parts)
+        (source/"bin").mkdir(parents=True)
+        (source/"bin/shepherdr").write_text("#!/usr/bin/env python3\n")
+        (source/"lib").mkdir()
+        (source/"lib/addons.json").write_text('{"core":{"mods":["chat"]},"addons":[]}')
+        return app,source
+
+    def test_release_round_trip_keeps_helpers_and_assets_but_omits_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve()
+            app,source=self.make_app(root)
+            payload={
+                "keys.json":'{"layout:shepherdr":{}}',
+                "mods/tasks/bin/herdr-task":"#!/usr/bin/env python3\n",
+                "mods/chat/audio.swift":"import Foundation\n",
+                "web/src/App.tsx":"export default function App() { return null; }\n",
+                "web/dist/index.html":"<html></html>",
+                "web/dist/manifest.webmanifest":'{"name":"Shepherdr"}',
+                "web/dist/assets/app.js":"console.log('ready')",
+                "web/dist/assets/font.woff2":"font data",
+                "node_modules/package/index.js":"excluded dependency",
+                "data/tasks.json":"excluded tasks",
+                "web/dist/.env":"excluded credential",
+            }
+            for name,text in payload.items():
+                path=source/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(text)
+            (app/"mods/chat").mkdir()
+            (app/"mods/chat/main.js").write_text("// generated installed copy")
+            files,mods=sync.collect(app)
+            prefix=sync.SHEPHERDR.as_posix()+"/"
+            for name in list(payload)[:8]:
+                self.assertIn(prefix+name,files,name)
+            for name in list(payload)[8:]:
+                self.assertNotIn(prefix+name,files,name)
+            self.assertIn(prefix+"bin/shepherdr",files)
+            self.assertIn(prefix+"lib/addons.json",files)
+            self.assertNotIn("chat",mods)
+            self.assertNotIn("mods/chat/main.js",files)
+            repo=root/"repo";repo.mkdir()
+            with patch.object(sync,"ROOT",repo):
+                sync.snapshot(files,mods)
+                self.assertEqual(sync.validate()[1],files)
+
+    def test_extensionless_helpers_are_portable_on_another_home(self):
+        path=sync.SHEPHERDR/"bin/shepherdr"
+        self.assertTrue(sync.text_file(path))
+        data=("#!"+str(Path.home())+"/.local/bin/python3\n").encode()
+        self.assertNotIn(str(Path.home()).encode(),sync.portable(data))
+
+    def test_source_policy_rejects_machine_state_and_hidden_files(self):
+        for name in ("data/tasks.json","state/service/token.json","node_modules/p/index.js",
+                     "bin/.credentials.json","mods/chat/data/session.json","web/dist/.env","web/.git/config"):
+            self.assertFalse(sync.shepherdr_source(sync.SHEPHERDR/name),name)
+
+    def test_local_registration_restores_permissions_and_only_repeats_for_source_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve()
+            app,source=self.make_app(root)
+            home=root/"home"
+            for name in ("shepherdr","herdr-task","herdr-artifact","herdr-secret","herdr-browser"):
+                link=home/".local/bin"/name;link.parent.mkdir(parents=True,exist_ok=True)
+                link.symlink_to(source/"bin/shepherdr")
+            record=app/"data/shepherdr/installed.json"
+            record.parent.mkdir(parents=True);record.write_text("{}")
+            state=root/"state/native-state.json"
+            result=subprocess.CompletedProcess([],0,stdout="whole\n",stderr="")
+            with patch.object(sync,"STATE",state),patch.object(sync.Path,"home",return_value=home), \
+                 patch.object(sync.subprocess,"run",return_value=result) as execute:
+                sync.shepherdr_runtime(app)
+                sync.shepherdr_runtime(app)
+                self.assertEqual(execute.call_count,2)
+                install=execute.call_args_list[0]
+                self.assertEqual(install.args[0][1],str(source/"bin/shepherdr"))
+                self.assertIn("--keys",install.args[0])
+                self.assertNotIn("--root",install.args[0])
+                self.assertNotIn("env",install.kwargs)
+                self.assertEqual((source/"bin/shepherdr").stat().st_mode&0o777,0o755)
+                (source/"bin/shepherdr").write_text("#!/usr/bin/env python3\n# new release\n")
+                sync.shepherdr_runtime(app)
+                self.assertEqual(execute.call_count,4)
+
+    def test_failed_local_install_is_retryable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve()
+            app,_=self.make_app(root)
+            state=root/"state/native-state.json"
+            result=subprocess.CompletedProcess([],1,stdout="",stderr="missing dependency")
+            with patch.object(sync,"STATE",state),patch.object(sync.subprocess,"run",return_value=result):
+                with self.assertRaisesRegex(RuntimeError,"missing dependency"):
+                    sync.shepherdr_runtime(app)
+                self.assertFalse((state.parent/"shepherdr-runtime.json").exists())
+
+
+class KansoLayoutSwitchTests(unittest.TestCase):
+    def test_stale_kanso_tree_cannot_overwrite_a_newly_selected_layout(self):
+        script = r"""
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+const root = process.argv[2];
+let checked = 0;
+for (const name of fs.readdirSync(path.join(root, "mods"))) {
+    const file = path.join(root, "mods", name, "layout.js");
+    if (!fs.existsSync(file)) continue;
+    let source = fs.readFileSync(file, "utf8");
+    if (!source.includes("export const isKansoTree")) continue;
+    const state = new Map([["layout", "kanso"]]);
+    const calls = [];
+    const tree = {id: "root", children: [
+        {id: "sidebar", size: {px: 240}},
+        {id: "strip-map", children: []},
+    ]};
+    globalThis.__herdr = {
+        layout: () => tree,
+        run: (...args) => calls.push(args),
+        shared: key => state.get(key),
+        setShared: (key, value) => state.set(key, value),
+        window: () => ({platform: "macos"}),
+    };
+    source = source.replace(/import \{([^}]+)\} from "herdr";/,
+                            "const {$1} = globalThis.__herdr;");
+    const mod = await import("data:text/javascript;base64," +
+                             Buffer.from(source).toString("base64") + "#" + name);
+    assert.equal(mod.isKansoTree(tree), true, name);
+    assert.equal(mod.commitLayout({}), true, name);
+    assert.equal(calls[0][0], "layout.set", name);
+    calls.length = 0;
+    state.set("layout", "shepherdr");
+    assert.equal(mod.isKansoTree(tree), false, name);
+    assert.equal(mod.commitLayout({}), false, name);
+    mod.setRail?.(false, 76);
+    assert.deepEqual(calls, [], name + " wrote to Shepherdr using the stale Kanso tree");
+    checked++;
+}
+assert.ok(checked >= 13, "Expected every installed Kanso layout helper");
+console.log(`${checked} layout helpers reject writes after switching`);
+"""
+        result = subprocess.run(
+            ["node", "--input-type=module", "-", str(Path(SPEC.origin).parent)],
+            input=script, capture_output=True, text=True, timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
