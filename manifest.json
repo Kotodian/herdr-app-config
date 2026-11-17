@@ -5652,6 +5652,9 @@
     "mods/local-gitview-entry/mod.json": {
       "sha256": "f27c83fb4fd4b98511a7a89070560e2ee6fab9aa31b1b44a48985045a19179b0"
     },
+    "mods/local-issues/actions.js": {
+      "sha256": "9f08a934bae23e026a78767cbed148d93a1f9818fe73723643d8d6e2881bc7a9"
+    },
     "mods/local-issues/context-source.js": {
       "sha256": "9990eb64769aab6de7572a5d915be71a174e2e6f25e1c69fd0d905657bef2563"
     },
@@ -5659,7 +5662,7 @@
       "sha256": "2a4f86a88ba564f741c8fe6b95df377c77d3ac5ec6c0bb895ecd43e75a33cfbb"
     },
     "mods/local-issues/main.js": {
-      "sha256": "de4292ac18c40b1602a20ce30ac86d62f62ceb6cfdceb3a46d9846118900fab9"
+      "sha256": "957e358f9ce9084dbaf72f5ce6886054a5bc0c4714c77e4a98afd5d25e6185fe"
     },
     "mods/local-issues/mod.json": {
       "sha256": "49cb779576ddf913caf027a638e4cff3d32baee0314a9d80e72e6ca0f73a57f6"
@@ -5731,7 +5734,7 @@
       "sha256": "86a888b027478e108f161035301a8c9adaf31c2a9d79b33c17e109f89b09379c"
     },
     "mods/local-tapd/main.js": {
-      "sha256": "7e3d89300cb89e39cd8bc97179ade4df71e3dce85f2f7db62882ef2315505c86"
+      "sha256": "b19b80c89e52bcc287ceab9535c4c3096a178f5d05bdd33f1ce8c4a0fe9661d5"
     },
     "mods/local-tapd/mod.json": {
       "sha256": "64c721e077fbfbb0b04ddc155ba3f8fad1abb713893779bbeff5869873a33126"
@@ -5740,7 +5743,7 @@
       "sha256": "3cfc0848a28e96c31aa311f13cbde8d9552da1efe21e3e30356394dc83745131"
     },
     "mods/local-tapd/tapd_bridge.py": {
-      "sha256": "3703a52e39d163facad49b5846541844eed11ab43e47ac4dd49473575af50845"
+      "sha256": "fed280fcb1a4ad0b9444089e330e44558813bb5eb218d5ebc97051e6bf769843"
     },
     "mods/local-tapd/ui.js": {
       "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
