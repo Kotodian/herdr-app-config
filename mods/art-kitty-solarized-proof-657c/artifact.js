@@ -3,9 +3,9 @@ import { hc } from "herdr";
 
 export const id = "kitty-solarized-proof-657c";
 export const title = "KIT-1: \u4e0b\u8f7d\u5e76\u6539\u9020 Kitty Solarized \u78e8\u7802\u4e3b\u9898 \u00b7 Proof";
-export const version = 2;
+export const version = 4;
 /** The newest version when this one was installed (an older version shows only when picked). */
-export const latest = 2;
+export const latest = 4;
 export const folder = "/private/tmp/kitty-appearance-work";
 /** The machine the artifact (and its agent) is on, null for this one. */
 export const machine = null;
