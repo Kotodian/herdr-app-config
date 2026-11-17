@@ -270,6 +270,60 @@
                         }
                       ],
                       "active": "artifacts-list"
+                    },
+                    {
+                      "id": "magpie",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-magpie",
+                        "props": {
+                          "role": "panel"
+                        }
+                      }
+                    },
+                    {
+                      "id": "komari",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-komari",
+                        "props": {
+                          "role": "panel"
+                        }
+                      }
+                    },
+                    {
+                      "id": "gitview",
+                      "type": "block",
+                      "content": {
+                        "mod": "gitview"
+                      }
+                    },
+                    {
+                      "id": "cloudflare",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-cloudflare",
+                        "props": {
+                          "role": "panel"
+                        }
+                      }
+                    },
+                    {
+                      "id": "tapd",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-tapd",
+                        "props": {
+                          "role": "panel"
+                        }
+                      }
+                    },
+                    {
+                      "id": "agenttrail",
+                      "type": "block",
+                      "content": {
+                        "mod": "agenttrail"
+                      }
                     }
                   ],
                   "active": "tasks",
@@ -308,14 +362,48 @@
           ]
         },
         {
-          "id": "status",
-          "type": "block",
-          "content": {
-            "mod": "workspace-status-chat"
-          },
+          "id": "status-row",
+          "type": "row",
           "size": {
             "px": 28
-          }
+          },
+          "resizable": false,
+          "children": [
+            {
+              "id": "status",
+              "type": "block",
+              "content": {
+                "mod": "workspace-status-chat"
+              },
+              "size": {
+                "weight": 1
+              },
+              "min": 80
+            },
+            {
+              "id": "local-tools-entry",
+              "type": "block",
+              "size": {
+                "px": 438
+              },
+              "content": {
+                "mod": "local-tools"
+              }
+            },
+            {
+              "id": "config-sync-entry",
+              "type": "block",
+              "size": {
+                "px": 82
+              },
+              "content": {
+                "mod": "local-sync-bootstrap",
+                "props": {
+                  "role": "entry"
+                }
+              }
+            }
+          ]
         }
       ],
       "resizable": false

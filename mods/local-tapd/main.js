@@ -2,7 +2,7 @@ import { View, div, svg } from "gpui-kit";
 import { h_flex, v_flex, Button, Input, InputState, TextView } from "gpui-base";
 import { theme, exec, appHome, home, nextCommand } from "herdr";
 import { tokens, G, T, quietTabs, iconButton, section, controlInput, quietLink } from "./ui.js";
-import { commitLayout } from "./layout.js";
+import { commitLayout } from "./panels.js";
 const ICON="mods/local-tapd/icon.svg";
 const priorityName={urgent:"紧急",high:"高",medium:"中",low:"低",insignificant:"可忽略",'1':"紧急",'2':"高",'3':"中",'4':"低"};
 const severityName={fatal:"致命",serious:"严重",normal:"一般",prompt:"提示",advice:"建议"};

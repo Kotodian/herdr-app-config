@@ -2,7 +2,7 @@ import { View, div, svg } from "gpui-kit";
 import { h_flex, v_flex, Button, Input, InputState, Textarea, TextareaState } from "gpui-base";
 import { theme, exec, appHome, props, shared, setShared, nextCommand, layout } from "herdr";
 import { tokens, G, T, quietTabs, quietLink, iconButton, section, controlInput, toggleSwitch } from "./ui.js";
-import { commitLayout, walkLayout } from "./layout.js";
+import { commitLayout, walkLayout, panelIsOpen } from "./panels.js";
 const MOD = "local-cloudflare", ICON = "mods/local-cloudflare/icon.svg";
 const TYPES = ["A", "AAAA", "CNAME", "TXT", "MX", "NS"];
 const ttlText = n => Number(n) === 1 ? "自动" : `${n} 秒`;
@@ -44,7 +44,7 @@ export default class Cloudflare extends View {
   }
   open() {
     const body = walkLayout(layout(), "panel-body");
-    if (body) commitLayout({ panel: !body.hidden && body.children?.[0]?.id === "cloudflare" ? null : { id: "cloudflare", type: "block", content: { mod: MOD, props: { role: "panel" } } } });
+    if (body) commitLayout({ panel: panelIsOpen("cloudflare") ? null : { id: "cloudflare", type: "block", content: { mod: MOD, props: { role: "panel" } } } });
   }
   async request(args) {
     const r = await exec("python3", [`${appHome()}/mods/${MOD}/cloudflare.py`, JSON.stringify(args)], { timeout: 90000 });

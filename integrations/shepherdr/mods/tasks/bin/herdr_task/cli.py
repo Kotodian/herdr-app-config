@@ -244,7 +244,7 @@ def main():
     c.add_argument("--working", action="store_true", help="include live worktree edits; this view cannot be approved")
     c = cmd("approve-review", cmd_approve_review, "the person's Diff screen approves the exact displayed commits")
     c.add_argument("--snapshot", required=True, help="the comparison shown by review-diff")
-    from .human_review import cmd_review_comment, cmd_request_changes
+    from .human_review import cmd_review_comment, cmd_request_changes, cmd_sync_review_comments
     c = cmd("review-comment", cmd_review_comment, "save a person's draft PR review comment")
     c.add_argument("--snapshot", required=True)
     c.add_argument("--body")
@@ -254,6 +254,7 @@ def main():
     c.add_argument("--remove", help="remove a draft comment by id")
     c = cmd("request-changes", cmd_request_changes, "send the person's draft comments to the worker for fixes")
     c.add_argument("--snapshot", required=True)
+    cmd("sync-review-comments", cmd_sync_review_comments, "retry publishing already submitted human comments to the PR")
     c = cmd("start", cmd_start, "start a task's agent (no tab: an hc child of the space's coordinator)")
     agent_opts(c)
     c.add_argument("--space")

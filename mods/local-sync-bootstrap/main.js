@@ -14,10 +14,10 @@ export default class ConfigSync extends View {
     if(!shared("layout"))return;
     if(!shared("local.sync.onboarded")){
       setShared("local.sync.onboarded",true);
-      if(shared("layout")==="main"){run("layout.switch",{name:"kanso"});return;}
+      if(shared("layout")==="main"){run("layout.switch",{name:"shepherdr"});return;}
     }
-    // First discovery can dock a copy; kanso already has its compact status entry.
-    if(!props()?.role&&shared("layout")==="kanso"&&hasEntry(layout())){
+    // First discovery can dock a copy; Shepherdr already has its compact status entry.
+    if(!props()?.role&&shared("layout")==="shepherdr"&&hasEntry(layout())){
       run("layout.set",{layout:withoutDock(layout())});return;
     }
     this.sync(cx,true);

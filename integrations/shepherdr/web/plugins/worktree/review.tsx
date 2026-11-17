@@ -2,12 +2,12 @@ import clsx from 'clsx'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { act } from '@client/kernel.ts'
 import { Dialog } from '@client/rowmenu.tsx'
-import { patchRows, fileTree, reviewItems, diffMode } from '@core/pr-diff.js'
+import { patchRows, fileTree, reviewItems, reviewHistory, diffMode } from '@core/pr-diff.js'
 import { colorDiff, codeSpans, syntaxColor } from '@core/pr-syntax.js'
 import type { Task } from '@shared/types.ts'
 
 type ChangedFile = { path: string; status: string; add: number; del: number }
-type Comment = { id: string; snapshot: string; head: string; path?: string; line?: number; side: 'LEFT' | 'RIGHT'; body: string; status: string }
+type Comment = { id: string; snapshot: string; head: string; path?: string; line?: number; side: 'LEFT' | 'RIGHT'; body: string; status: string; pr_comment?: { url: string }; pr_sync_error?: string }
 type Target = { snapshot: string; path: string; line: number; side: 'LEFT' | 'RIGHT' }
 type Review = {
   snapshot: string; head: string; merge_base: string; base: string; branch: string; state: string
@@ -238,6 +238,18 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
             </button>)}
             {!files.length ? <p className="p-4 text-xs text-fg3">{loading ? '正在读取…' : '没有代码差异'}</p> : null}
           </div>
+          {comments.length ? <div className="flex max-h-64 shrink-0 flex-col border-t border-line">
+            <div className="shrink-0 px-3 py-2 text-xs font-medium">审核意见 · {comments.length}</div>
+            <div className="min-h-0 overflow-y-auto px-3 pb-3 text-xs">
+              {reviewHistory(comments, data?.snapshot).map((c: Comment & { outdated: boolean }) => <div key={c.id} className="mb-2 space-y-1 rounded bg-sel p-2">
+                <div className="text-fg3">{c.outdated ? '旧提交 · ' : ''}{c.head?.slice(0, 8)} · {c.status === 'changes' ? '待人工复核' : commentStatus[c.status] ?? c.status}</div>
+                <div className="break-all text-fg3">{c.path ?? 'PR'}{c.line ? `:${c.line}` : ''}</div>
+                <div className="whitespace-pre-wrap break-words">{c.body}</div>
+                {c.pr_comment?.url ? <a href={c.pr_comment.url} target="_blank" rel="noreferrer" className="underline">在 PR 查看</a> : null}
+                {c.pr_sync_error ? <div className="text-need-fg">PR 同步未完成，评论已保留</div> : null}
+              </div>)}
+            </div>
+          </div> : null}
         </div>
         {wide ? <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="grid shrink-0 grid-cols-2 border-b border-line px-3 py-2 text-xs text-fg3"><span>基准 · {data?.merge_base.slice(0, 8)}</span><span>{working ? '当前 Worktree' : `本地 Commit · ${data?.head.slice(0, 8) ?? ''}`}</span></div>

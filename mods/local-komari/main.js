@@ -2,7 +2,7 @@ import { View, div, svg } from "gpui-kit";
 import { h_flex, v_flex, Button, Input, InputState } from "gpui-base";
 import { theme, exec, props, shared, setShared, nextCommand, layout, run } from "herdr";
 import { tokens, G, T, quietTabs, quietLink, iconButton, section, controlInput } from "./ui.js";
-import { commitLayout, walkLayout } from "./layout.js";
+import { commitLayout, walkLayout, panelIsOpen } from "./panels.js";
 
 const MOD = "local-komari", BASE = "https://mo.linqiankai.top", SNAP = "local.komari.snapshot";
 const safe = e => String(e?.message ?? e).slice(0, 160);
@@ -39,6 +39,8 @@ export default class Komari extends View {
     else {
       this.search = InputState.new({ placeholder: "节点名称、分组、地区" });
       this.search.on("change", (_e, cx) => cx.notify());
+      this.collect(cx);
+      cx.timer.every(10000, cx => this.collect(cx));
       cx.timer.every(1000, cx => cx.notify());
       cx.timer.every(30000, cx => { if (this.selected) this.loadHistory(cx); });
     }
@@ -64,7 +66,7 @@ export default class Komari extends View {
   open() {
     const body = walkLayout(layout(), "panel-body");
     if (!body) return;
-    const on = !body.hidden && body.children?.[0]?.id === "komari";
+    const on = panelIsOpen("komari");
     commitLayout({ panel: on ? null : { id: "komari", type: "block", content: { mod: MOD, props: { role: "panel" } } } });
   }
 

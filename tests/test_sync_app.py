@@ -424,6 +424,75 @@ class ShepherdrSyncTests(unittest.TestCase):
                 self.assertFalse((state.parent/"shepherdr-runtime.json").exists())
 
 
+class LocalToolsTests(unittest.TestCase):
+    def test_tools_select_existing_slots_without_replacing_tasks_or_artifacts(self):
+        script = r"""
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const root = process.argv[2];
+let tree = JSON.parse(fs.readFileSync(root + "/layouts/shepherdr.json", "utf8"));
+let selected = "shepherdr";
+const calls = [];
+globalThis.__herdr = {
+  layout: () => tree, shared: key => key === "layout" ? selected : null,
+  run: (...args) => calls.push(args),
+};
+const source = fs.readFileSync(root + "/mods/local-tools/panels.js", "utf8")
+  .replace(/import \{([^}]+)\} from "herdr";/, "const {$1} = globalThis.__herdr;");
+const bridge = await import("data:text/javascript;base64," + Buffer.from(source).toString("base64"));
+const before = JSON.stringify(tree);
+for (const tool of bridge.TOOLS) {
+  calls.length = 0;
+  assert.equal(bridge.commitLayout({panel:{id:tool.id,content:{mod:tool.mod}}}), true);
+  assert.deepEqual(calls, [
+    ["layout.select",{stack:"panel-body",child:tool.id}],
+    ["layout.show",{id:"panel"}],
+  ]);
+  assert.equal(JSON.stringify(tree), before);
+}
+const body = bridge.walkLayout(tree, "panel-body");
+body.active = "tasks";
+calls.length = 0;
+assert.equal(bridge.commitLayout({panel:null}), false);
+assert.deepEqual(calls, []);
+body.active = "magpie";
+assert.equal(bridge.panelIsOpen("magpie"), !bridge.walkLayout(tree, "panel").hidden);
+assert.equal(bridge.commitLayout({panel:null}), true);
+selected = "main";
+calls.length = 0;
+assert.equal(bridge.togglePanel("magpie"), false);
+assert.deepEqual(calls, []);
+selected = "shepherdr";
+tree = {id:"root",children:[{id:"strip-map"}]};
+assert.equal(bridge.togglePanel("magpie"), false);
+assert.deepEqual(calls, []);
+"""
+        result = subprocess.run(["node", "--input-type=module", "-", str(Path(SPEC.origin).parent)],
+                                input=script, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_panel_bridge_copies_match_the_canonical_source(self):
+        root = Path(SPEC.origin).parent
+        source = (root / "mods/local-tools/panels.js").read_bytes()
+        for name in ("local-magpie", "local-komari", "local-cloudflare", "local-tapd"):
+            self.assertEqual((root / "mods" / name / "panels.js").read_bytes(), source, name)
+
+    def test_documentation_screenshots_survive_sync_without_exporting_other_docs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            app, repo = root / "app", root / "repo"
+            for name in ("mods", "layouts", "themes", "docs/screenshots"):
+                (app / name).mkdir(parents=True)
+            (app / "docs/screenshots/panel.png").write_bytes(b"\x89PNG\r\n\x1a\nexample")
+            (app / "docs/private.txt").write_text("local only")
+            files, mods = sync.collect(app)
+            self.assertEqual(set(files), {"docs/screenshots/panel.png"})
+            with patch.object(sync, "ROOT", repo):
+                sync.snapshot(files, mods)
+                _, actual = sync.validate()
+            self.assertEqual(actual, files)
+
+
 class KansoLayoutSwitchTests(unittest.TestCase):
     def test_stale_kanso_tree_cannot_overwrite_a_newly_selected_layout(self):
         script = r"""

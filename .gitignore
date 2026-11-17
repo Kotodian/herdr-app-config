@@ -1,6 +1,9 @@
 *
 !/.gitignore
 !/README.md
+!/docs/
+!/docs/screenshots/
+!/docs/screenshots/*.png
 !/sync-app.py
 !/tests/
 !/tests/test_sync_app.py

@@ -6,5 +6,7 @@
   "release_requires_user": true,
   "release_instruction": "上线",
   "task_merge": "ask",
-  "human_review_required": true
+  "human_review_required": true,
+  "pr_review_manual": true,
+  "publish_review_comments": true
 }

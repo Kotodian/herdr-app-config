@@ -12,6 +12,55 @@ READ = ["--no-optional-locks", "--literal-pathspecs", "-c", "core.fsmonitor=fals
 MAX_FILES, MAX_PATCH = 1000, 600_000
 
 
+def sync_comments(s, t):
+    """Publish submitted human feedback to the PR; opening a diff and saving drafts stay local."""
+    pr = t.get("pr") or {}
+    if not (policy() or {}).get("publish_review_comments") or not pr.get("number") or not pr.get("repo"):
+        return
+    comments = [c for c in t.get("human_comments") or []
+                if c.get("by") == "person" and c.get("status") in ("changes", "commented", "resolved")
+                and not c.get("pr_comment")]
+    if not comments:
+        return
+    from .github import gh
+    from urllib.parse import quote
+    endpoint = f"repos/{pr['repo']}/issues/{pr['number']}/comments"
+    ok, out, error = gh("api", "--paginate", endpoint, "--jq", ".[] | {id,html_url,body} | @json")
+    existing = []
+    if ok:
+        try:
+            existing = [json.loads(line) for line in out.splitlines() if line.strip()]
+        except (ValueError, TypeError):
+            ok, error = False, "Couldn't read existing PR comments; retry to avoid duplicate feedback."
+    for c in comments:
+        marker = f"<!-- herdr-human-comment:{s.ref(t)}:{c['id']} -->"
+        posted = next((item for item in existing if marker in (item.get("body") or "")), None)
+        if ok and not posted:
+            location = c.get("path") or "PR"
+            if c.get("line") is not None:
+                location += f":{c['line']}"
+            head = c.get("head") or ""
+            if c.get("path") and head and c.get("side") == "RIGHT":
+                url = f"https://github.com/{pr['repo']}/blob/{head}/{quote(c['path'], safe='/')}#L{c['line']}"
+                location = f"[{location}]({url})"
+            body = f"### 人工审核意见\n\n{location} · Commit `{head[:8]}`\n\n{c['body']}\n\n{marker}"
+            sent, response, reason = gh("api", "-X", "POST", endpoint, "-f", f"body={body}")
+            if sent:
+                try:
+                    posted = json.loads(response)
+                except (ValueError, TypeError):
+                    posted = None
+            if not posted:
+                c["pr_sync_error"] = reason or "PR comment response unavailable; retry synchronization."
+        elif not ok:
+            c["pr_sync_error"] = error or "Couldn't read PR comments; feedback remains saved locally."
+        if posted and posted.get("id") and posted.get("html_url"):
+            c["pr_comment"] = {"id": posted["id"], "url": posted["html_url"],
+                               "repo": pr["repo"], "number": pr["number"]}
+            c.pop("pr_sync_error", None)
+        s.dirty = True
+
+
 def required(t):
     return bool((policy() or {}).get("human_review_required") and t.get("mode") == "worktree"
                 and not t.get("nothing_to_merge"))
@@ -135,6 +184,7 @@ def approve(s, t, snapshot):
             comment["status"] = "commented"
         elif comment.get("status") == "changes":
             comment["status"] = "resolved"
+    sync_comments(s, t)
     s.dirty = True
     return {**current, "approved": True, "approval": t["human_review"]}
 
@@ -231,6 +281,7 @@ def request_changes(s, t, snapshot, args):
         "head": current["head"], "comments": [c["id"] for c in comments], "at": now(), "by": "person"})
     t["fix_requested"] = t["handed_at"] = now()
     back_to_work(s, t, "the person requested changes in PR comments", "Fixing PR review comments")
+    sync_comments(s, t)
     return {**current, "state": t["state"], "approved": False, "approval": None,
             "comments": t["human_comments"], "reviews": t["human_reviews"],
             "terminal": address, "new_agent": started}
@@ -283,3 +334,14 @@ def cmd_request_changes(args):
     with open_store(args) as s:
         out = request_changes(s, s.find(args.id), args.snapshot, args)
     say(args, out, "Changes requested. The worker will address the review comments.")
+
+
+def cmd_sync_review_comments(args):
+    from .store import open_store
+    from .output import say
+    with open_store(args) as s:
+        t = s.find(args.id)
+        sync_comments(s, t)
+        comments = t.get("human_comments") or []
+        out = {"comments": comments, "pending": sum(bool(c.get("pr_sync_error")) for c in comments)}
+    say(args, out, "Submitted human review comments synchronized to the PR.")

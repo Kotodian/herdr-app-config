@@ -214,6 +214,72 @@ class HumanReviewTests(unittest.TestCase):
             review.require_approval(self.store, task, remote)
         self.assertEqual(task["human_review"]["head"], approved["head"])
 
+    def test_pr_stage_overrides_automatic_review_even_with_an_old_review_brief(self):
+        task, _ = self.prepare()
+        from herdr_task import settings
+        value = json.loads(self.policy_path.read_text())
+        value["pr_review_manual"] = True
+        self.policy_path.write_text(json.dumps(value))
+        task.update(pr={"number": 12}, brief_review={"on": True, "rounds": 1},
+                    review_gate=True, agents=[{"argv": ["codex"]}])
+        cfg = {"tasks": {"review_rounds": 1}, "worker": {}, "agents": {}}
+        with patch.object(settings, "settings_for", return_value=cfg), \
+             patch.object(settings, "by_layer", return_value=None):
+            rows = {row["label"]: row for row in settings.task_settings(self.store, task)}
+            self.assertFalse(rows["Review"]["value"])
+            self.assertEqual(rows["Review"]["by"], "workflow")
+            self.assertNotIn("Reviewer", rows)
+            self.assertIsNone(commands.review_refusal(self.store, task, task["worktree"]))
+        self.assertTrue(task["brief_review"]["on"])
+
+    def test_submitted_human_comments_publish_to_pr_once_and_keep_original_text(self):
+        task, _ = self.prepare()
+        from herdr_task import github
+        task["pr"] = {"repo": "example/repo", "number": 12}
+        comment = {"id": "human1", "by": "person", "status": "changes", "head": "a" * 40,
+                   "path": "src/中文.go", "line": 37, "side": "RIGHT", "body": "为什么这里要判断？"}
+        task["human_comments"] = [comment]
+        response = {"id": 98, "html_url": "https://github.com/example/repo/pull/12#issuecomment-98"}
+        with patch.object(review, "policy", return_value={"publish_review_comments": True}), \
+             patch.object(github, "gh", side_effect=[(True, "", ""), (True, json.dumps(response), "")]) as gh:
+            review.sync_comments(self.store, task)
+            review.sync_comments(self.store, task)
+        self.assertEqual(gh.call_count, 2)
+        body = gh.call_args.args[-1]
+        self.assertIn(comment["body"], body)
+        self.assertIn("herdr-human-comment:", body)
+        self.assertEqual(comment["pr_comment"]["id"], 98)
+        self.assertEqual(comment["status"], "changes")
+
+    def test_comment_sync_recovers_a_posted_comment_without_posting_duplicates(self):
+        task, _ = self.prepare()
+        from herdr_task import github
+        task["pr"] = {"repo": "example/repo", "number": 12}
+        comment = {"id": "h1", "by": "person", "status": "changes", "body": "keep"}
+        task["human_comments"] = [comment]
+        existing = {"id": 98, "html_url": "https://github.com/example/repo/pull/12#issuecomment-98",
+                    "body": f"keep\n<!-- herdr-human-comment:{self.store.ref(task)}:h1 -->"}
+        with patch.object(review, "policy", return_value={"publish_review_comments": True}), \
+             patch.object(github, "gh", return_value=(True, json.dumps(existing), "")) as gh:
+            review.sync_comments(self.store, task)
+        self.assertEqual(gh.call_count, 1)
+        self.assertEqual(comment["pr_comment"]["id"], 98)
+
+    def test_comment_sync_failure_preserves_feedback_for_retry_and_never_posts_drafts(self):
+        task, _ = self.prepare()
+        from herdr_task import github
+        task["pr"] = {"repo": "example/repo", "number": 12}
+        submitted = {"id": "h1", "by": "person", "status": "changes", "body": "keep"}
+        draft = {"id": "h2", "by": "person", "status": "draft", "body": "not submitted"}
+        task["human_comments"] = [submitted, draft]
+        with patch.object(review, "policy", return_value={"publish_review_comments": True}), \
+             patch.object(github, "gh", return_value=(False, "", "offline")) as gh:
+            review.sync_comments(self.store, task)
+        self.assertEqual(gh.call_count, 1)
+        self.assertEqual(submitted["pr_sync_error"], "offline")
+        self.assertNotIn("pr_sync_error", draft)
+        self.assertEqual(submitted["body"], "keep")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,16 @@
 import { expect, test } from "bun:test";
-import { inlineChanges, patchRows, fileTree, reviewItems, diffMode } from "./pr-diff.js";
+import { inlineChanges, patchRows, fileTree, reviewItems, reviewHistory, diffMode } from "./pr-diff.js";
+
+test("PR history retains old-commit comments even after their file leaves the diff", () => {
+  const comments = [
+    { id: "old", snapshot: "before", path: "removed.go", line: 37, body: "原始人工意见", status: "changes" },
+    { id: "new", snapshot: "after", path: "new.go", line: 1, body: "本轮意见", status: "draft" },
+  ];
+  expect(reviewHistory(comments, "after")).toEqual([
+    { ...comments[0], outdated: true }, { ...comments[1], outdated: false },
+  ]);
+  expect(comments[0].outdated).toBeUndefined();
+});
 
 test("replacement lines align across both sides without shifting later line numbers", () => {
   const { split } = patchRows("diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -5,3 +5,4 @@ fn\n same\n-old\n+new\n+extra\n tail\n");

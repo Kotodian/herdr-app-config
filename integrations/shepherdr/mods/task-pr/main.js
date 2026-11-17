@@ -4,7 +4,7 @@ import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Scrollbar, 
 import { appHome, checking, closeOverlay, exec, nextCommand, openOverlay, props, theme } from "herdr";
 import { where, shown, PR } from "./taskwhere.js";
 import { VIEW_WORDS } from "./core/worktree.js";
-import { patchRows, fileTree, reviewItems, diffMode } from "./core/pr-diff.js";
+import { patchRows, fileTree, reviewItems, reviewHistory, diffMode } from "./core/pr-diff.js";
 import { colorDiff, codeSpans, syntaxColor } from "./core/pr-syntax.js";
 import { settle } from "./core/pending.js";
 import { button } from "./ui.js";
@@ -261,7 +261,20 @@ export default class PullRequest extends View {
                 .child(div().text_color(t.ansi1).child(file.del ? `−${file.del}` : "")));
           }))
           .when(!files.length, (el) => el.child(this.note(all.length ? "没有匹配的文件" : "没有代码差异", t))))
-        .child(Scrollbar.vertical("pr-review-files").absolute().inset_0()));
+        .child(Scrollbar.vertical("pr-review-files").absolute().inset_0()))
+      .when(Boolean(this.current?.comments?.length), el => el.child(
+        v_flex().h(220).flex_none().min_h(0).border_t(1).border_color(t.border)
+          .child(div().flex_none().p(10).font_semibold().text_size(12).child(`审核意见 · ${this.current.comments.length}`))
+          .child(v_flex().id("pr-review-history").flex_1().min_h(0).overflow_y_scrollbar().px(10).pb(10).gap(10)
+            .children(reviewHistory(this.current.comments, this.current.snapshot).map(comment =>
+              v_flex().flex_none().gap(5).p(8).rounded(6).bg(t.raised)
+                .child(div().text_size(10).text_color(t.accent).child(`${comment.outdated ? "旧提交 · " : ""}${comment.head?.slice(0, 8) ?? ""} · ${comment.status === "changes" ? "待人工复核" : comment.status === "resolved" ? "已审核解决" : comment.status === "draft" ? "草稿" : "审核意见"}`))
+                .child(div().text_size(10).text_color(t.dim).child(`${comment.path ?? "PR"}${comment.line ? `:${comment.line}` : ""}`))
+                .child(div().text_size(12).child(comment.body))
+                .when(Boolean(comment.pr_comment?.url), el => el.child(button(`pr-comment-link-${comment.id}`, "在 PR 查看", {
+                  kind: "plain", onClick: (_e, cx) => cx.open_url(comment.pr_comment.url),
+                })))
+                .when(Boolean(comment.pr_sync_error), el => el.child(div().text_size(10).text_color(t.ansi1).child("PR 同步未完成，评论已保留"))))))));
   }
   code(side, pieces, changed, t, direction) {
     const color = direction === "left" ? t.ansi1 : t.ansi2;

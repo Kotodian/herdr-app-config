@@ -24,6 +24,11 @@ export function reviewItems(rows, comments, target, snapshot, path) {
   });
 }
 
+// Every human comment remains in the PR history, even if its file or line left the new diff.
+export function reviewHistory(comments, snapshot) {
+  return comments.map((comment) => ({ ...comment, outdated: comment.snapshot !== snapshot }));
+}
+
 // Stable directory rows for the PR's changed files, with folders before files at each level.
 export function fileTree(files, query = "", collapsed = []) {
   const root = { dirs: new Map(), files: [] }, folded = new Set(collapsed), rows = [];

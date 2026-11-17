@@ -2,7 +2,7 @@ import { View, div, svg } from "gpui-kit";
 import { h_flex, v_flex, Button, Input, InputState, TextView } from "gpui-base";
 import { theme, exec, props, home, appHome, shared, setShared, nextCommand, layout, openOverlay, closeOverlay } from "herdr";
 import { tokens, G, T, quietTabs, quietLink, iconButton, section, controlInput } from "./ui.js";
-import { commitLayout, walkLayout } from "./layout.js";
+import { commitLayout, walkLayout } from "./panels.js";
 
 const MOD = "local-magpie", GATEWAY = "http://127.0.0.1:3425";
 const money = n => n == null ? "—" : `$${Number(n).toFixed(2)}`;
@@ -60,7 +60,7 @@ export default class Magpie extends View {
   }
 
   open(page) {
-    if (shared("layout") === "kanso" && walkLayout(layout(), "panel-body")) {
+    if (shared("layout") === "shepherdr" && walkLayout(layout(), "panel-body")) {
       commitLayout({ panel: { id: "magpie", type: "block", content: { mod: MOD, props: { role: "panel", page, at: Date.now() } } } });
     } else openOverlay({ mod: MOD, kind: "dialog", width: 760, height: 680, props: { role: "details", page } });
   }

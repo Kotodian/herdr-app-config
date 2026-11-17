@@ -98,6 +98,7 @@ def collect(app):
     for p in (app/'layouts').glob('*.json'):
         if 'layout:'+p.stem not in installed and not p.name.startswith('.'):sources.append(p)
     sources.extend(p for p in (app/'themes').glob('*.json') if p.stem!='atom-one-dark' and p.stem not in installed)
+    sources.extend(p for p in (app/'docs/screenshots').glob('*.png') if p.is_file())
     sources.extend(app/name for name in ('keys.json','settings.json','programs.json','git-workflow.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore') if (app/name).exists())
     coordinator=app.joinpath(*COORDINATOR.parts)
     if coordinator.exists() and not (shepherdr/'bin/shepherdr').exists():
@@ -152,7 +153,8 @@ def validate(folder=None):
         if rel.is_absolute() or '..' in rel.parts or not rel.parts:raise RuntimeError('Unsafe snapshot path')
         shepherdr=shepherdr_source(rel)
         integration=coordinator_source(rel) or shepherdr
-        allowed=integration or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','git-workflow.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore')
+        screenshot=rel.parts[:2]==('docs','screenshots') and len(rel.parts)==3 and rel.suffix=='.png'
+        allowed=integration or screenshot or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','git-workflow.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore')
         if not allowed or any((x.startswith('.') and name!='.gitignore' and not integration) or
                               (x in OMIT and not (shepherdr and x in ('bin','dist'))) for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
         if rel.parts[0]=='mods' and (rel.suffix not in TEXT|ASSETS and rel.name not in ('LICENSE','NOTICE')):raise RuntimeError('Unexpected mod file')
