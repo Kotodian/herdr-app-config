@@ -64,10 +64,10 @@
       "sha256": "660a80bfa8bf605fd1dd4c1ec730b837719cda0e130c35dc098732c7e39c80d1"
     },
     "README.md": {
-      "sha256": "b100f080a34e3e2839796c01dee0e9bdd72c84d8ff09f4ebfb0e9b242cb9642c"
+      "sha256": "47daf28b9c3f6d68c10108948737399259db79697a9380c51336246a4c12ca75"
     },
     "docs/screenshots/01-workspace.png": {
-      "sha256": "76a2e65339e3fda04d6a83f1a505feead9c0d80d01b5f49393545fb157ff917a"
+      "sha256": "3058f888f033ecba558e6898afbaa6268a821fd19341930b44ba3eedb0c16810"
     },
     "docs/screenshots/02-tasks.png": {
       "sha256": "3d51e80a19d95a80cc7f28816bb5fe005692b5fe6286702d4910eeb306a0c63c"
@@ -83,6 +83,12 @@
     },
     "docs/screenshots/06-agent-models.png": {
       "sha256": "15d368260b09997f1cd006017e4103dea19d5330ec503ed8e0f0b5adf4473b01"
+    },
+    "docs/screenshots/07-issues.png": {
+      "sha256": "c80af6183d88c1240b8a7a5a708d9418a440936ff2a3cca0976752c1cf640a0a"
+    },
+    "docs/screenshots/08-tapd.png": {
+      "sha256": "06c750040ae30398263e318fe4e0cc81cfa7dd638542eff4f494688a5bfc4eec"
     },
     "git-workflow.json": {
       "sha256": "90cdcd8749251adbcab91d5c4c807890be0045de176d44641ea0b067dc352c4f"
@@ -1624,7 +1630,7 @@
       "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
     },
     "integrations/shepherdr/mods/spaces-chat/core/session-inbox.js": {
-      "sha256": "26e94866517bfa8a846ff5952383003b77a295bfc28d24883a179e522fbbc715"
+      "sha256": "2ff37258b24e8aaed4a9eee66b26c54782d0403c2f54b9984ffc9f022229a0fd"
     },
     "integrations/shepherdr/mods/spaces-chat/core/spaces.js": {
       "sha256": "b07cb18d3cf3994e108d42e5c4b0fde631e2b41d2da3bac3882273b9f7368f9e"
@@ -1660,7 +1666,7 @@
       "sha256": "78d35e5659a8bdd6e67013d35bbef6f6cf3a5a52d2db0987adf4193fbaf0e31c"
     },
     "integrations/shepherdr/mods/spaces-chat/main.js": {
-      "sha256": "5e0d5b7554116346ca6b26c7d52ebf7a618c2b84044486162b1c5c43b1a2ed51"
+      "sha256": "ac501684b5f033908d5ff5deb318a95900de11d3f1b8c75f8103ecb5dd0389dc"
     },
     "integrations/shepherdr/mods/spaces-chat/mod.json": {
       "sha256": "5b5d03a83a5f8da0e3a7c77c27d0d306afa7eef0556114dc1438612ef1c7e473"

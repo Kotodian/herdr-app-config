@@ -861,12 +861,12 @@ export default class Spaces extends View {
           .child(div().size(6).flex_none().rounded_full().bg(row.priority === 0 ? t.blocked : row.priority === 1 ? t.done : t.accent))
           .when(!collapsed, (el) => el.child(v_flex().flex_1().min_w(0).gap(2)
             .child(div().text_size(12.5).text_color(t.foreground).truncate().child(row.title))
-            .child(div().text_size(10.5).text_color(t.dim).truncate().child(`${row.place || "Session"} · ${row.reason}`)))))
-          .child(h_flex().id(`inbox-dismiss-${row.key}`).size(collapsed ? 16 : 22).flex_none().items_center().justify_center()
+            .child(div().text_size(10.5).text_color(t.dim).truncate().child(`${row.place || "Session"} · ${row.reason}`))))
+          .when(!collapsed, (el) => el.child(h_flex().id(`inbox-dismiss-${row.key}`).size(22).flex_none().items_center().justify_center()
             .rounded(4).text_color(t.dim).hover((s) => s.bg(t.hover).text_color(t.foreground))
             .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
             .on_click((_e, cx) => { cx.stop_propagation(); dismiss(row); cx.notify(); })
-            .child("×")))));
+            .child("×"))))));
   }
 
   // One copy of Herdr's live lists for the whole render (live.js): past ~50 ms Herdr stops it.

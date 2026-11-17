@@ -1,14 +1,75 @@
 # Herdr 开发工作台
 
-默认使用 **Shepherdr layout**：左边通过 Inbox 查看通知、选择项目，中间和 Assistant 对话或查看终端，右边跟进任务、检查代码、逐行评论。你点审核通过后，由 Assistant 执行合并。底部有 Magpie、Komari、Gitview、Cloudflare、TAPD、Issues 和 Map 的常驻入口。
+这套配置把 Assistant、任务、代码审核、通知和辅助面板放进 Herdr。第一次使用请按顺序完成：**安装 Herdr App → 导入工作台 → 设置角色模型 → 打开项目 → 开发与人工审核**。
 
-界面按参考图使用深青色毛玻璃效果：半透明底配合原生窗口模糊、半透明侧栏和圆角面板，背后内容呈现模糊轮廓，文字和代码保持清晰。配色和透明度保存在 `layouts/shepherdr.json`，随配置同步。
+## 1. 安装 Herdr App
 
-Kanso layout 已移除，工具已接入 Shepherdr。下面的六张截图均于 **2026-11-17** 重新拍摄，来自实际运行的毛玻璃原生界面，主工作区统一使用 **Chat 模式**。
+到 [Herdr 官方下载页](https://herdr.dev/download/) 下载桌面 App；macOS Apple Silicon 可使用官网的 [最新版 DMG](https://releases.herdr.dev/app/Herdr.dmg)，下载后打开 DMG，将 Herdr App 放入「应用程序」。其他系统或架构以官网当前提供的安装方式为准。
+
+官网也提供终端安装方式，适合需要一并安装 `herdr-app`、`hc` 等命令的环境：
+
+```sh
+curl -fsSL https://releases.herdr.dev/app/install.sh | sh
+```
+
+## 2. 导入工作台配置
+
+安装 Git 和系统 Python 3，配置此私仓访问权限，登录要使用的 Codex 或 Claude。在目标目录不存在时，**首次启动 Herdr App 前**执行：
+
+```sh
+git clone --branch main git@github.com:Kotodian/herdr-app-config.git ~/.config/herdr-app
+```
+
+然后打开 Herdr App。引导模块会选择 Shepherdr，安装本机 Gitview，初始化独立同步 checkout，注册登录时及每 5 分钟执行的自动同步，并从 `integrations/shepherdr/` 安装辅助命令、hooks 和服务；安装器处理需要的 Bun。
+
+已有配置时先备份，不要直接覆盖。Magpie、Cloudflare、TAPD 的账号连接需要在各台电脑分别配置。
+
+首次打开后选择 **Shepherdr** layout，确认左侧有 Spaces、左下角有 Shepherdr 设置入口、底部有工具栏，再继续设置模型。
+
+## 3. 设置各个角色的模型
+
+### 打开正确的设置入口
+
+左下角有两个入口：**Settings** 设置 Herdr 的外观与窗口；旁边的 **Shepherdr** 设置任务、模型和角色。
+
+1. 点左下角 **Shepherdr** 图标，进入 **Agents**。
+2. 先看顶部 **Applies to**：选 **Everywhere** 设置所有项目的默认值；选某个 Space 只覆盖该项目。也可以从项目侧栏菜单打开 **Space settings…**。
+3. 找到要改的角色，点击这一行右侧的模型按钮。决策模型未选时显示 **Choose model…**。
+4. 在弹出的模型选择器中先选 **Codex / Claude**，再搜索并选择模型；需要时调整 **Reasoning**。支持的模型还会显示 **Fast**、**Permissions**。
+5. 选择会自动保存。关闭选择器后，检查角色按钮显示的模型和推理强度。
+
+![Agents 中按角色设置模型，后方保持 Chat 模式](docs/screenshots/06-agent-models.png)
+
+### 四个角色各管什么
+
+| Agents 中的角色 | 工作范围 | 怎么选 |
+| --- | --- | --- |
+| **Decision model · 决策模型** | 在任务创建前分类需求、建议流程和验证要求，例如普通开发走 `dev`，生产缺陷修复走 `main`。 | 独立设置 Agent 和模型，例如 `Codex → Typesafe → typesafe/jev-latest`。分类器不承担代码实现。 |
+| **Assistant** | 你在项目 Chat 中对话的主助手；拆分需求、创建任务、协调 Worker，并在人工通过后执行合并。 | 选择能理解项目、处理工具调用和 Git 流程的模型。 |
+| **Workers** | 每项任务实际执行实现、验证和提交的 Agent。 | 设置后续新任务使用的编码模型和推理强度。 |
+| **Reviewer** | 开发阶段的模型评审。任务进入 PR 阶段后统一改为人工评审。 | 可独立选模型；显示 **Other CLI (Codex / Claude)** 时，表示沿用 Worker 之外的另一种 CLI 默认模型。 |
+
+**Typesafe** 是模型厂商分组。选它时核对完整模型 ID，例如 `typesafe/jev-latest`；只切换 Codex / Claude 标签，并不等于已经选择了 Typesafe。模型清单读取这台机器的模型目录与提供商配置，账号和凭据需要在本机可用。
+
+### 评审开关、项目覆盖和运行中的任务
+
+- **Reviewer 的模型**在 **Agents** 设置；是否开启开发阶段评审、最多几轮、必须修复的严重级别，在 **Tasks** 中设置 **Review rounds / Must fix**。选了 Reviewer 模型不等于打开评审。
+- 项目行显示 **Inherited from Everywhere** 时，使用全局默认；显示 **Set for this space · Reset** 时，这个项目有覆盖。点 **Reset** 恢复继承。
+- 新的角色默认值用于后续任务；运行中的任务保留创建时的 brief。修改默认值不会悄悄重启所有 Agent。
+- 要切换**当前这段对话**的模型，点 Chat 输入框旁的模型按钮，选择新 Agent / 模型并按界面提示切换；不要只改全局默认后期待现有会话立即变化。
+- PR 阶段的人工审核策略始终适用：提交、推送、按评论返修不会再触发模型自动评审。
+
+### 模型没有出现在列表时
+
+先确认该模型在当前机器的 Codex 或 Claude 中可用，再重新打开 Shepherdr 设置。Codex 的模型目录支持 `model_catalog_json` 和 `CODEX_HOME`；自定义提供商仍需要对应的本机 endpoint 和认证。Magpie 面板可以查看资源，但不代替这两种 Agent 的模型配置。每台电脑分别维护自己的模型、账号和凭据。
+
+## 4. 打开项目，认识工作区
+
+在左侧 **Spaces** 选择已有项目，或用 `+` 新建 Space 并选择项目仓库目录。确认当前 Space 的目录和机器后，打开它的 **Assistant**；任务、Issue 列表和代码检查都以这个项目为上下文。
+
+默认使用 **Shepherdr layout**：左侧看 Inbox 和项目，中间使用 Assistant，右侧跟进任务和审核代码。深青色毛玻璃的配色和透明度保存在 `layouts/shepherdr.json`，随配置同步。本文界面截图的主工作区均使用 **Chat 模式**。
 
 ![工作区与工具栏](docs/screenshots/01-workspace.png)
-
-## 界面怎么分工
 
 | 位置 | 用途 |
 | --- | --- |
@@ -20,7 +81,7 @@ Kanso layout 已移除，工具已接入 Shepherdr。下面的六张截图均于
 | 右上角 Artifacts | 查看项目成果；任务内的 Artifacts 聚焦单个任务的报告、证据和预览。 |
 | 底部工具栏 | 打开辅助工具，再点同一入口可以收起；点 Tasks 等按钮可切回任务。 |
 
-## 一次开发怎么走
+## 5. 完成一次开发和人工审核
 
 ### 1. 选项目，在 Assistant 里说明需求
 
@@ -109,7 +170,7 @@ Worker 提交新版本后，原评论仍保留在左侧 **审核意见** 中，�
 
 Assistant 暂时未启动或正在接收输入时，交接请求会保留并自动重试。审核绑定具体提交：执行合并时仍核对本地和远端的提交及目标分支；审核后代码或目标分支版本变化，需要重新审核。有未提交改动等情况时会禁用通过操作并提示原因。Worker 不能替你通过人工审核。
 
-## 辅助面板怎么用
+## 6. 使用 Issues、TAPD 和其他辅助面板
 
 ![Magpie 与底部工具入口](docs/screenshots/04-magpie.png)
 
@@ -147,77 +208,9 @@ Artifacts 适合放实现说明、测试报告、截图和可交互预览，供�
 
 ![Artifacts 成果列表](docs/screenshots/05-artifacts.png)
 
-## 各个角色的模型怎么设置
+## 7. 自动同步和排查
 
-### 打开正确的设置入口
-
-左下角有两个入口：**Settings** 设置 Herdr 的外观与窗口；旁边的 **Shepherdr** 设置任务、模型和角色。
-
-1. 点左下角 **Shepherdr** 图标，进入 **Agents**。
-2. 先看顶部 **Applies to**：选 **Everywhere** 设置所有项目的默认值；选某个 Space 只覆盖该项目。也可以从项目侧栏菜单打开 **Space settings…**。
-3. 找到要改的角色，点击这一行右侧的模型按钮。决策模型未选时显示 **Choose model…**。
-4. 在弹出的模型选择器中先选 **Codex / Claude**，再搜索并选择模型；需要时调整 **Reasoning**。支持的模型还会显示 **Fast**、**Permissions**。
-5. 选择会自动保存。关闭选择器后，检查角色按钮显示的模型和推理强度。
-
-![Agents 中按角色设置模型，后方保持 Chat 模式](docs/screenshots/06-agent-models.png)
-
-### 四个角色各管什么
-
-| Agents 中的角色 | 工作范围 | 怎么选 |
-| --- | --- | --- |
-| **Decision model · 决策模型** | 在任务创建前分类需求、建议流程和验证要求，例如普通开发走 `dev`，生产缺陷修复走 `main`。 | 独立设置 Agent 和模型，例如 `Codex → Typesafe → typesafe/jev-latest`。分类器不承担代码实现。 |
-| **Assistant** | 你在项目 Chat 中对话的主助手；拆分需求、创建任务、协调 Worker，并在人工通过后执行合并。 | 选择能理解项目、处理工具调用和 Git 流程的模型。 |
-| **Workers** | 每项任务实际执行实现、验证和提交的 Agent。 | 设置后续新任务使用的编码模型和推理强度。 |
-| **Reviewer** | 开发阶段的模型评审。任务进入 PR 阶段后统一改为人工评审。 | 可独立选模型；显示 **Other CLI (Codex / Claude)** 时，表示沿用 Worker 之外的另一种 CLI 默认模型。 |
-
-**Typesafe** 是模型厂商分组。选它时核对完整模型 ID，例如 `typesafe/jev-latest`；只切换 Codex / Claude 标签，并不等于已经选择了 Typesafe。模型清单读取这台机器的模型目录与提供商配置，账号和凭据需要在本机可用。
-
-### 评审开关、项目覆盖和运行中的任务
-
-- **Reviewer 的模型**在 **Agents** 设置；是否开启开发阶段评审、最多几轮、必须修复的严重级别，在 **Tasks** 中设置 **Review rounds / Must fix**。选了 Reviewer 模型不等于打开评审。
-- 项目行显示 **Inherited from Everywhere** 时，使用全局默认；显示 **Set for this space · Reset** 时，这个项目有覆盖。点 **Reset** 恢复继承。
-- 新的角色默认值用于后续任务；运行中的任务保留创建时的 brief。修改默认值不会悄悄重启所有 Agent。
-- 要切换**当前这段对话**的模型，点 Chat 输入框旁的模型按钮，选择新 Agent / 模型并按界面提示切换；不要只改全局默认后期待现有会话立即变化。
-- PR 阶段的人工审核策略始终适用：提交、推送、按评论返修不会再触发模型自动评审。
-
-### 模型没有出现在列表时
-
-先确认该模型在当前机器的 Codex 或 Claude 中可用，再重新打开 Shepherdr 设置。Codex 的模型目录支持 `model_catalog_json` 和 `CODEX_HOME`；自定义提供商仍需要对应的本机 endpoint 和认证。Magpie 面板可以查看资源，但不代替这两种 Agent 的模型配置。每台电脑分别维护自己的模型、账号和凭据。
-
-## 快捷键
-
-| macOS 快捷键 | 操作 |
-| --- | --- |
-| `⌘⇧M` | 打开 / 收起 Magpie |
-| `⌘⇧G` | 打开 / 收起 Gitview |
-| `⌘G` | 打开 Gitview 独立标签 |
-| `⌘B` | 显示 / 隐藏侧栏 |
-| `⌘⇧P` | 命令面板 |
-| `F2` / `⇧F2` | 重命名标签 / 项目空间 |
-
-## 新 Mac 安装和自动同步
-
-### 下载 Herdr App
-
-到 [Herdr 官方下载页](https://herdr.dev/download/) 下载桌面 App；macOS Apple Silicon 可使用官网的 [最新版 DMG](https://releases.herdr.dev/app/Herdr.dmg)，下载后打开 DMG，将 Herdr App 放入「应用程序」。其他系统或架构以官网当前提供的安装方式为准。
-
-官网也提供终端安装方式，适合需要一并安装 `herdr-app`、`hc` 等命令的环境：
-
-```sh
-curl -fsSL https://releases.herdr.dev/app/install.sh | sh
-```
-
-### 导入这个工作台
-
-安装 Git 和系统 Python 3，配置此私仓访问权限，登录要使用的 Codex 或 Claude。在目标目录不存在时，**首次启动 Herdr App 前**执行：
-
-```sh
-git clone --branch main git@github.com:Kotodian/herdr-app-config.git ~/.config/herdr-app
-```
-
-然后打开 Herdr App。引导模块会选择 Shepherdr，安装本机 Gitview，初始化独立同步 checkout，注册登录时及每 5 分钟执行的自动同步，并从 `integrations/shepherdr/` 安装辅助命令、hooks 和服务；安装器处理需要的 Bun。
-
-已有配置时先备份，不要直接覆盖。Magpie、Cloudflare、TAPD 的账号连接需要在各台电脑分别配置。
+工作台导入后会自动同步配置；每台机器的账号连接仍需单独设置。
 
 - **同步 ✓**：上次成功；点击可以立即同步。
 - **同步中 / 待同步**：正在处理，或有更新等待下一轮。
@@ -236,3 +229,15 @@ git clone --branch main git@github.com:Kotodian/herdr-app-config.git ~/.config/h
 ```
 
 一般不需要手动操作传输 checkout。不要用强制拉取覆盖正在使用的 App 配置。
+
+## 8. 常用快捷键
+
+| macOS 快捷键 | 操作 |
+| --- | --- |
+| `⌘⇧M` | 打开 / 收起 Magpie |
+| `⌘⇧G` | 打开 / 收起 Gitview |
+| `⌘G` | 打开 Gitview 独立标签 |
+| `⌘B` | 显示 / 隐藏侧栏 |
+| `⌘⇧P` | 命令面板 |
+| `F2` / `⇧F2` | 重命名标签 / 项目空间 |
+
