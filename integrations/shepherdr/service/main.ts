@@ -28,6 +28,7 @@ import { record, deleteAll, note as noteUsage, followSwitch, isOn as insightsOn,
 import { insightsSummary } from "./voice-data.ts";
 import { Chats } from "./chats.ts";
 import { sourceAttachment } from "./context-source.ts";
+import { spaceIssues } from "../core/context-source.js";
 import { act, findMachines, hc as hcRun } from "./actions.ts";
 import { AgentWatch } from "./watch.ts";
 import { Compat, activity, newsKey, placeKey } from "./compat.ts";
@@ -772,10 +773,18 @@ const server = Bun.serve<{ who: string }>({
       try { rel = decodeURIComponent(art[3]); } catch { return json({ error: "not found" }, 404); }
       return artifacts.file(art[1], v, rel, on, req.headers.get("range"));
     }
+    if (path === "/api/context-source/issues" && req.method === "GET") {
+      try {
+        const sp = compat.allSpaces().find((s) => placeKey(s.id) === url.searchParams.get("chat"));
+        if (!sp) throw new Error("当前对话没有 Space 仓库。");
+        return json(await spaceIssues(sp.folder, (cmd: string, args: string[]) => exec(hub, [cmd, ...args], sp.machine, 90)));
+      } catch (err) { return json({ error: (err as Error).message }, 400); }
+    }
     if (path === "/api/context-source" && req.method === "POST") {
       try {
         const body = await req.json();
-        return json(await sourceAttachment(body, (cmd, args) => exec(hub, [cmd, ...args], null, 90), ATTACH));
+        const sp = body?.kind === "github" ? compat.allSpaces().find((s) => placeKey(s.id) === body.chat) : null;
+        return json(await sourceAttachment(body, (cmd, args) => exec(hub, [cmd, ...args], sp?.machine ?? null, 90), ATTACH, sp?.folder));
       } catch (err) { return json({ error: (err as Error).message }, 400); }
     }
     if (path === "/api/upload" && req.method === "POST") {

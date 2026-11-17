@@ -3,6 +3,7 @@ import { h_flex, v_flex, Button, Input, InputState, TextView } from "gpui-base";
 import { theme, exec, appHome, home, nextCommand } from "herdr";
 import { tokens, G, T, quietTabs, iconButton, section, controlInput, quietLink } from "./ui.js";
 import { commitLayout } from "./panels.js";
+import * as fs from "fs/promises";
 const ICON="mods/local-tapd/icon.svg";
 const priorityName={urgent:"紧急",high:"高",medium:"中",low:"低",insignificant:"可忽略",'1':"紧急",'2':"高",'3':"中",'4':"低"};
 const severityName={fatal:"致命",serious:"严重",normal:"一般",prompt:"提示",advice:"建议"};
@@ -29,7 +30,17 @@ export default class TapdPanel extends View {
   load(cx) {
     if(this.busy)return;this.busy=true;this.error=null;cx.notify();
     cx.spawn(async cx=>{
-      try{this.data=await this.request({action:"snapshot"});this.at=Date.now();if(!this.data.projects.some(p=>p.id===this.project))this.project="all";}
+      try{
+        const data=await this.request({action:"snapshot"});
+        await fs.mkdir(`${appHome()}/data/tapd-drag`,{recursive:true});
+        await Promise.all(data.bugs.map(async r=>{
+          if(!/^\d+$/.test(r.workspace_id)||!/^\d{10,30}$/.test(r.id))return;
+          const path=`${appHome()}/data/tapd-drag/${r.workspace_id}-${r.id}.tapd.json`;
+          await fs.writeFile(path,JSON.stringify({kind:"tapd-bug",workspace:r.workspace_id,id:r.id}));
+          r.dragPath=path;
+        }));
+        this.data=data;this.at=Date.now();if(!this.data.projects.some(p=>p.id===this.project))this.project="all";
+      }
       catch(e){this.error=String(e.message??e);}
       finally{this.busy=false;cx.notify();}
     });
@@ -60,7 +71,8 @@ export default class TapdPanel extends View {
         .when(!shown.length,el=>el.child(v_flex().py(G.xl).gap(G.md)
           .child(div().text_size(T.card).child(this.busy?"正在读取我的 Bug…":!complete?"暂未取得完整列表":!projectRows.length?"当前没有分配给你的 Bug":"没有符合筛选条件的 Bug"))
           .child(this.text(!complete?"请查看上方连接提示后刷新。":`当前处理人：${this.data.user}。可切换“全部”查看已结束的记录。`,c))))
-        .children(shown.map(r=>Button.new(`tapd-bug-${r.workspace_id}-${r.id}`).w_full().p(G.md).rounded(6).cursor_pointer().hover(s=>s.bg(c.subtle)).focus(s=>s.bg(c.selected))
+        .children(shown.map(r=>v_flex().id(`tapd-bug-${r.workspace_id}-${r.id}`).w_full().p(G.md).rounded(6).cursor_pointer().hover(s=>s.bg(c.subtle))
+          .when(Boolean(r.dragPath),el=>el.drag_paths([r.dragPath]))
           .accessibility_label(`查看 Bug ${shortId(r)} ${r.title}`).on_click((_e,cx)=>this.show(r,cx))
           .child(v_flex().w_full().min_w(0).gap(G.sm)
             .child(h_flex().gap(G.sm).items_center().child(this.text(`#${shortId(r)}`,c)).child(div().flex_1())).child(div().text_size(T.card).child(r.title||"未命名缺陷"))
@@ -74,7 +86,10 @@ export default class TapdPanel extends View {
     const r=this.detail??this.selected;
     return v_flex().id("tapd-detail").flex_1().min_h(0).overflow_y_scrollbar().p(G.lg).gap(G.lg)
       .child(this.text(`${r.project} · #${shortId(r)}`,c))
-      .child(div().text_size(T.page).child(r.title||"未命名缺陷"))
+      .child(div().id(`tapd-detail-drag-${r.id}`).text_size(T.page).cursor_pointer()
+        .when(Boolean(this.selected?.dragPath),el=>el.drag_paths([this.selected.dragPath]))
+        .child(r.title||"未命名缺陷"))
+      .child(this.text("拖动标题到 Assistant 输入框，添加此 Bug 的详情附件",c))
       .child(v_flex().child(this.row("状态",r.status_label,c)).child(this.row("优先级",r.priority_label||priorityName[r.priority]||r.priority,c))
         .child(this.row("严重程度",severityName[r.severity]||r.severity,c)).child(this.row("当前处理人",r.current_owner,c))
         .child(this.row("报告人",r.reporter,c)).child(this.row("更新时间",r.modified,c)).child(this.row("截止日期",r.deadline,c)))

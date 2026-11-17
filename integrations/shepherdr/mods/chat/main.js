@@ -48,7 +48,7 @@ import { SecretCards } from "./secret-card.js";
 import * as secrets from "./secrets.js";
 import { taskDot, ownProgress } from "./dot.js";
 import * as attach from "./attach.js";
-import { SOURCES } from "./core/context-source.js";
+import { SOURCES, spaceIssues } from "./core/context-source.js";
 import * as slash from "./slash.js";
 import * as mentions from "./core/mentions.js";
 import { SH } from "./core/paths.js";
@@ -3895,7 +3895,7 @@ export default class Chat extends View {
             .border_1().border_color(t.border).bg(t.surface)
             // A pasted text opens to read.
             .when(Boolean(f.text), (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => { cx.stop_propagation(); this.openText(f); }))
-            .child(svg(`mods/chat/${f.source === "github" ? "github" : f.source === "lark" ? "lark" : "file"}.svg`).size(16).flex_none().text_color(t.dim))
+            .child(svg(`mods/chat/${["github", "lark", "tapd"].includes(f.source) ? f.source : "file"}.svg`).size(16).flex_none().text_color(t.dim))
             .child(div().w_full().text_center().truncate().text_size(10.5).text_color(t.muted).child(f.name));
         return div().relative().flex_none().child(tile)
           .child(div().id(`file-x-${i}`).absolute().top(-6).right(-6).size(18).flex().items_center().justify_center().rounded(9).cursor_pointer()
@@ -4085,7 +4085,7 @@ export default class Chat extends View {
     this.sourceError = null;
     cx.spawn(async (cx) => {
       try {
-        const file = await attach.sourceFile(kind, value);
+        const file = await attach.sourceFile(kind, value, this.sourceSpace());
         // A task chat can follow another worker while a request is in flight.
         if (this.sourceClosed || draft !== this.draftFile) { attach.drop(file); return; }
         if (this.files.length >= 20) { attach.drop(file); throw new Error("附件已满，请先移除一个附件。"); }
@@ -4101,6 +4101,44 @@ export default class Chat extends View {
     });
   }
 
+  sourceSpace() {
+    const rec = this.slotRec();
+    const id = props()?.space ?? rec?.space ?? terminals().find((x) => x.address === this.addr)?.labels?.["herdr.space"];
+    return spaces().find((s) => s.id === id) ?? null;
+  }
+
+  loadIssues(cx) {
+    if (this.issuesBusy) return;
+    const space = this.sourceSpace(), draft = this.draftFile;
+    this.issuesBusy = true; this.sourceError = null; this.issues = null;
+    cx.spawn(async (cx) => {
+      try {
+        const data = await spaceIssues(space?.folder, (cmd, args) => exec(cmd, args, { on: space?.machine, timeout: 90000 }));
+        if (!this.sourceClosed && draft === this.draftFile) this.issues = { ...data, space: space.id };
+      } catch (e) { if (!this.sourceClosed && draft === this.draftFile) this.sourceError = plainError(e); }
+      finally { this.issuesBusy = false; cx.notify(); }
+    });
+  }
+
+  dropFiles(list, cx) {
+    const draft = this.draftFile;
+    cx.spawn(async (cx) => {
+      for (const path of [...new Set(list)]) {
+        if (this.sourceClosed || draft !== this.draftFile) break;
+        if (this.files.length >= 20) { this.error = "每条消息最多添加 20 个附件。"; break; }
+        try {
+          const file = await attach.droppedFile(path);
+          if (this.sourceClosed || draft !== this.draftFile) { attach.drop(file); break; }
+          if (this.files.length >= 20) { attach.drop(file); this.error = "附件已满，请先移除一个附件。"; break; }
+          this.addFiles([file]);
+          this.saveSoon(cx);
+        } catch (e) { this.error = plainError(e); }
+      }
+      if (!this.sourceClosed && draft === this.draftFile) this.box.focus();
+      cx.notify();
+    });
+  }
+
   attachmentMenu(t) {
     if (!this.attachMenu) return null;
     const source = SOURCES.find((s) => s.id === this.sourceKind);
@@ -4113,12 +4151,26 @@ export default class Chat extends View {
       })
       .child(h_flex().gap(6).flex_wrap()
         .child(this.button("attach-local", "本地文件", "mods/chat/paperclip.svg", "ghost", t, (cx) => { close(); this.pickFiles(cx); }))
-        .children(SOURCES.map((s) => this.button(`attach-${s.id}`, s.label, `mods/chat/${s.icon}.svg`, this.sourceKind === s.id ? "secondary" : "ghost", t, () => {
+        .children(SOURCES.map((s) => this.button(`attach-${s.id}`, s.label, `mods/chat/${s.icon}.svg`, this.sourceKind === s.id ? "secondary" : "ghost", t, (cx) => {
           if (this.sourceBusy) return;
           this.sourceKind = s.id; this.sourceError = null; this.sourceBox.set_value(""); this.sourceBox.focus();
+          if (s.id === "github") this.loadIssues(cx);
         })))
         .child(this.iconButton("attach-close", "mods/chat/x.svg", t, false, close)))
-      .when(Boolean(source), (el) => el
+      .when(this.sourceKind === "github", (el) => el
+        .child(h_flex().gap(8).items_center()
+          .child(div().flex_1().text_size(12).text_color(t.dim).child(this.issuesBusy ? "读取当前 Space 的 Issue…" : this.issues?.repo ?? "当前 Space 仓库"))
+          .child(this.button("attach-issues-refresh", "刷新", null, "ghost", t, (cx) => this.loadIssues(cx))))
+        .child(Input.new(this.sourceBox).w_full().h(30).px(8).rounded(6).border_1().border_color(t.input).bg(t.surface).text_size(12.5))
+        .child(v_flex().id("chat-space-issues").max_h(220).overflow_y_scrollbar().gap(3)
+          .children((this.issues?.issues ?? []).filter((x) => `#${x.number} ${x.title}`.toLowerCase().includes(this.sourceBox.value().toLowerCase()))
+            .map((x) => this.button(`attach-issue-${x.number}`, `#${x.number} ${x.title}`, null, "ghost", t, (cx) => {
+              if (this.sourceBusy) return;
+              this.sourceBox.set_value(x.url); this.attachSource(cx);
+            })))
+          .when(Boolean(this.issues) && !this.issues?.issues.length, (el) => el.child(div().text_size(12).text_color(t.dim).child("当前仓库没有开放的 Issue。"))))
+        .child(div().text_size(11.5).text_color(t.dim).child(this.sourceBusy ? "正在读取 Issue 正文和讨论…" : "选择 Issue 加入附件。开启此 Space 的 Autopilot 后，会监听新增和更新。")))
+      .when(Boolean(source) && this.sourceKind !== "github", (el) => el
         .child(div().text_size(12).text_color(t.dim).child(source?.placeholder ?? ""))
         .child(h_flex().gap(6).items_center()
           .child(Input.new(this.sourceBox).flex_1().min_w(0).h(32).px(8).rounded(6).border_1().border_color(t.input).bg(t.surface).text_size(12.5))
@@ -4281,7 +4333,7 @@ export default class Chat extends View {
         cx.stop_propagation();
         this.enter(cx, Boolean(m.control || m.platform));
       })
-      .on_drop((e, cx) => { this.addFiles(attach.paths(e.paths ?? [])); this.saveSoon(cx); this.box.focus(); cx.notify(); })
+      .on_drop((e, cx) => { cx.stop_propagation(); this.dropFiles(e.paths ?? [], cx); })
       // Where the box is in the window, for a typed /model's picker (modelCommand()).
       .on_mouse_move((e) => { if (e.bounds) this.composerAt = e.bounds; })
       .border_color(this.focused ? t.accent : t.input).bg(t.background)
@@ -4536,7 +4588,7 @@ export default class Chat extends View {
       .on_mouse_down("left", (e) => { this.notePress(e); holdKeys(this.areaKey()); this.pressWin = e.position; this.keepIcons = null; this.pressing = true; this.pressMoved = false; if (e.bounds) this.noteArea(e.bounds); })
       .on_mouse_up("left", () => { this.pressing = false; })
       // Files dropped anywhere on the chat go with the next message.
-      .on_drop((e, cx) => { this.addFiles(attach.paths(e.paths ?? [])); this.saveSoon(cx); this.box.focus(); cx.notify(); });
+      .on_drop((e, cx) => { cx.stop_propagation(); this.dropFiles(e.paths ?? [], cx); });
 
     // Starting (or the new agent's log not there yet): the person's message shows at once.
     const starting = (this.phase === "starting" || (this.phase === "finding" && this.role && !this.path)) && this.pending.length > 0;

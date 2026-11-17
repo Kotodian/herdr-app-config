@@ -2457,16 +2457,18 @@ function PlusOpen({ chatKey, file, photo }: { chatKey: string; file: RefObject<H
   const [url, setUrl] = useState('')
   const [reading, setReading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [issues, setIssues] = useState<{ repo: string; issues: { number: number; title: string; url: string }[] } | null>(null)
+  const [listing, setListing] = useState(false)
   const active = SOURCES.find((s) => s.id === source)
   const close = () => setUI({ plus: null })
-  const readSource = async () => {
+  const readSource = async (selected = url) => {
     if (!source || reading) return
     setReading(true)
     setError(null)
     try {
       const r = await fetch('api/context-source', {
         method: 'POST', headers: { 'content-type': 'application/json', 'x-shepherdr': '1' },
-        body: JSON.stringify({ kind: source, url }), signal: AbortSignal.timeout(200_000),
+        body: JSON.stringify({ kind: source, url: selected, chat: chatKey }), signal: AbortSignal.timeout(200_000),
       })
       const result = await r.json()
       if (!r.ok || !result.path) throw new Error(result.error || '读取失败，请重试。')
@@ -2475,6 +2477,16 @@ function PlusOpen({ chatKey, file, photo }: { chatKey: string; file: RefObject<H
         files: { ...u.files, [chatKey]: [...(u.files[chatKey] ?? []), { name: result.name, path: result.path }] } }))
     } catch (e) { setError((e as Error).message) }
     finally { setReading(false) }
+  }
+  const listIssues = async () => {
+    setListing(true); setIssues(null); setError(null)
+    try {
+      const r = await fetch(`api/context-source/issues?chat=${encodeURIComponent(chatKey)}`, { signal: AbortSignal.timeout(200_000) })
+      const result = await r.json()
+      if (!r.ok) throw new Error(result.error || '无法读取当前仓库的 Issue。')
+      setIssues(result)
+    } catch (e) { setError((e as Error).message) }
+    finally { setListing(false) }
   }
   const screenshot = async () => {
     close()
@@ -2512,11 +2524,31 @@ function PlusOpen({ chatKey, file, photo }: { chatKey: string; file: RefObject<H
       </MenuItem>
       {SOURCES.map((s) => (
         <MenuItem key={s.id} icon={s.id === 'github' ? <QuestionIcon className={ic} /> : <PageIcon className={ic} />}
-          disabled={reading} onClick={() => { setSource(s.id); setUrl(''); setError(null) }}>
+          disabled={reading} onClick={() => { setSource(s.id); setUrl(''); setError(null); if (s.id === 'github') void listIssues() }}>
           {s.label}
         </MenuItem>
       ))}
-      {active ? (
+      {source === 'github' ? (
+        <div className="w-[380px] max-w-full space-y-2 border-t border-line p-3" onKeyDown={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between gap-2 text-[0.8125rem]">
+            <span>{listing ? '读取当前 Space 的 Issue…' : issues?.repo || '当前 Space 仓库'}</span>
+            <button disabled={listing || reading} onClick={() => void listIssues()}>刷新</button>
+          </div>
+          <input autoFocus value={url} placeholder="搜索编号或标题" onChange={(e) => setUrl(e.target.value)}
+            className={clsx(field, 'h-9 w-full rounded-lg bg-bg px-2 text-base')} />
+          <div className="max-h-56 space-y-1 overflow-y-auto">
+            {issues?.issues.filter((x) => `#${x.number} ${x.title}`.toLowerCase().includes(url.toLowerCase())).map((x) => (
+              <button key={x.number} disabled={reading} onClick={() => void readSource(x.url)}
+                className="block w-full rounded-lg px-2 py-2 text-left text-[0.8125rem] whitespace-normal hover:bg-hover">
+                #{x.number} {x.title}
+              </button>
+            ))}
+            {issues && !issues.issues.length ? <p className="text-[0.8125rem]">当前仓库没有开放的 Issue。</p> : null}
+          </div>
+          <p className="text-[0.75rem] whitespace-normal text-fg3">{reading ? '正在读取正文和讨论…' : '选择后加入附件。开启此 Space 的 Autopilot 后，会监听新增和更新。'}</p>
+          {error ? <p role="alert" className="text-[0.75rem] whitespace-normal text-red-400">{error}</p> : null}
+        </div>
+      ) : active ? (
         <div className="w-[340px] max-w-full space-y-2 border-t border-line p-3" onKeyDown={(e) => e.stopPropagation()}>
           <label className="block text-[0.8125rem]" htmlFor="context-source-url">{active.label} 链接</label>
           <input key={active.id} id="context-source-url" autoFocus value={url} disabled={reading}

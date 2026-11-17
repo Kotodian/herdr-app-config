@@ -5,7 +5,8 @@
 
 import { exec, hc, appHome, window } from "herdr";
 import * as fs from "fs/promises";
-import { fetchSource } from "./core/context-source.js";
+import { fetchSource, spaceIssue } from "./core/context-source.js";
+import { tapdReference, tapdSnapshot } from "./core/tapd-attachment.js";
 
 const IMAGE = /\.(png|jpe?g|gif|webp|bmp|tiff?)$/i;
 const base = (p) => String(p).split("/").filter(Boolean).pop() ?? p;
@@ -89,6 +90,20 @@ export async function pick(title = "Attach files", os = window()?.platform) {
 // Dropped or pasted file paths as attachments.
 export const paths = (list) => list.filter(Boolean).map((p) => ({ path: p, name: base(p), image: isImage(p), temp: false }));
 
+export async function droppedFile(path) {
+  const dir = `${appHome()}/data/tapd-drag/`;
+  if (!path.startsWith(dir) || !/^\d+-\d+\.tapd\.json$/.test(path.slice(dir.length))) return paths([path])[0];
+  const ref = tapdReference(JSON.parse(await fs.readFile(path, "utf8")));
+  const r = await exec("/usr/bin/python3", [`${appHome()}/mods/local-tapd/tapd_bridge.py`, JSON.stringify(ref)], { timeout: 180000 });
+  let reply;
+  try { reply = JSON.parse(r.stdout); } catch {}
+  if (r.code !== 0 || !reply?.ok) throw new Error(reply?.error || "无法读取 TAPD Bug，请刷新 TAPD 面板后重试。");
+  const snapshot = tapdSnapshot(reply.data, ref);
+  const file = await textFile(snapshot.text);
+  if (!file) throw new Error("Bug 已读取，但附件保存失败，请重试。");
+  return { ...file, name: snapshot.name, source: snapshot.source, url: snapshot.url };
+}
+
 // The message's file lines: each file's path where the agent is. For another machine, a copy
 // lands beside the agent's terminal.
 export async function deliver(files, addr, machine) {
@@ -160,8 +175,9 @@ export async function textFile(text) {
   return { path, name: first.length > 40 ? first.slice(0, 39) + "…" : first, image: false, text: true, temp: true };
 }
 
-export async function sourceFile(kind, value) {
-  const source = await fetchSource(kind, value, (cmd, args) => exec(cmd, args, { timeout: 90000 }));
+export async function sourceFile(kind, value, where) {
+  const run = (cmd, args) => exec(cmd, args, { timeout: 90000, on: kind === "github" ? where?.machine : null });
+  const source = kind === "github" ? await spaceIssue(value, where?.folder, run) : await fetchSource(kind, value, run);
   const file = await textFile(source.text);
   if (!file) throw new Error("内容已读取，但附件保存失败，请重试。");
   return { ...file, name: source.name, source: source.kind, url: source.url };
