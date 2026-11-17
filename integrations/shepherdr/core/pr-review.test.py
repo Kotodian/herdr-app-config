@@ -239,17 +239,220 @@ class HumanReviewTests(unittest.TestCase):
         comment = {"id": "human1", "by": "person", "status": "changes", "head": "a" * 40,
                    "path": "src/中文.go", "line": 37, "side": "RIGHT", "body": "为什么这里要判断？"}
         task["human_comments"] = [comment]
-        response = {"id": 98, "html_url": "https://github.com/example/repo/pull/12#issuecomment-98"}
+        response = {"id": 98, "html_url": "https://github.com/example/repo/pull/12#discussion_r98"}
+        empty = self.thread_page([])
+        found = self.thread_page([self.thread(task, comment)])
         with patch.object(review, "policy", return_value={"publish_review_comments": True}), \
-             patch.object(github, "gh", side_effect=[(True, "", ""), (True, json.dumps(response), "")]) as gh:
+             patch.object(github, "gh", side_effect=[
+                 (True, json.dumps(empty), ""), (True, json.dumps(response), ""),
+                 (True, json.dumps(found), ""), (True, json.dumps(found), "")]) as gh:
             review.sync_comments(self.store, task)
+            review.sync_comments(self.store, task)
+        self.assertEqual(gh.call_count, 4)
+        posted = gh.call_args_list[1].args
+        self.assertIn("repos/example/repo/pulls/12/comments", posted)
+        self.assertIn(f"body={comment['body']}\n\n<!-- herdr-human-comment:{self.store.ref(task)}:human1 -->", posted)
+        for arg in ("commit_id=" + "a" * 40, "path=src/中文.go", "line=37", "side=RIGHT"):
+            self.assertIn(arg, posted)
+        self.assertEqual(comment["pr_comment"]["id"], 98)
+        self.assertEqual(comment["pr_comment"]["thread_id"], "thread98")
+        self.assertEqual(comment["status"], "changes")
+
+    def thread_page(self, nodes, after=None):
+        return {"data": {"repository": {"pullRequest": {"reviewThreads": {
+            "nodes": nodes, "pageInfo": {"hasNextPage": after is not None, "endCursor": after}}}}}}
+
+    def thread(self, task, comment, resolved=False):
+        return {"id": "thread98", "isResolved": resolved, "viewerCanResolve": not resolved,
+                "viewerCanUnresolve": resolved, "comments": {"nodes": [{
+                    "id": "node98", "databaseId": 98,
+                    "url": "https://github.com/example/repo/pull/12#discussion_r98",
+                    "body": f"{comment['body']}\n<!-- herdr-human-comment:{self.store.ref(task)}:{comment['id']} -->"}]}}
+
+    def test_legacy_discussion_comment_migrates_to_inline_without_losing_history(self):
+        task, _ = self.prepare()
+        from herdr_task import github
+        task["pr"] = {"repo": "example/repo", "number": 12}
+        legacy = {"id": 7, "url": "https://github.com/example/repo/pull/12#issuecomment-7"}
+        c = {"id": "h1", "by": "person", "status": "changes", "head": "a" * 40,
+             "path": "中文.go", "line": 3, "side": "LEFT", "body": "原文", "pr_comment": legacy}
+        task["human_comments"] = [c]
+        posted = {"id": 98, "html_url": "https://github.com/example/repo/pull/12#discussion_r98"}
+        with patch.object(review, "policy", return_value={"publish_review_comments": True}), \
+             patch.object(github, "gh", side_effect=[
+                 (True, json.dumps(self.thread_page([])), ""), (True, json.dumps(posted), ""),
+                 (True, json.dumps(self.thread_page([self.thread(task, c)])), "")]) as gh:
+            review.sync_comments(self.store, task)
+        self.assertIn("side=LEFT", gh.call_args_list[1].args)
+        self.assertEqual(c["pr_comment_legacy"], [legacy])
+        self.assertEqual(c["pr_comment"]["kind"], "review")
+        self.assertEqual(c["body"], "原文")
+
+    def test_inline_recovery_paginates_without_duplicate_posts(self):
+        task, _ = self.prepare()
+        from herdr_task import github
+        task["pr"] = {"repo": "example/repo", "number": 12}
+        c = {"id": "h1", "by": "person", "status": "changes", "path": "中文.go", "body": "keep"}
+        task["human_comments"] = [c]
+        with patch.object(review, "policy", return_value={"publish_review_comments": True}), \
+             patch.object(github, "gh", side_effect=[
+                 (True, json.dumps(self.thread_page([], "page2")), ""),
+                 (True, json.dumps(self.thread_page([self.thread(task, c)])), "")]) as gh:
+            review.sync_comments(self.store, task)
+        self.assertIn("after=page2", gh.call_args.args)
+        self.assertEqual(gh.call_count, 2)
+        self.assertEqual(c["pr_comment"]["id"], 98)
+
+    def test_failed_inline_post_preserves_comment_and_never_falls_back_to_discussion(self):
+        task, _ = self.prepare()
+        from herdr_task import github
+        task["pr"] = {"repo": "example/repo", "number": 12}
+        c = {"id": "h1", "by": "person", "status": "changes", "head": "a" * 40,
+             "path": "中文.go", "line": 3, "side": "LEFT", "body": "keep"}
+        task["human_comments"] = [c, {**c, "id": "draft", "status": "draft"}]
+        with patch.object(review, "policy", return_value={"publish_review_comments": True}), \
+             patch.object(github, "gh", side_effect=[
+                 (True, json.dumps(self.thread_page([])), ""), (False, "", "invalid line")]) as gh:
             review.sync_comments(self.store, task)
         self.assertEqual(gh.call_count, 2)
-        body = gh.call_args.args[-1]
-        self.assertIn(comment["body"], body)
-        self.assertIn("herdr-human-comment:", body)
-        self.assertEqual(comment["pr_comment"]["id"], 98)
-        self.assertEqual(comment["status"], "changes")
+        self.assertIn("pulls/12/comments", " ".join(gh.call_args.args))
+        self.assertEqual(c["body"], "keep")
+        self.assertEqual(c["status"], "changes")
+        self.assertEqual(c["pr_sync_error"], "invalid line")
+        self.assertNotIn("pr_sync_error", task["human_comments"][1])
+
+    def test_resolve_and_reopen_update_local_status_only_after_confirmed_mutation(self):
+        task, _ = self.prepare()
+        from herdr_task import github, pr_comments
+        task["pr"] = {"repo": "example/repo", "number": 12}
+        c = {"id": "h1", "by": "person", "status": "changes", "path": "中文.go", "body": "keep"}
+        task["human_comments"] = [c]
+        for reopen in (False, True):
+            action = "unresolveReviewThread" if reopen else "resolveReviewThread"
+            thread = self.thread(task, c, resolved=not reopen)
+            mutation = {"data": {action: {"thread": thread}}}
+            before = self.thread_page([self.thread(task, c, resolved=reopen)])
+            with patch.object(github, "gh", side_effect=[
+                    (True, json.dumps(before), ""), (True, json.dumps(mutation), "")]) as gh:
+                pr_comments.resolve(self.store, task, c["id"], reopen)
+            self.assertIn(action, " ".join(gh.call_args.args))
+            self.assertEqual(c["status"], "changes" if reopen else "resolved")
+            self.assertEqual(c["pr_comment"]["is_resolved"], not reopen)
+
+    def test_failed_resolution_does_not_claim_thread_is_resolved(self):
+        task, _ = self.prepare()
+        from herdr_task import github, pr_comments
+        task["pr"] = {"repo": "example/repo", "number": 12}
+        c = {"id": "h1", "by": "person", "status": "changes", "path": "中文.go", "body": "keep"}
+        task["human_comments"] = [c]
+        with patch.object(github, "gh", side_effect=[
+                (True, json.dumps(self.thread_page([self.thread(task, c)])), ""), (False, "", "offline")]):
+            with self.assertRaisesRegex(Fail, "offline"):
+                pr_comments.resolve(self.store, task, c["id"])
+        self.assertEqual(c["status"], "changes")
+        self.assertFalse(c["pr_comment"]["is_resolved"])
+
+    def test_agent_cannot_resolve_the_persons_review_threads(self):
+        with patch.dict(os.environ, {"CODEX_THREAD_ID": "agent-session"}), \
+             self.assertRaisesRegex(Fail, "agents cannot approve"):
+            review.cmd_resolve_review_comment(argparse.Namespace(id=1, comment_id="h1", reopen=False))
+
+    def test_approval_does_not_silently_resolve_submitted_comments(self):
+        task, _ = self.prepare()
+        task["human_comments"] = [{"id": "h1", "status": "changes", "snapshot": "old", "body": "keep"}]
+        self.approval(task)
+        self.assertEqual(task["human_comments"][0]["status"], "changes")
+
+    def test_old_comment_opens_original_local_commit_after_file_removed_and_base_changed(self):
+        task, wt = self.prepare()
+        from herdr_task import github
+        first = review.review_diff(self.store, task)
+        with patch.dict(os.environ, {}, clear=True):
+            review.comment(self.store, task, first["snapshot"], "keep original", "文件 with spaces.txt", 1)
+        c = task["human_comments"][0]
+        (wt / "文件 with spaces.txt").unlink()
+        self.git("add", "-A", cwd=wt)
+        self.git("commit", "-qm", "remove file", cwd=wt)
+        self.git("commit", "-q", "--allow-empty", "-m", "base changed")
+        self.git("branch", "-f", "dev", "main")
+        with patch.object(github, "gh", side_effect=AssertionError("no network")):
+            old = review.review_diff(self.store, task, comment_id=c["id"])
+        self.assertTrue(old["historical"])
+        self.assertFalse(old["approved"])
+        self.assertEqual(old["head"], first["head"])
+        self.assertEqual(old["merge_base"], first["merge_base"])
+        self.assertEqual(old["anchor"], {"path": c["path"], "line": 1, "side": "RIGHT"})
+        self.assertIn("+before", old["patch"]["text"])
+        with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(Fail, "changed"):
+            review.approve(self.store, task, old["snapshot"])
+
+    def test_approval_queues_merge_and_delivers_only_once_to_the_tasks_assistant(self):
+        task, _ = self.prepare()
+        from herdr_task import launch, news
+        task["space"] = "project-space"
+        out = self.approval(task)
+        self.assertEqual(out["handoff"]["state"], "queued")
+        with patch.object(launch, "coordinator_in", return_value="t-assistant") as target, \
+             patch.object(news, "news_send", return_value=True) as send:
+            review.dispatch_merge(self.store, task)
+            review.dispatch_merge(self.store, task)
+        target.assert_called_once_with("project-space")
+        self.assertEqual(send.call_count, 1)
+        message = send.call_args.args[1]
+        self.assertIn("herdr-task accept", message)
+        self.assertIn(out["head"], message)
+        self.assertIn("never bypass", message)
+        self.assertEqual(task["human_merge"]["state"], "sent")
+        self.assertEqual(task["state"], "ready")
+
+    def test_merge_handoff_waits_for_assistant_and_retries_without_losing_approval(self):
+        task, _ = self.prepare()
+        from herdr_task import launch, news
+        self.approval(task)
+        with patch.object(launch, "coordinator_in", return_value=None), patch.object(news, "news_send") as send:
+            review.dispatch_merge(self.store, task)
+        send.assert_not_called()
+        self.assertEqual(task["human_merge"]["state"], "queued")
+        self.assertIn("Assistant", task["human_merge"]["error"])
+        task["human_merge"]["tried"] = 0
+        with patch.object(launch, "coordinator_in", return_value="t-assistant"), \
+             patch.object(news, "news_send", return_value=True):
+            review.dispatch_merge(self.store, task)
+        self.assertEqual(task["human_merge"]["state"], "sent")
+        self.assertTrue(review.comparison(self.store, task)["approved"])
+
+    def test_stale_approval_never_gets_delivered_for_automatic_merge(self):
+        task, wt = self.prepare()
+        from herdr_task import news
+        self.approval(task)
+        self.git("commit", "-q", "--allow-empty", "-m", "later change", cwd=wt)
+        with patch.object(news, "news_send") as send:
+            review.dispatch_merge(self.store, task)
+        send.assert_not_called()
+        self.assertEqual(task["human_merge"]["state"], "stale")
+        self.assertFalse(review.comparison(self.store, task)["approved"])
+
+    def test_existing_exact_human_approval_is_handed_off_without_another_button(self):
+        task, _ = self.prepare()
+        from herdr_task import launch, news
+        self.approval(task)
+        task.pop("human_merge")
+        with patch.object(launch, "coordinator_in", return_value="t-assistant"), \
+             patch.object(news, "news_send", return_value=True) as send:
+            review.dispatch_merge(self.store, task)
+        self.assertEqual(send.call_count, 1)
+        self.assertEqual(task["human_merge"]["state"], "sent")
+
+    def test_old_approval_for_changed_commits_is_not_migrated_or_sent(self):
+        task, wt = self.prepare()
+        from herdr_task import news
+        self.approval(task)
+        task.pop("human_merge")
+        self.git("commit", "-q", "--allow-empty", "-m", "later change", cwd=wt)
+        with patch.object(news, "news_send") as send:
+            review.dispatch_merge(self.store, task)
+        send.assert_not_called()
+        self.assertNotIn("human_merge", task)
 
     def test_comment_sync_recovers_a_posted_comment_without_posting_duplicates(self):
         task, _ = self.prepare()

@@ -25,6 +25,7 @@ export default class PullRequest extends View {
   init(_props, cx) {
     this.fixed = props()?.where ?? null; this.wide = Boolean(props()?.wide); this.path = props()?.path ?? null;
     this.commentId = props()?.commentId ?? null; this.jumpTarget = props()?.jumpTarget ?? null;
+    this.anchor = this.jumpTarget;
     this.current = null; this.error = null; this.rows = []; this.mode = "split"; this.host = cx;
     this.patch = null; this.patchSnapshot = null; this.working = false; this.fileSeq = 0;
     this.scroll = VirtualListScrollHandle.new(); this.handle = cx.focus_handle();
@@ -108,6 +109,7 @@ export default class PullRequest extends View {
         const target = this.jumpTarget, field = target.side === "LEFT" ? "left" : "right";
         const at = this.items().findIndex(item => item.kind === "code" && item.row[field]?.number === target.line);
         if (at >= 0) this.scroll.scroll_to_item(at, "center");
+        else if (target.line) this.error = "评论的原始行不在此预览中，代码可能已截断。";
         this.jumpTarget = null;
       }
     } catch (e) { if (seq === this.fileSeq) this.error = String(e?.message ?? e); }
@@ -128,7 +130,7 @@ export default class PullRequest extends View {
     const target = JSON.parse(key);
     const press = this.pressX; this.pressX = null;
     if (press == null || press < 0 || press >= 24 || target.kind !== "code" || !target.line
-      || target.snapshot !== this.current?.snapshot || target.path !== this.path || this.working) return;
+      || target.snapshot !== this.current?.snapshot || target.path !== this.path || this.working || this.current?.historical) return;
     if (this.commentBox.value().trim() && this.commentTarget &&
       (target.line !== this.commentTarget.line || target.side !== this.commentTarget.side)) {
       this.error = "请先保存或取消正在编辑的评论。"; cx.notify(); return;
@@ -140,7 +142,7 @@ export default class PullRequest extends View {
   }
   saveComment(cx, remove = null) {
     const c = this.current, target = this.commentTarget, body = this.commentBox.value().trim();
-    if (this.busy || this.working || !c || (!remove && (!body || !target))) return;
+    if (this.busy || this.working || !c || c.historical || (!remove && (!body || !target))) return;
     if (!remove && target && target.snapshot !== c.snapshot) {
       this.error = "代码版本已变化，请重新选择评论行。输入的评论已保留。"; cx.notify(); return;
     }
@@ -164,13 +166,14 @@ export default class PullRequest extends View {
   }
   expand(path = this.path) {
     openOverlay({ kind: "dialog", mod: "task-pr", width: 0.96, height: 0.92,
-      props: { wide: true, where: this.where(), path } });
+      props: { wide: true, where: this.where(), path, commentId: this.commentId, jumpTarget: this.jumpTarget } });
   }
   jumpComment(comment) {
     if (!comment.path) return;
     if (this.commentBox.value().trim()) {
       this.error = "请先保存或取消正在编辑的评论。"; this.invalidate(); return;
     }
+    if (props()?.overlay) closeOverlay(props().overlay);
     openOverlay({ kind: "dialog", mod: "task-pr", width: 0.96, height: 0.92,
       props: { wide: true, where: this.where(), path: comment.path, commentId: comment.id,
         jumpTarget: { path: comment.path, line: comment.line, side: comment.side } } });
@@ -193,7 +196,7 @@ export default class PullRequest extends View {
     });
   }
   scope(working, cx) {
-    if (working === this.working || this.loading || this.busy) return;
+    if (working === this.working || this.loading || this.busy || this.current?.historical) return;
     this.working = working; this.fileSeq++; this.rows = []; this.patchSnapshot = null;
     this.refresh(cx); cx.notify();
   }
@@ -205,7 +208,7 @@ export default class PullRequest extends View {
   }
   async action(command, cx) {
     const current = this.current, w = this.where();
-    if (this.busy || !current || this.working || current.historical) return;
+    if (this.busy || !current || this.working || current.historical || !["approve", "changes"].includes(command)) return;
     this.busy = command; this.error = null; cx.notify();
     try {
       if (command === "approve") {
@@ -216,12 +219,6 @@ export default class PullRequest extends View {
         const out = await cli(w, ["request-changes", w.ref, "--snapshot", current.snapshot]);
         this.current = { ...current, ...out };
         this.message = "已要求修改 · Worker 将逐条处理评论，完成后请重新审核";
-      } else {
-        const out = await cli(w, ["accept", w.ref]);
-        this.current = { ...current, state: out.state ?? current.state };
-        this.message = out.state === "done" ? "已审核并完成合并"
-          : out.accepted === "queue" ? "已加入 GitHub 合并队列，尚未合并"
-          : "已提交合并请求，正在等待检查或 GitHub 审核";
       }
     } catch (e) { this.error = String(e?.message ?? e); }
     finally { this.busy = false; this.invalidate(); }
@@ -239,7 +236,7 @@ export default class PullRequest extends View {
           .child(h_flex().gap(8).items_center()
             .child(div().flex_1().text_size(10).text_color(t.dim)
               .child(`${labels[comment.status] || comment.status} · 第 ${comment.line} 行`))
-            .when(comment.status === "draft" && comment.snapshot === this.current?.snapshot, (el) => el.child(
+            .when(!this.current?.historical && comment.status === "draft" && comment.snapshot === this.current?.snapshot, (el) => el.child(
               button(`pr-comment-delete-${comment.id}`, "删除", { kind: "plain", disabled: this.busy,
                 onClick: (_e, cx) => this.saveComment(cx, comment.id) })))
             .when(comment.status !== "draft" && Boolean(comment.path && this.current?.pr?.number),
@@ -264,6 +261,14 @@ export default class PullRequest extends View {
     return Boolean(c && !c.historical && c.state === "ready" && !c.dirty.length && c.local_matches && !c.limited
       && !this.working && !this.loading && !this.fileLoading && !this.busy
       && this.patchSnapshot === c.snapshot && !this.patch?.limited);
+  }
+  approvalText() {
+    const c = this.current;
+    if (c.historical) return "评论原提交 · 只读";
+    if (c.state === "done") return "任务已完成";
+    if (!c.approved) return c.approval ? "代码或基准已变化，之前的审核已失效" : "待人工审核 · 通过后自动交给 Assistant 合并";
+    if (c.handoff?.state === "sent") return `已审核 ${c.head.slice(0, 8)} · 已交给 Assistant 合并，等待执行结果`;
+    return `已审核 ${c.head.slice(0, 8)} · ${c.handoff?.error || "等待交给 Assistant，系统会自动重试"}`;
   }
   note(text, t, error = false) {
     return div().p(18).text_size(12).text_color(error ? t.ansi1 : t.dim).child(text);
@@ -345,6 +350,10 @@ export default class PullRequest extends View {
       .child(div().w(1).flex_none().h_full().bg(t.border))
       .child(this.code(row.right, row.inline?.right, row.kind !== "context", t, "right"));
   }
+  anchored(row) {
+    return this.anchor?.path === this.path && this.anchor?.line
+      && row[this.anchor.side === "LEFT" ? "left" : "right"]?.number === this.anchor.line;
+  }
   diff(t, cx) {
     const c = this.current, items = this.items();
     const pickMode = (mode) => { this.mode = mode; this.setRows(); this.prepareThreads(cx); this.scroll.scroll_to_item(0); };
@@ -370,8 +379,9 @@ export default class PullRequest extends View {
               (range) => items.slice(range.start, range.end).map((item) => item.kind === "thread"
                 ? div().h(item.height).w_full().child(this.threads.get(item.key))
                 : h_flex().h(LINE).w_full()
+                  .when(this.anchored(item.row), el => el.bg(t.selected))
                   .child(div().w(24).h(LINE).flex_none().text_center().text_color(t.accent)
-                    .when(!this.working && item.row.kind !== "hunk", (el) => el.cursor_pointer().hover((s) => s.bg(t.selected)).child("+")))
+                    .when(!this.working && !c.historical && item.row.kind !== "hunk", (el) => el.cursor_pointer().hover((s) => s.bg(t.selected)).child("+")))
                   .child(this.diffRow(item.row, t).flex_1().min_w(0)))).size_full().track_scroll(this.scroll)
               .on_item_click((key, cx) => this.selectLine(key, cx)))))
         .child(Scrollbar.vertical("pr-review-diff").absolute().inset_0())
@@ -418,20 +428,16 @@ export default class PullRequest extends View {
       .when(Boolean(this.error), (el) => el.child(div().max_h(100).overflow_y_scrollbar().child(this.note(this.error, t, true))))
       .child(v_flex().flex_none().px(16).py(12).gap(10).border_t(1).border_color(t.border)
         .child(div().text_size(11).text_color(c.approved ? t.ansi2 : t.dim)
-          .child(this.message || (c.approved ? `已审核 ${c.head.slice(0, 8)} · 当前提交可合并` : c.approval ? "代码或基准已变化，之前的审核已失效" : "待人工审核 · 审核通过后才能合并")))
+          .child(this.message || this.approvalText()))
         .child(h_flex().gap(8).items_center()
           .when(!this.wide, (el) => el.child(button("pr-review", "查看 Diff 并审核", { kind: "primary", size: "lg", onClick: () => this.expand() })))
           .when(this.wide, (el) => el
             .child(button("pr-request-changes", `要求修改 · ${drafts.length} 条评论`, {
-              size: "lg", disabled: this.busy || !drafts.length || c.state !== "ready" || this.working || this.loading || Boolean(this.message),
+              size: "lg", disabled: this.busy || c.historical || !drafts.length || c.state !== "ready" || this.working || this.loading || Boolean(this.message),
               onClick: (_e, cx) => cx.spawn(async (cx) => this.action("changes", cx)),
             }))
-            .child(button("pr-approve", this.busy === "approve" ? "正在记录…" : c.approved ? "已审核通过" : "审核通过", {
+            .child(button("pr-approve", this.busy === "approve" ? "正在交给 Assistant…" : c.approved ? "已审核通过" : "审核通过", {
               size: "lg", disabled: !this.ready() || c.approved, onClick: (_e, cx) => cx.spawn(async (cx) => this.action("approve", cx)),
-            }))
-            .child(button("pr-merge", this.busy === "merge" ? "正在合并…" : `合并到 ${c.base}`, {
-              kind: "primary", size: "lg", disabled: !this.ready() || !c.approved || Boolean(this.message),
-              onClick: (_e, cx) => cx.spawn(async (cx) => this.action("merge", cx)),
             })))));
   }
 }

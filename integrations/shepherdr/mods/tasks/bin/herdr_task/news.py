@@ -117,6 +117,10 @@ def news_pass(report, folder=None):
             first = "_init" not in mine
             mine["_init"] = True
             for t in s.data["tasks"]:
+                if s.write and ((t.get("human_merge") or {}).get("state") == "queued"
+                                or not t.get("human_merge") and t.get("human_review")):
+                    from .human_review import dispatch_merge
+                    dispatch_merge(s, t)
                 key = f"{s.slug}#{t['id']}"
                 live = [k for k in map(detail, live_agents(s.key(t))) if agent_running(k)] if t["state"] in ("running", "ready") else []
                 v, event, stall = news_state(s, t, live)

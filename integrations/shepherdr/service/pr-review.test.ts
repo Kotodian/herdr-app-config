@@ -5,13 +5,16 @@ import { patchRows } from '../core/pr-diff.js'
 
 let calls: string[][] = []
 let answer: unknown
+let fail = ''
+let overlays: any[] = []
 mock.module('herdr', () => fakeHerdr({
   appHome: () => '/tmp/test-app',
   theme: () => ({ input: '#333', background: '#222', foreground: '#eee' }),
   props: () => ({ where: { ref: 'TEST-1', folder: '/tmp/repo' } }),
+  openOverlay: (spec: unknown) => { overlays.push(spec); return 'test-overlay' },
   exec: async (_cmd: string, args: string[]) => {
     calls.push(args)
-    return { code: 0, stdout: JSON.stringify(answer), stderr: '' }
+    return { code: fail ? 1 : 0, stdout: JSON.stringify(answer), stderr: fail }
   },
 }))
 mock.module('gpui-kit', () => fakeGpuiKit())
@@ -31,15 +34,18 @@ const make = () => {
     scroll: { scroll_to_item() {} }, refresh() {},
   })
 }
-beforeEach(() => { calls = [] })
+beforeEach(() => { calls = []; fail = ''; overlays = [] })
 
-test('a GitHub merge queue result never claims the PR already merged', async () => {
-  answer = { state: 'ready', accepted: 'queue' }
+test('approval hands merging to the Assistant without a separate merge action', async () => {
+  answer = { state: 'ready', approved: true, head: '123456789', handoff: { state: 'sent' } }
   const view = make()
-  await view.action('merge', cx)
+  await view.action('approve', cx)
   expect(view.current.state).toBe('ready')
-  expect(view.message).toContain('尚未合并')
-  expect(calls[0]).toContain('accept')
+  expect(view.approvalText()).toContain('已交给 Assistant 合并')
+  expect(view.approvalText()).toContain('等待执行结果')
+  expect(calls[0]).toContain('approve-review')
+  await view.action('merge', cx)
+  expect(calls).toHaveLength(1)
 })
 
 test('request changes preserves the full returned comment list and returns to Working', async () => {
@@ -101,4 +107,69 @@ test('background GitHub polling cannot invalidate and repeatedly clear the displ
   expect(view.context()).toBe(before)
   view.fixed.pr.number = 2
   expect(view.context()).not.toBe(before)
+})
+
+test('review comment location opens its immutable original code anchor', () => {
+  const view = make()
+  view.jumpComment({ id: 'abcdef123456', path: 'src/中文.ts', line: 37, side: 'LEFT' })
+  expect(overlays[0].props).toMatchObject({
+    wide: true, commentId: 'abcdef123456', path: 'src/中文.ts',
+    jumpTarget: { path: 'src/中文.ts', line: 37, side: 'LEFT' },
+  })
+  view.commentBox.set_value('unsaved')
+  view.jumpComment({ id: 'another', path: 'src/other.ts' })
+  expect(overlays).toHaveLength(1)
+  expect(view.error).toContain('保存或取消')
+})
+
+test('original comment snapshot loads locally and centers the matching source row', async () => {
+  const view = make(), scrolled: any[] = []
+  view.commentId = 'abcdef123456'
+  view.jumpTarget = { path: 'code.ts', line: 37, side: 'LEFT' }
+  view.fileSeq = 0
+  view.scroll.scroll_to_item = (...args: any[]) => scrolled.push(args)
+  answer = { snapshot: 'old', files: [{ path: 'code.ts' }], comments: [],
+    historical: true, patch: { text: '@@ -36,2 +36,2 @@\n same\n-before\n+after\n' } }
+  await view.loadFile('code.ts', cx)
+  expect(calls[0]).toContain('--comment-id')
+  expect(calls[0]).toContain('abcdef123456')
+  const [at, strategy] = scrolled.at(-1)
+  expect(view.items()[at].row.left.number).toBe(37)
+  expect(strategy).toBe('center')
+})
+
+test('historical code cannot receive comments, request changes, approve, or merge', async () => {
+  const view = make()
+  view.current.historical = true; view.path = 'code.ts'; view.pressX = 10
+  view.selectLine(JSON.stringify({ kind: 'code', snapshot: 'abc', path: 'code.ts', line: 1 }), cx)
+  expect(view.commentTarget).toBeUndefined()
+  view.commentBox.set_value('text')
+  view.commentTarget = { line: 1, path: 'code.ts', snapshot: 'abc' }
+  view.saveComment(cx)
+  view.scope(true, cx)
+  for (const action of ['approve', 'changes', 'merge']) await view.action(action, cx)
+  expect(calls).toHaveLength(0)
+  expect(view.working).toBe(false)
+  expect(view.ready()).toBe(false)
+})
+
+test('resolve and reopen use the saved comment id while preserving the comparison', async () => {
+  const view = make()
+  answer = { comments: [{ id: 'abcdef123456', status: 'resolved' }] }
+  await view.commentAction({ id: 'abcdef123456', status: 'changes' }, cx)
+  expect(calls[0].slice(0, 4)).toEqual(['resolve-review-comment', 'TEST-1', '--comment-id', 'abcdef123456'])
+  expect(view.current.snapshot).toBe('abc')
+  expect(view.current.comments[0].status).toBe('resolved')
+  answer = { comments: [{ id: 'abcdef123456', status: 'changes' }] }
+  await view.commentAction({ id: 'abcdef123456', status: 'resolved' }, cx)
+  expect(calls[1]).toContain('--reopen')
+})
+
+test('failed resolution keeps the original feedback and shows the error', async () => {
+  const view = make()
+  view.current.comments = [{ id: 'abcdef123456', status: 'changes', body: 'keep' }]
+  answer = null; fail = 'GitHub offline'
+  await view.commentAction(view.current.comments[0], cx)
+  expect(view.current.comments[0]).toEqual({ id: 'abcdef123456', status: 'changes', body: 'keep' })
+  expect(view.error).toBe('GitHub offline')
 })

@@ -71,7 +71,8 @@ def comparison(s, t):
             "title": t.get("title") or s.ref(t), "pr_url": pr.get("url"),
             "worktree": wt, "local_matches": same_head, "state": t["state"],
             "required": required(t), "approval": t.get("human_review"),
-            "comments": t.get("human_comments") or [], "reviews": t.get("human_reviews") or []}
+            "comments": t.get("human_comments") or [], "reviews": t.get("human_reviews") or [],
+            "handoff": t.get("human_merge")}
 
 
 def review_diff(s, t, path=None, working=False, comment_id=None):
@@ -88,7 +89,7 @@ def review_diff(s, t, path=None, working=False, comment_id=None):
             s.loc["folder"], "merge-base", original_base, original_head).stdout.strip()
         review.update(head=original_head, base_head=original_base, merge_base=original_merge,
                       snapshot=c["snapshot"], approved=False, approval=None, historical=True,
-                      dirty=[], local_matches=True, comment_id=comment_id,
+                      dirty=[], local_matches=True, comment_id=comment_id, handoff=None,
                       anchor={k: c.get(k) for k in ("path", "line", "side")})
         path = path or c["path"]
     folder, end = s.loc["folder"], review["head"]
@@ -160,8 +161,64 @@ def approve(s, t, snapshot):
         if comment["snapshot"] == snapshot and comment.get("status") == "draft":
             comment["status"] = "commented"
     sync_comments(s, t)
+    if ((t.get("human_merge") or {}).get("snapshot") != snapshot
+            or (t.get("human_merge") or {}).get("state") == "stale"):
+        t["human_merge"] = {"snapshot": snapshot, "state": "queued", "at": now()}
     s.dirty = True
-    return {**current, "approved": True, "approval": t["human_review"]}
+    return {**current, "approved": True, "approval": t["human_review"], "handoff": t["human_merge"]}
+
+
+def dispatch_merge(s, t):
+    """Deliver a persisted human approval to this task's Assistant; tick retries unavailable ones."""
+    handoff = t.get("human_merge") or {}
+    # Older screens saved a human approval but waited for a second merge-button click.
+    # Recover that already-authorized intent only while its exact commits still match.
+    if not handoff and t["state"] == "ready" and (t.get("human_review") or {}).get("by") == "person" and required(t):
+        try:
+            current = require_approval(s, t)
+        except Fail:
+            return
+        handoff = t["human_merge"] = {"snapshot": current["snapshot"], "state": "queued", "at": now()}
+        s.dirty = True
+    if handoff.get("state") != "queued" or now() - handoff.get("tried", 0) < 15000:
+        return
+    if t["state"] != "ready" or t.get("accepted_at") or t.get("merge_requested"):
+        return
+    handoff["tried"] = now()
+    s.dirty = True
+    try:
+        current = require_approval(s, t)
+        if current is None or current["snapshot"] != handoff["snapshot"]:
+            raise Fail("代码已变化，需要重新人工审核。")
+    except Fail as e:
+        handoff.update(state="stale", error=str(e))
+        return
+    from .launch import coordinator_in
+    from .news import news_send
+    import shlex
+    to = coordinator_in(t.get("space"))
+    if not to:
+        handoff["error"] = "等待此项目的 Assistant 启动，系统会自动重试。"
+        return
+    message = (
+        f"The person clicked 审核通过 for {s.ref(t)} at commit {current['head']} "
+        f"and base {current['base']} ({current['base_head']}). "
+        "They authorize you to complete its merge now. Do not ask for another merge-button click. "
+        f"Run herdr-task accept {shlex.quote(s.ref(t))} --folder {shlex.quote(s.loc['folder'])} --json. "
+        "The human approval must still match the exact local and remote commits; never bypass this gate. "
+        "If commits changed, request another human review. Report actual merge completion, "
+        "pending checks/queue, or the concrete blocker. Do not claim success while pending."
+    )
+    try:
+        sent = news_send(to, message)
+    except (Fail, OSError) as e:
+        handoff["error"] = f"暂时无法交给 Assistant，系统会自动重试：{e}"
+        return
+    if sent:
+        handoff.update(state="sent", terminal=to, sent_at=now())
+        handoff.pop("error", None)
+    else:
+        handoff["error"] = "暂时无法交给 Assistant，系统会自动重试。"
 
 
 def comment(s, t, snapshot, body=None, path=None, line=None, side="RIGHT", remove=None):
@@ -247,6 +304,7 @@ def request_changes(s, t, snapshot, args):
                   "Do not approve or merge. The person must review the new diff and click 审核通过 again."])
     # Approval is revoked before any agent is woken, including when starting the worker fails.
     t.pop("human_review", None)
+    t.pop("human_merge", None)
     for key in ("auto_merge", "accepted_at", "merge_requested"):
         t.pop(key, None)
     s.dirty = True
@@ -293,8 +351,13 @@ def cmd_approve_review(args):
     from .store import open_store
     from .output import say
     with open_store(args) as s:
-        out = approve(s, s.find(args.id), args.snapshot)
-    say(args, out, "Review approved for " + out["head"][:8] + ". Merge is now available.")
+        approve(s, s.find(args.id), args.snapshot)
+    # Approval is durable before the Assistant can run accept in another process.
+    with open_store(args) as s:
+        t = s.find(args.id)
+        dispatch_merge(s, t)
+        out = review_diff(s, t)
+    say(args, out, "Review approved for " + out["head"][:8] + "; merge handed to the Assistant.")
 
 
 def cmd_review_comment(args):

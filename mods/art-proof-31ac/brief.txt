@@ -1,0 +1,59 @@
+SPS-9   Working   补齐剩余策略与诊断能力  (提交候选并准备唯一正式评审 · 70% · ~1h left)
+folder: __HERDR_SYNC_HOME__/go/src/github.com/Kotodian/steam-proxy-sdk
+worktree: __HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-9-task (branch task/9-task, base dev)
+merges into: dev (set for this task)
+comes after: SPS-8
+review rounds: 0 of 1 used
+agent: t6q working
+
+# 补齐剩余策略与诊断能力
+
+这是 SPS-8 之后的一项完整交付，集中收敛原设计尚缺的可替换地址策略与真实诊断链。不要按模块再拆任务，不要重做 SPS-1～8 已完成的实现，也不要把“尚未运行验收”误当成缺代码。
+
+## 起点与原文
+
+- 依赖 SPS-8 完成后才启动，base 必须为 dev。启动时核实实际 dev 包含 SPS-8 最终提交 67145a825b263e47a2953c2e94d7fb65bed62fb2 的合入结果及此前 Planner/出口组合；不可从未合入的旧 dev 开始。
+- 原文：Obsidian Vault 的 gamesir/需求/steam 加速/方案/Steam 商店加速-SDK路由与策略引擎设计.md。可通过 Obsidian CLI 读取；当前快照 /private/tmp/steam-sdk-routing-design-20261115.md，须与原文核对。
+- 衔接 /private/tmp/sps8-proof/ledger.md、checks-summary.json、review.txt；SPS-8 proof 为 go-proof-81f9。逐条区分原文要求、已有源码事实、明确实现缺口、未核实和 main 阶段待运行。
+- 读取适用 AGENTS.md、CLAUDE.md 及 __HERDR_SYNC_HOME__/.codex/RTK.md。保留第 12 节 routing/outbound/health/probe 的职责和文件布局。
+
+## 核心交付
+
+1. 按原文 §2、§10、§11、§12 补齐 DirectOutbound<S> 的真实地址来源/选择策略组合。当前 S 实质上只是 TcpDialer，connect_addresses 内部排序写死。提供小而可替换的地址策略边界，并实际接入组装、业务调用及反馈；默认继续解析真实业务目标、优先历史较好的地址、在允许的建连失败边界尝试其他地址。不得只加未被调用的 trait。保持同一预算、取消、generation 历史隔离和现有公开调用兼容，不增加后台原站测速、TLS/HTTP 验证请求或新排名算法。独立 Go 按实际能力采用相应小接口，不强行复制 Rust 泛型形式。
+2. 按 §6.3 收敛探测窗口与业务诊断的实际消费链。SPS-8 的 Rust/Go 已有有界 60 秒 completed/success 窗口及单列取消，但没有可消费的近期诊断；Rust observation.rs 已有 first-byte/body/cache/reuse 等事件，先确认哪些链路已完整，避免重复造一套系统。利用现有 observer/status/诊断边界，以最小兼容方式让宿主读取有界的当前接入点/generation 探测完成数、成功数、取消数，并核对首字节、正文数据/中断、缓存命中和连接复用是否从真实业务采集且可消费；只补缺失链路。失败/超时进入完成分母，取消单列，零分母和过期窗口明确，业务不混入探测样本，旧代迟到反馈不污染新代。无真实数据的指标必须明确不可用，不伪造 RTT、丢包率或吞吐。
+3. 以同一份完整台账收敛剩余歧义：原文“全局并发 3”的作用域、Go 未有 EdgeOneWebSocket 反代配置、默认 Linux/macOS 网络观察限制与其他平台宿主边界、高优先级恢复时新旧流共存证据。逐项引用原文并查实际调用链；有实现而未运行的归 main 待验收，不为消掉 D 状态自行新增进程级全局状态、扩 wire 配置或重写平台适配。确属原设计且与本交付直接相关的缺口一并补齐；否则保留准确限制和依据，不冒称全设计验收完成。
+
+## 约束
+
+- 用户要求一个任务一个任务运行，相关任务可以预排队；不得另开开发子代理或并行实现。
+- dev 不运行回归，只有 main 阶段才回归。仅 Rust cargo check --offline --locked --tests、cargo fmt --all -- --check、git diff --check；Go 在 bindings/go 使用 GOWORK=off CGO_ENABLED=0 的 go build 或 go test -c 编译测试源码，不执行生成二进制。go test -run '^$' 会执行 init，不允许。
+- 可以补有意义的测试源码并编译，不能执行测试/race/feature 回归矩阵、设备/真实节点/Steam 请求。不要用静态结构检查冒充行为复现或运行通过。
+- 保持固定 A→B→C→D 层级、默认选择规则、HTTP/TCP 能力、配置与现有 ABI/wire、Factory/start/serve/close/restart 契约。近期统计用于诊断，不进入新的评分或熔断百分比规则；不增加监控服务、依赖、部署。
+- 必要任务提交、任务分支普通推送及目标 dev 的 PR 已获授权。身份缺失时仅临时沿用已确认的 c50f76b 作者身份，不修改 global/local Git 配置。不推送/合入 main，不 tag，不部署，不删除分支或 worktree，不自行合并、Accept、Done。
+- 默认唯一正式 review 轮：完整候选提交后交指定 codex / auto/gpt-6-astra / medium reviewer 只读评审；必要修正由同一 reviewer 在同轮核对真实最终 SHA，再如实 reviewed。不要预评审、机械追加轮次或把旧 SHA 记录为最终已审。
+
+## 验收与交付证据
+
+- 地址策略可通过替代策略的测试源码证明实际被业务组装调用；默认排序、预算/取消和网络代际边界都有有意义的测试源码，编译但不执行。
+- 诊断有明确宿主读取/接收入口和实际生产写入链，提供无需真实节点的使用示例；60 秒窗口、零样本、超时/取消、旧代隔离及业务缓存/复用归属有测试源码。避免为此改变不相关语言绑定；确需兼容扩展时说明原契约与变更范围。
+- 完整核对原文全部章节和第 12 节 23 个场景，更新真实证据与剩余限制。编译通过、评审通过、已实现未运行和完全未支持必须分开表述。
+- proof 绑定最终 SHA、真实检查命令及日志、唯一正式 reviewer 报告和逐项台账，实际查看手机与桌面预览。仅 worker 自己执行 herdr-task ready。
+- Ready 若重复显示后台作业计数，但已确认本任务命令和 reviewer 退出，提交一次 Herdr feedback 并向 Assistant 汇报即可；不花长时间查全机进程、不杀其他任务、不修改 Herdr 存储、不以此反复追加工作。
+
+Settings: (from herdr-task show; where the brief above says otherwise, it wins)
+- Review: on (set by the assistant for this task)
+- Reviewer: codex, model auto/gpt-6-astra, effort medium; start it as `codex --no-daemon --sandbox read-only --ask-for-approval never --disable hooks -c 'projects={"__HERDR_SYNC_HOME__/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-9-task"={trust_level="trusted"},"__HERDR_SYNC_HOME__/go/src/github.com/Kotodian/steam-proxy-sdk"={trust_level="trusted"}}' -m auto/gpt-6-astra -c 'model_reasoning_effort="medium"'` (your setting everywhere)
+- Must fix: blocker (your setting everywhere)
+- Review rounds: at most 1 (your setting everywhere)
+- Merge: ask the person first: they accept it in the Tasks panel, which merges it
+- Base: dev: your branch starts from it and merges into it (set by the assistant for this task)
+- Proof: show verifiable proof in one recipe artifact: each proof with a one-line caption, real and from this work now, plus a "Not proven" list; then say ready with --proof <its id> (set by the assistant for this task)
+- Agent: codex, model group/gpt-6.1-sol, effort medium (your setting everywhere)
+- Suggested next message: on (your reply ends with the message you'd likely send next, shown greyed out in the box)
+- Decision: development; implement; risk medium; complexity high. Typesafe Jev 分类为 development，风险 medium，复杂度 high；建议 implement / development。
+- Workflow: development; branch from and merge into dev
+- Decision model: codex / typesafe/jev-latest
+- Decision step: 确认受影响的代码和当前行为
+- Decision step: 实现变更并按风险验证结果
+- Required verification: 验证修改前后的行为
+- Required verification: 运行受影响范围的检查

@@ -1,0 +1,6 @@
+ bindings/go/network_change.go             | 60 -------------------------------
+ bindings/go/network_change_darwin.go      | 25 +++++++++++++
+ bindings/go/network_change_linux.go       | 29 +++++++++++++++
+ bindings/go/network_change_supported.go   | 34 ++++++++++++++++++
+ bindings/go/network_change_unsupported.go | 12 +++++++
+ 5 files changed, 100 insertions(+), 60 deletions(-)

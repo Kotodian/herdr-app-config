@@ -14,6 +14,7 @@ type Review = {
   snapshot: string; head: string; merge_base: string; base: string; branch: string; state: string
   approved: boolean; approval?: unknown; dirty: string[]; local_matches: boolean; limited: boolean
   historical?: boolean
+  handoff?: { state: string; error?: string } | null
   files: ChangedFile[]; file_count: number; add: number; delete: number
   comments: Comment[]
   title?: string; pr?: { number?: number }; pr_url?: string
@@ -174,7 +175,7 @@ function ReviewContent({ task, wide = false, anchor }: { task: string; wide?: bo
   useEffect(() => { setMessage('') }, [data?.snapshot])
   const ready = !!data && !data.historical && data.state === 'ready' && !data.dirty.length && data.local_matches && !data.limited
     && !working && !loading && !busy && !detail?.patch?.limited && (detail?.snapshot === data.snapshot || !data.files.length)
-  const action = async (kind: 'approve' | 'merge' | 'changes') => {
+  const action = async (kind: 'approve' | 'changes') => {
     if (!data || data.historical || busy || working || (kind === 'changes' ? data.state !== 'ready' : !ready)) return
     setBusy(kind); setError('')
     try {
@@ -186,10 +187,6 @@ function ReviewContent({ task, wide = false, anchor }: { task: string; wide?: bo
         const result = await act({ type: 'request-changes', task, snapshot: data.snapshot }) as Review
         setData((old) => ({ ...old!, ...result }))
         setMessage('已要求修改 · Worker 将逐条处理评论，完成后请重新审核')
-      } else {
-        const out = await act({ type: 'accept', task } as never) as { state?: string; accepted?: string }
-        setMessage(out.state === 'done' ? '已审核并完成合并' : out.accepted === 'queue' ? '已加入 GitHub 合并队列，尚未合并' : '合并请求已提交，正在等待检查或 GitHub 审核')
-        refresh((n) => n + 1)
       }
     } catch (e) { setError(String((e as Error).message ?? e)) }
     finally { setBusy('') }
@@ -283,7 +280,7 @@ function ReviewContent({ task, wide = false, anchor }: { task: string; wide?: bo
             anchor={anchor} historical={data?.historical} onResolve={(c) => void commentAction(c)}
             onBody={setBody} onSave={(remove) => void saveComment(remove)} onCancel={() => { setBody(''); setTarget(null) }}
             onComment={(row) => {
-              if (working || !detail) return
+              if (working || !detail || data?.historical) return
               const side = row.right ? 'RIGHT' : 'LEFT', line = (row.right ?? row.left)!.number
               if (body.trim() && target && (target.line !== line || target.side !== side)) { setError('请先保存或取消正在编辑的评论。'); return }
               setTarget({ snapshot: detail.snapshot, path, line, side })
@@ -292,11 +289,12 @@ function ReviewContent({ task, wide = false, anchor }: { task: string; wide?: bo
       </div>
       {error ? <p role="alert" className="max-h-24 shrink-0 overflow-auto px-3 py-2 text-xs text-need-fg">{error}</p> : null}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line px-3 py-3 text-xs">
-        <span className="min-w-0 flex-1 text-fg3">{message || (data?.approved ? `已审核 ${data.head.slice(0, 8)}` : data?.approval ? '版本已变化，之前的审核已失效' : '待人工审核 · 审核通过后才能合并')}</span>
+        <span className="min-w-0 flex-1 text-fg3">{message || (data?.historical ? '评论原提交 · 只读' : data?.state === 'done' ? '任务已完成' : data?.approved
+          ? `已审核 ${data.head.slice(0, 8)} · ${data.handoff?.state === 'sent' ? '已交给 Assistant 合并，等待执行结果' : data.handoff?.error || '等待交给 Assistant，系统会自动重试'}`
+          : data?.approval ? '版本已变化，之前的审核已失效' : '待人工审核 · 通过后自动交给 Assistant 合并')}</span>
         {wide ? <>
           <button className={primary} disabled={!!busy || !drafts.length || data?.state !== 'ready' || data?.historical || working || loading || !!message} onClick={() => void action('changes')}>要求修改 · {drafts.length} 条评论</button>
-          <button className={primary} disabled={!ready || data?.approved} onClick={() => void action('approve')}>{busy === 'approve' ? '正在记录…' : data?.approved ? '已审核通过' : '审核通过'}</button>
-          <button className={primary} disabled={!ready || !data?.approved || !!message} onClick={() => void action('merge')}>{busy === 'merge' ? '正在合并…' : `合并到 ${data?.base ?? ''}`}</button>
+          <button className={primary} disabled={!ready || data?.approved} onClick={() => void action('approve')}>{busy === 'approve' ? '正在交给 Assistant…' : data?.approved ? '已审核通过' : '审核通过'}</button>
         </> : null}
       </div>
     </div>
