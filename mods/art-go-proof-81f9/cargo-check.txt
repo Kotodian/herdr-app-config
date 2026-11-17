@@ -111,4 +111,4 @@ warning: field `cipher` is never read
 
 warning: `steam-proxy` (lib) generated 6 warnings
 warning: `steam-proxy` (lib test) generated 7 warnings (2 duplicates) (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.23s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.65s

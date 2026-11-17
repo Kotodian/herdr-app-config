@@ -6,9 +6,17 @@
 
 状态：A 仅指源码事实/静态证据；B 表示有实现但运行未验收；C 为明确实现缺口；D 为尚待核实。以下新增测试都只是源码；本轮不运行 Rust/Go 测试、race、feature 回归矩阵、设备、真实节点或 Steam 请求。
 
-最终交付：67145a825b263e47a2953c2e94d7fb65bed62fb2；PR #8，task/8-go → dev，未合并。最终 SHA 的 cargo check --offline --locked --tests、cargo fmt --all -- --check、Go go test -c、gofmt 和 git diff --check 均真实通过。检查输出、源码哈希见 checks-summary.json 及日志；未执行任何测试 binary/init。
+最终交付：19335d7df9c737f7a01fbd554327d0778222e394；PR #8，task/8-go → dev，未合并。当前 SHA 的 cargo check --offline --locked --tests、cargo fmt --all -- --check、Go go test -c、gofmt 和 git diff --check 均真实通过。检查输出、源码哈希见 checks-summary.json 及日志；未执行任何测试 binary/init。
 
-唯一正式评审：指定 codex / auto/gpt-6-astra / medium 以只读模式在同一轮核对最终 SHA，无 blocker/major。初次启动预算、HTTP 提交边界和连续事件回收问题，以及同轮后续 H2 DATA 写锁问题均在源码中修正。minor 为临时 diff 文件曾只有 diffstat：已补完整 patch，并独立逐字节与 Git 输出比对；未改变评审后的源码或提交。保留 reviewer 原始结论及工作者证据处置于 review.txt。评审不构成运行验收。
+唯一正式评审：指定 codex / auto/gpt-6-astra / medium 以只读模式在同一轮核对先前交付 SHA 67145a825b263e47a2953c2e94d7fb65bed62fb2，无 blocker/major。初次启动预算、HTTP 提交边界和连续事件回收问题，以及同轮后续 H2 DATA 写锁问题均在源码中修正。minor 为临时 diff 文件曾只有 diffstat：已补完整 patch，并独立逐字节与 Git 输出比对。保留 reviewer 原始结论及当时证据处置于 review.txt。当前后续用户修改提交不冒充已获该 reviewer 复审；按用户要求更新 Ready，由人重新审核新 diff。评审不构成运行验收。
+
+## 用户评审意见 3afaeef0c910
+
+- 意见：network_change.go:37 的平台判断为什么不在编译期处理。
+- 说明：原 runtime.GOOS 已是编译目标常量，switch 不是动态 OS 检测；但将不同平台的系统访问代码集中在共用文件不够清晰。按意见改为编译期文件选择，移除共用文件中的平台 switch 和 runtime 导入。
+- 实现：network_change_linux.go 仅 Linux；network_change_darwin.go 仅 macOS；network_change_supported.go 共享接口快照与排序；network_change_unsupported.go 保留其他平台默认源不可用的返回。NetworkObserver 宿主注入优先级不变。
+- 保留 Android/iOS 原不提供默认源的范围：Go 将它们分别同时匹配 linux/darwin，故显式 !android / !ios，兜底约束包含 android / ios。
+- 验证：实际 go list 静态选择 Linux/macOS 对应实现，Windows/Android/iOS 仅兜底；新增 Linux 与 Windows 兜底 helper 独立编译通过，本机完整 Go 测试源码编译通过。完整原始命令、退出码与选中文件见 platform-selection.json。这不是平台运行回归或设备验收。
 
 ## 网络事件到资源收敛的实际链路
 

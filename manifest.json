@@ -3370,10 +3370,10 @@
       "sha256": "146fca169dc1a80cf173e77b16db5b2a9d95719dd2e817d310cc4c02918c9bd1"
     },
     "mods/art-go-proof-81f9/artifact.js": {
-      "sha256": "d3b0b3186d7424048d7aa7ec772c387ac156607a7c4409b0b4a60e25b5f92bc7"
+      "sha256": "9081f493e5c58723d3a64877d53e5d3ae2b2bdcc4638b8319ff80dfc325760e8"
     },
     "mods/art-go-proof-81f9/cargo-check.txt": {
-      "sha256": "9ad40f79a2f9e8ddbcaead523ea67e3ee8a672b31c96686a65b4e87dcebe017f"
+      "sha256": "0840e2479145974a2206ce39731ce38cc5fc8332553a7f3ba55cb0dbfd11a95b"
     },
     "mods/art-go-proof-81f9/core/paths.js": {
       "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
@@ -3385,7 +3385,7 @@
       "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
     },
     "mods/art-go-proof-81f9/final-patch.txt": {
-      "sha256": "cfc434f0b05ee0e0f40008278ecdef302ffde9660304de4f3e0825b5ae03ec2a"
+      "sha256": "3eeb5d096f7021ff97d6b23b55993f295ec161ab09233423085b01d3204e32a5"
     },
     "mods/art-go-proof-81f9/format.txt": {
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -3397,7 +3397,7 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "mods/art-go-proof-81f9/ledger.md": {
-      "sha256": "26a6e61a1ba2c8e3019d17d2a3cbe3e0d0626611204a14fc8119980cf914e154"
+      "sha256": "def158e177278b0e7cd4193b98e6ae260b5c8e2f0f505835102a8c917982cea0"
     },
     "mods/art-go-proof-81f9/main.js": {
       "sha256": "374be9b5cce5935607c81391521342fab467e96c9ab4daae69dc64870b148f2a"
@@ -3406,7 +3406,7 @@
       "sha256": "7f3d7fa21806bc6e8a01445cc03378d7a5425b29fa948a8bbd4e35e8b5828268"
     },
     "mods/art-go-proof-81f9/recipe-data.js": {
-      "sha256": "3d78217088c0bd85f5ee52db71a689b4313860e4549b4f4aa2346d5c039da2d2"
+      "sha256": "aa0e180547eb67006b17652017058afa28f0197bc55ef4e952da68ff38ebda1e"
     },
     "mods/art-go-proof-81f9/recipe-view.js": {
       "sha256": "5db98a2f3b33f9735415f74fcb61ae4e8a5d863b7995c82224b3aa7b0d41b4c8"

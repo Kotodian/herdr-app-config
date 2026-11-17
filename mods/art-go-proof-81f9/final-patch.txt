@@ -281,21 +281,15 @@ index 8670101..7d6521a 100644
  	}
 diff --git a/bindings/go/network_change.go b/bindings/go/network_change.go
 new file mode 100644
-index 0000000..48fbf55
+index 0000000..2476a20
 --- /dev/null
 +++ b/bindings/go/network_change.go
-@@ -0,0 +1,178 @@
+@@ -0,0 +1,118 @@
 +package steamproxy
 +
 +import (
 +	"context"
 +	"errors"
-+	"net"
-+	"os"
-+	"os/exec"
-+	"runtime"
-+	"slices"
-+	"strings"
 +	"time"
 +)
 +
@@ -303,60 +297,6 @@ index 0000000..48fbf55
 +// network revision. It must honor ctx and must not probe business destinations.
 +type NetworkObserver interface {
 +	NetworkRevision(context.Context) (string, error)
-+}
-+
-+func localNetworkRevision(ctx context.Context) (string, error) {
-+	var snapshot []string
-+	interfaces, err := net.Interfaces()
-+	if err != nil {
-+		return "", err
-+	}
-+	for _, link := range interfaces {
-+		addresses, err := link.Addrs()
-+		if err != nil {
-+			return "", err
-+		}
-+		snapshot = append(snapshot, link.Name+":"+link.Flags.String())
-+		for _, address := range addresses {
-+			snapshot = append(snapshot, link.Name+":"+address.String())
-+		}
-+	}
-+	switch runtime.GOOS {
-+	case "linux":
-+		for _, path := range []string{"/proc/net/route", "/proc/net/ipv6_route", "/etc/resolv.conf"} {
-+			data, err := os.ReadFile(path)
-+			if err != nil {
-+				return "", err
-+			}
-+			for _, line := range strings.Split(string(data), "\n") {
-+				fields := strings.Fields(line)
-+				if path == "/proc/net/route" && len(fields) >= 8 {
-+					line = strings.Join([]string{fields[0], fields[1], fields[2], fields[3], fields[6], fields[7]}, " ")
-+				}
-+				if path == "/proc/net/ipv6_route" && len(fields) >= 10 {
-+					line = strings.Join(append(fields[:6:6], fields[8:]...), " ")
-+				}
-+				snapshot = append(snapshot, line)
-+			}
-+		}
-+	case "darwin":
-+		for _, args := range [][]string{{"-n", "get", "default"}, {"-n", "get", "-inet6", "default"}} {
-+			data, err := exec.CommandContext(ctx, "/sbin/route", args...).Output()
-+			if err != nil && ctx.Err() != nil {
-+				return "", ctx.Err()
-+			}
-+			for _, line := range strings.Split(string(data), "\n") {
-+				line = strings.TrimSpace(line)
-+				if strings.HasPrefix(line, "gateway:") || strings.HasPrefix(line, "interface:") {
-+					snapshot = append(snapshot, line)
-+				}
-+			}
-+		}
-+	default:
-+		return "", errors.New("steamproxy: local network observer unavailable")
-+	}
-+	slices.Sort(snapshot)
-+	return strings.Join(snapshot, "\n"), ctx.Err()
 +}
 +
 +func (m *session) networkRevision(ctx context.Context) (string, error) {
@@ -462,6 +402,112 @@ index 0000000..48fbf55
 +		}
 +	}
 +	return result
++}
+diff --git a/bindings/go/network_change_darwin.go b/bindings/go/network_change_darwin.go
+new file mode 100644
+index 0000000..e659c10
+--- /dev/null
++++ b/bindings/go/network_change_darwin.go
+@@ -0,0 +1,25 @@
++//go:build darwin && !ios
++
++package steamproxy
++
++import (
++	"context"
++	"os/exec"
++	"strings"
++)
++
++func appendNetworkRoutes(ctx context.Context, snapshot []string) ([]string, error) {
++	for _, args := range [][]string{{"-n", "get", "default"}, {"-n", "get", "-inet6", "default"}} {
++		data, err := exec.CommandContext(ctx, "/sbin/route", args...).Output()
++		if err != nil && ctx.Err() != nil {
++			return nil, ctx.Err()
++		}
++		for _, line := range strings.Split(string(data), "\n") {
++			line = strings.TrimSpace(line)
++			if strings.HasPrefix(line, "gateway:") || strings.HasPrefix(line, "interface:") {
++				snapshot = append(snapshot, line)
++			}
++		}
++	}
++	return snapshot, nil
++}
+diff --git a/bindings/go/network_change_linux.go b/bindings/go/network_change_linux.go
+new file mode 100644
+index 0000000..9636a22
+--- /dev/null
++++ b/bindings/go/network_change_linux.go
+@@ -0,0 +1,29 @@
++//go:build linux && !android
++
++package steamproxy
++
++import (
++	"context"
++	"os"
++	"strings"
++)
++
++func appendNetworkRoutes(ctx context.Context, snapshot []string) ([]string, error) {
++	for _, path := range []string{"/proc/net/route", "/proc/net/ipv6_route", "/etc/resolv.conf"} {
++		data, err := os.ReadFile(path)
++		if err != nil {
++			return nil, err
++		}
++		for _, line := range strings.Split(string(data), "\n") {
++			fields := strings.Fields(line)
++			if path == "/proc/net/route" && len(fields) >= 8 {
++				line = strings.Join([]string{fields[0], fields[1], fields[2], fields[3], fields[6], fields[7]}, " ")
++			}
++			if path == "/proc/net/ipv6_route" && len(fields) >= 10 {
++				line = strings.Join(append(fields[:6:6], fields[8:]...), " ")
++			}
++			snapshot = append(snapshot, line)
++		}
++	}
++	return snapshot, nil
++}
+diff --git a/bindings/go/network_change_supported.go b/bindings/go/network_change_supported.go
+new file mode 100644
+index 0000000..ecfbac7
+--- /dev/null
++++ b/bindings/go/network_change_supported.go
+@@ -0,0 +1,34 @@
++//go:build (linux && !android) || (darwin && !ios)
++
++package steamproxy
++
++import (
++	"context"
++	"net"
++	"slices"
++	"strings"
++)
++
++func localNetworkRevision(ctx context.Context) (string, error) {
++	var snapshot []string
++	interfaces, err := net.Interfaces()
++	if err != nil {
++		return "", err
++	}
++	for _, link := range interfaces {
++		addresses, err := link.Addrs()
++		if err != nil {
++			return "", err
++		}
++		snapshot = append(snapshot, link.Name+":"+link.Flags.String())
++		for _, address := range addresses {
++			snapshot = append(snapshot, link.Name+":"+address.String())
++		}
++	}
++	snapshot, err = appendNetworkRoutes(ctx, snapshot)
++	if err != nil {
++		return "", err
++	}
++	slices.Sort(snapshot)
++	return strings.Join(snapshot, "\n"), ctx.Err()
 +}
 diff --git a/bindings/go/network_change_test.go b/bindings/go/network_change_test.go
 new file mode 100644
@@ -680,6 +726,24 @@ index 0000000..5aade5e
 +		t.Fatalf("queue ignored cancellation: %v", err)
 +	}
 +	<-conn.headerGate
++}
+diff --git a/bindings/go/network_change_unsupported.go b/bindings/go/network_change_unsupported.go
+new file mode 100644
+index 0000000..6029619
+--- /dev/null
++++ b/bindings/go/network_change_unsupported.go
+@@ -0,0 +1,12 @@
++//go:build (!linux && !darwin) || android || ios
++
++package steamproxy
++
++import (
++	"context"
++	"errors"
++)
++
++func localNetworkRevision(ctx context.Context) (string, error) {
++	return "", errors.New("steamproxy: local network observer unavailable")
 +}
 diff --git a/bindings/go/pool.go b/bindings/go/pool.go
 index 3e7c83c..7090286 100644
