@@ -820,7 +820,6 @@ export default class Spaces extends View {
     const rows = sessionInbox({ terminals: ts, agents: [...agents(), ...chatAgents()], spaces: sp,
       needs: inboxItems(), ready: inboxReady(), seen: shared("chat.seen") ?? {},
       alertRead: shared("inbox.session-alerts-read") ?? {}, notify: shared("notify") ?? {} });
-    const folded = shared("inbox.sessions-folded") === true;
     const open = (row) => {
       if (row.terminal) {
         const k = terminals().find((x) => x.address === row.terminal);
@@ -840,20 +839,19 @@ export default class Spaces extends View {
       }
     };
     return v_flex().id("session-inbox").flex_none().max_h(collapsed ? 180 : 250).min_h(0).px(8).pb(6)
-      .child(h_flex().id("session-inbox-toggle").h(32).flex_none().px(8).gap(7).items_center().rounded(6)
-        .cursor_pointer().text_color(rows.length ? t.foreground : t.dim).hover((s) => s.bg(t.hover))
-        .on_click((_e, cx) => { setShared("inbox.sessions-folded", !folded); cx.notify(); })
+      .child(h_flex().id("session-inbox-heading").h(32).flex_none().px(8).gap(7).items_center()
+        .text_color(rows.length ? t.foreground : t.dim)
         .child(svg("mods/spaces-chat/inbox.svg").size(15).flex_none())
         .when(!collapsed, (el) => el.child(div().flex_1().font_medium().child("Inbox")))
         .child(div().text_size(11).child(String(rows.length))))
-      .when(!folded, (el) => el.child(v_flex().id("session-inbox-rows").min_h(0).overflow_y_scrollbar().gap(2)
+      .child(v_flex().id("session-inbox-rows").min_h(0).overflow_y_scrollbar().gap(2)
         .when(!rows.length && !collapsed, (el) => el.child(div().px(8).py(5).text_size(11.5).text_color(t.dim).child("暂无新通知")))
         .children(rows.map((row) => h_flex().id(`inbox-session-${row.key}`).min_h(30).flex_none().px(8).py(5).gap(7).items_center()
           .rounded(6).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => { open(row); cx.notify(); })
           .child(div().size(6).flex_none().rounded_full().bg(row.priority === 0 ? t.blocked : row.priority === 1 ? t.done : t.accent))
           .when(!collapsed, (el) => el.child(v_flex().flex_1().min_w(0).gap(2)
             .child(div().text_size(12.5).text_color(t.foreground).truncate().child(row.title))
-            .child(div().text_size(10.5).text_color(t.dim).truncate().child(`${row.place || "Session"} · ${row.reason}`))))))));
+            .child(div().text_size(10.5).text_color(t.dim).truncate().child(`${row.place || "Session"} · ${row.reason}`)))))));
   }
 
   // One copy of Herdr's live lists for the whole render (live.js): past ~50 ms Herdr stops it.

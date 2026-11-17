@@ -64,7 +64,7 @@
       "sha256": "660a80bfa8bf605fd1dd4c1ec730b837719cda0e130c35dc098732c7e39c80d1"
     },
     "README.md": {
-      "sha256": "2f172ea567ef2ad9fa9ae8207464ff947799251695a2d3a2b9d226d6783604a6"
+      "sha256": "857bb0e66c191d66c9cbee26997c8ea14115f0df734b60f7599c848f2bd190b4"
     },
     "docs/screenshots/01-workspace.png": {
       "sha256": "76a2e65339e3fda04d6a83f1a505feead9c0d80d01b5f49393545fb157ff917a"
@@ -1660,7 +1660,7 @@
       "sha256": "78d35e5659a8bdd6e67013d35bbef6f6cf3a5a52d2db0987adf4193fbaf0e31c"
     },
     "integrations/shepherdr/mods/spaces-chat/main.js": {
-      "sha256": "85ff73a973ad15854b76607d4812fdaeb8e27e9d9da988f7415d290dd4795c25"
+      "sha256": "9e099dce6e556b3eb48b31dfaad828c416eeeeb9d701d12f4442af3bf1b6d802"
     },
     "integrations/shepherdr/mods/spaces-chat/mod.json": {
       "sha256": "5b5d03a83a5f8da0e3a7c77c27d0d306afa7eef0556114dc1438612ef1c7e473"
