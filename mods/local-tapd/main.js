@@ -20,6 +20,7 @@ export default class TapdPanel extends View {
     cx.spawn(async cx => {for (;;) {
       const cmd=String(await nextCommand()).replace(/^local-tapd\./,"");
       if(cmd==="refresh")this.load(cx);
+      if(cmd==="owners"){this.picker=this.picker==="filter"?null:"filter";this.memberSearch.set_value("");cx.notify();}
       if(cmd==="back"&&!this.saving){this.back(cx);}
       if(cmd.startsWith("bug:")) {const r=this.data?.bugs?.find(b=>b.id===cmd.slice(4));if(r)this.show(r,cx);}
     }});
@@ -89,7 +90,7 @@ export default class TapdPanel extends View {
     this.targetStatus=option.key;this.picker=null;
     Object.values(this.fieldInputs).forEach(input=>input.release());this.fieldInputs={};
     for(const f of option.fields??[]){
-      const input=InputState.new({placeholder:`必填 · ${f.name}`});input.set_value(f.value??"");
+      const input=InputState.new({placeholder:`必填 · ${f.label??f.name}`});input.set_value(f.value??"");
       input.on("change",(_e,cx)=>cx.notify());this.fieldInputs[f.name]=input;
     }
     cx.notify();
@@ -171,7 +172,7 @@ export default class TapdPanel extends View {
         },c,this.saving))
         .when(this.picker==="edit-status",el=>el.child(v_flex().gap(2).children(this.options.statuses.map(option=>
           this.action(`tapd-status-${option.key}`,option.label,cx=>this.chooseStatus(option,cx),c,this.saving)))))
-        .children(Object.entries(this.fieldInputs).map(([name,input])=>v_flex().gap(G.sm).child(this.text(`必填 · ${name}`,c))
+        .children(Object.entries(this.fieldInputs).map(([name,input])=>v_flex().gap(G.sm).child(this.text(`必填 · ${this.options.statuses.find(s=>s.key===this.targetStatus)?.fields?.find(f=>f.name===name)?.label??name}`,c))
           .child(controlInput(Input.new(input),c).w_full())))
         .child(this.action("tapd-save-update",this.saving?"保存中…":"保存状态 / 转交",cx=>this.save(cx),c,
           this.saving||(!this.targetOwner&&(!this.targetStatus||this.targetStatus===r.status))))

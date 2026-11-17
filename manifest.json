@@ -5655,6 +5655,9 @@
     "mods/local-issues/actions.js": {
       "sha256": "9f08a934bae23e026a78767cbed148d93a1f9818fe73723643d8d6e2881bc7a9"
     },
+    "mods/local-issues/actions.test.js": {
+      "sha256": "e9b8546fdbf3f0aa90cb6c4ece26ebf8a17bbded7e29f151366030294076e3e1"
+    },
     "mods/local-issues/context-source.js": {
       "sha256": "9990eb64769aab6de7572a5d915be71a174e2e6f25e1c69fd0d905657bef2563"
     },
@@ -5734,7 +5737,7 @@
       "sha256": "86a888b027478e108f161035301a8c9adaf31c2a9d79b33c17e109f89b09379c"
     },
     "mods/local-tapd/main.js": {
-      "sha256": "b19b80c89e52bcc287ceab9535c4c3096a178f5d05bdd33f1ce8c4a0fe9661d5"
+      "sha256": "65eed104d042a1b88f2e160b9f5463b86bea9797b1201a498bddc0d015a9048c"
     },
     "mods/local-tapd/mod.json": {
       "sha256": "64c721e077fbfbb0b04ddc155ba3f8fad1abb713893779bbeff5869873a33126"
@@ -5744,6 +5747,9 @@
     },
     "mods/local-tapd/tapd_bridge.py": {
       "sha256": "fed280fcb1a4ad0b9444089e330e44558813bb5eb218d5ebc97051e6bf769843"
+    },
+    "mods/local-tapd/test_tapd_bridge.py": {
+      "sha256": "90226fd6d36e62f8c4073b184bae0f11c5d5d6d5befff337bc29ddf97dcd060b"
     },
     "mods/local-tapd/ui.js": {
       "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
