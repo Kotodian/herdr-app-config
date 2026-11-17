@@ -14,6 +14,7 @@
     "art-sdk-proof-c66c",
     "art-sdk-proof-c66c--v1",
     "art-sdk-proof-c66c--v2",
+    "art-tapd-bug-github-issues-a-a66a",
     "gitview",
     "gitview-agents",
     "gitview-ask",
@@ -4115,6 +4116,36 @@
     },
     "mods/art-sdk-proof-c66c/unittest.txt": {
       "sha256": "0052afa0a9b098db3f1c898216a12af991d7913838d4b93756b6ba43f34d5f8c"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/artifact-main.js": {
+      "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/artifact-markup.js": {
+      "sha256": "146fca169dc1a80cf173e77b16db5b2a9d95719dd2e817d310cc4c02918c9bd1"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/artifact.js": {
+      "sha256": "fdf113951cff816cf196263dd9246ac9292f7c6e7654f4ba52dcb18356b19c38"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/core/paths.js": {
+      "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/dirs.js": {
+      "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/main.js": {
+      "sha256": "374be9b5cce5935607c81391521342fab467e96c9ab4daae69dc64870b148f2a"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/mod.json": {
+      "sha256": "7f3d7fa21806bc6e8a01445cc03378d7a5425b29fa948a8bbd4e35e8b5828268"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/recipe-data.js": {
+      "sha256": "cfd734ff436f31e72491b0e85eee974de7cb9c9644daa9e47ef38c84aed52160"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/recipe-view.js": {
+      "sha256": "5db98a2f3b33f9735415f74fcb61ae4e8a5d863b7995c82224b3aa7b0d41b4c8"
+    },
+    "mods/art-tapd-bug-github-issues-a-a66a/recipe.js": {
+      "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
     },
     "mods/gitview-agents/engine.js": {
       "sha256": "0847795ae08237cb6e07825465a8916fbc86fb561de85fea08bc95838e1fb122"
