@@ -3,6 +3,7 @@
 // or is starting does it wait, and the bubble says why.
 import clsx from 'clsx'
 import * as SL from '@core/slash.js'
+import { SOURCES } from '@core/context-source.js'
 const { typing: slashTyping, match: slashMatch } = SL as any
 import { openAccept } from '@client/screens/Accept.tsx'
 import { createContext, Fragment, memo, useContext, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type ComponentType, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode, type RefObject } from 'react'
@@ -2452,7 +2453,29 @@ function PlusMenu({ chatKey }: { chatKey: string }) {
 function PlusOpen({ chatKey, file, photo }: { chatKey: string; file: RefObject<HTMLInputElement | null>; photo: RefObject<HTMLInputElement | null> }) {
   const phone = useUI((u) => u.device === 'phone')
   const snap = useSnap()
+  const [source, setSource] = useState<string | null>(null)
+  const [url, setUrl] = useState('')
+  const [reading, setReading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const active = SOURCES.find((s) => s.id === source)
   const close = () => setUI({ plus: null })
+  const readSource = async () => {
+    if (!source || reading) return
+    setReading(true)
+    setError(null)
+    try {
+      const r = await fetch('api/context-source', {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-shepherdr': '1' },
+        body: JSON.stringify({ kind: source, url }), signal: AbortSignal.timeout(200_000),
+      })
+      const result = await r.json()
+      if (!r.ok || !result.path) throw new Error(result.error || '读取失败，请重试。')
+      // The captured chat key keeps a result in its own draft even if navigation changed.
+      setUI((u) => ({ ...(u.plus === chatKey ? { plus: null } : {}),
+        files: { ...u.files, [chatKey]: [...(u.files[chatKey] ?? []), { name: result.name, path: result.path }] } }))
+    } catch (e) { setError((e as Error).message) }
+    finally { setReading(false) }
+  }
   const screenshot = async () => {
     close()
     if (phone) return photo.current?.click()
@@ -2487,6 +2510,24 @@ function PlusOpen({ chatKey, file, photo }: { chatKey: string; file: RefObject<H
       >
         {WORDS.attach}
       </MenuItem>
+      {SOURCES.map((s) => (
+        <MenuItem key={s.id} icon={s.id === 'github' ? <QuestionIcon className={ic} /> : <PageIcon className={ic} />}
+          disabled={reading} onClick={() => { setSource(s.id); setUrl(''); setError(null) }}>
+          {s.label}
+        </MenuItem>
+      ))}
+      {active ? (
+        <div className="w-[340px] max-w-full space-y-2 border-t border-line p-3" onKeyDown={(e) => e.stopPropagation()}>
+          <label className="block text-[0.8125rem]" htmlFor="context-source-url">{active.label} 链接</label>
+          <input key={active.id} id="context-source-url" autoFocus value={url} disabled={reading}
+            placeholder={active.placeholder} onChange={(e) => { setUrl(e.target.value); setError(null) }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void readSource() } if (e.key === 'Escape') close() }}
+            className={clsx(field, 'h-9 w-full rounded-lg bg-bg px-2 text-base')} />
+          <p className="text-[0.75rem] whitespace-normal text-fg3">读取后加入附件，发送消息时交给 Assistant。</p>
+          {error ? <p role="alert" className="text-[0.75rem] whitespace-normal text-red-400">{error}</p> : null}
+          <Primary disabled={reading || !url.trim()} onClick={() => void readSource()}>{reading ? '读取中…' : '添加'}</Primary>
+        </div>
+      ) : null}
       {phone ? (
         <MenuItem icon={<CameraIcon className={ic} />} onClick={screenshot}>
           Take a photo

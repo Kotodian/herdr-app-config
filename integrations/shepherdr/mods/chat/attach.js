@@ -5,6 +5,7 @@
 
 import { exec, hc, appHome, window } from "herdr";
 import * as fs from "fs/promises";
+import { fetchSource } from "./core/context-source.js";
 
 const IMAGE = /\.(png|jpe?g|gif|webp|bmp|tiff?)$/i;
 const base = (p) => String(p).split("/").filter(Boolean).pop() ?? p;
@@ -150,11 +151,18 @@ export function cover(w, h, size) {
 export async function textFile(text) {
   const first = String(text).split("\n").find((l) => l.trim())?.trim() ?? "pasted text";
   const slug = first.replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "pasted-text";
-  const name = `pasted-${Date.now().toString(36)}-${slug}.txt`;
+  const name = `pasted-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}-${slug}.txt`;
   const path = `${appHome()}/data/chat-attach/${name}`;
   try {
     await exec("mkdir", ["-p", `${appHome()}/data/chat-attach`]);
     await fs.writeFile(path, text);
   } catch { return null; }
   return { path, name: first.length > 40 ? first.slice(0, 39) + "…" : first, image: false, text: true, temp: true };
+}
+
+export async function sourceFile(kind, value) {
+  const source = await fetchSource(kind, value, (cmd, args) => exec(cmd, args, { timeout: 90000 }));
+  const file = await textFile(source.text);
+  if (!file) throw new Error("内容已读取，但附件保存失败，请重试。");
+  return { ...file, name: source.name, source: source.kind, url: source.url };
 }

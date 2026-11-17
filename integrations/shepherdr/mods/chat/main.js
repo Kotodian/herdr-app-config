@@ -48,6 +48,7 @@ import { SecretCards } from "./secret-card.js";
 import * as secrets from "./secrets.js";
 import { taskDot, ownProgress } from "./dot.js";
 import * as attach from "./attach.js";
+import { SOURCES } from "./core/context-source.js";
 import * as slash from "./slash.js";
 import * as mentions from "./core/mentions.js";
 import { SH } from "./core/paths.js";
@@ -305,6 +306,9 @@ export default class Chat extends View {
     // Its placeholder is drawn by composer(): it changes while a card asks ("Reply instead…").
     this.box = TextareaState.new({ placeholder: "" });
     this.box.set_rows(1);
+    this.sourceBox = InputState.new({ placeholder: "" });
+    this.sourceBox.on("change", (_e, cx) => { this.sourceError = null; cx.notify(); });
+    this.sourceBox.on("submit", (_e, cx) => this.attachSource(cx));
     // Ctrl+Enter (the textarea's secondary submit): held until the agent is free.
     this.box.on("submit", (e, cx) => { if (!e?.shift) this.enter(cx, Boolean(e?.secondary)); });
     this.box.on("focus", (_e, cx) => { this.focused = true; noteChatArea(this.areaKey(), { focus: true, at: Date.now() }); holdKeys(this.areaKey()); cx.notify(); });
@@ -608,6 +612,8 @@ export default class Chat extends View {
   // on the web's cards: its terminal shows its own prompt meanwhile. A call or a recording ends with it.
   async close(cx) {
     if (this.host) return this.host.close(cx);
+    this.sourceClosed = true;
+    this.sourceBox.release();
     this.box.release();
     this.findBox.release();
     this.scroll.release();
@@ -3888,7 +3894,7 @@ export default class Chat extends View {
             .border_1().border_color(t.border).bg(t.surface)
             // A pasted text opens to read.
             .when(Boolean(f.text), (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => { cx.stop_propagation(); this.openText(f); }))
-            .child(svg("mods/chat/file.svg").size(16).flex_none().text_color(t.dim))
+            .child(svg(`mods/chat/${f.source === "github" ? "github" : f.source === "lark" ? "lark" : "file"}.svg`).size(16).flex_none().text_color(t.dim))
             .child(div().w_full().text_center().truncate().text_size(10.5).text_color(t.muted).child(f.name));
         return div().relative().flex_none().child(tile)
           .child(div().id(`file-x-${i}`).absolute().top(-6).right(-6).size(18).flex().items_center().justify_center().rounded(9).cursor_pointer()
@@ -4070,6 +4076,56 @@ export default class Chat extends View {
     });
   }
 
+  attachSource(cx) {
+    if (!this.sourceKind || this.sourceBusy) return;
+    if (this.files.length >= 20) { this.sourceError = "每条消息最多添加 20 个附件。"; cx.notify(); return; }
+    const kind = this.sourceKind, value = this.sourceBox.value(), draft = this.draftFile;
+    this.sourceBusy = true;
+    this.sourceError = null;
+    cx.spawn(async (cx) => {
+      try {
+        const file = await attach.sourceFile(kind, value);
+        // A task chat can follow another worker while a request is in flight.
+        if (this.sourceClosed || draft !== this.draftFile) { attach.drop(file); return; }
+        if (this.files.length >= 20) { attach.drop(file); throw new Error("附件已满，请先移除一个附件。"); }
+        this.addFiles([file]);
+        this.saveSoon(cx);
+        this.sourceKind = null;
+        this.attachMenu = false;
+        this.sourceBox.set_value("");
+        this.box.focus();
+      } catch (e) {
+        if (!this.sourceClosed && draft === this.draftFile) this.sourceError = plainError(e);
+      } finally { this.sourceBusy = false; cx.notify(); }
+    });
+  }
+
+  attachmentMenu(t) {
+    if (!this.attachMenu) return null;
+    const source = SOURCES.find((s) => s.id === this.sourceKind);
+    const close = () => { this.attachMenu = false; this.sourceKind = null; this.sourceError = null; this.box.focus(); };
+    return v_flex().id("chat-attachment-menu").w_full().p(10).gap(8).border_b(1).border_color(t.border)
+      // Keep Enter/Escape and arrows in this field, away from the message composer.
+      .on_key_down((e, cx) => {
+        if (e.key === "escape") close();
+        cx.stop_propagation(); cx.notify();
+      })
+      .child(h_flex().gap(6).flex_wrap()
+        .child(this.button("attach-local", "本地文件", "mods/chat/paperclip.svg", "ghost", t, (cx) => { close(); this.pickFiles(cx); }))
+        .children(SOURCES.map((s) => this.button(`attach-${s.id}`, s.label, `mods/chat/${s.icon}.svg`, this.sourceKind === s.id ? "secondary" : "ghost", t, () => {
+          if (this.sourceBusy) return;
+          this.sourceKind = s.id; this.sourceError = null; this.sourceBox.set_value(""); this.sourceBox.focus();
+        })))
+        .child(this.iconButton("attach-close", "mods/chat/x.svg", t, false, close)))
+      .when(Boolean(source), (el) => el
+        .child(div().text_size(12).text_color(t.dim).child(source?.placeholder ?? ""))
+        .child(h_flex().gap(6).items_center()
+          .child(Input.new(this.sourceBox).flex_1().min_w(0).h(32).px(8).rounded(6).border_1().border_color(t.input).bg(t.surface).text_size(12.5))
+          .child(this.button("attach-source-read", this.sourceBusy ? "读取中…" : "添加", null, "primary", t, (cx) => this.attachSource(cx))))
+        .child(div().text_size(11.5).text_color(t.dim).child("读取内容后作为附件加入，发送消息时交给 Assistant。")))
+      .when(Boolean(this.sourceError), (el) => el.child(div().text_size(12).text_color(t.blocked).child(this.sourceError ?? "")));
+  }
+
   // The composer's round buttons: one size and shape, so Send, Call, End call, the mic and Mute
   // never change size or move; only the icon and fill change.
   //   fill: "solid" (Send), "call" (Call), "danger" (End call), "on" (muted), "quiet" (Mute), "ghost", "off"
@@ -4229,6 +4285,7 @@ export default class Chat extends View {
       .on_mouse_move((e) => { if (e.bounds) this.composerAt = e.bounds; })
       .border_color(this.focused ? t.accent : t.input).bg(t.background)
       .child(this.slashList(t, list) ?? div())
+      .child(this.attachmentMenu(t) ?? div())
       .child(this.tiles(t) ?? div())
       // The padding is around the textarea, not on it: its own height is then exactly its rows
       // (auto-grow, 1 to 8), so it never overflows itself by the padding, which showed a
@@ -4251,7 +4308,7 @@ export default class Chat extends View {
       .when(rec !== "idle", (el) => el.child(this.recordingRow(t)))
       .when(rec === "idle", (el) => el.child(h_flex().h(36).pl(6).pr(6).gap(4).items_center()
         // Attach on the left, as ChatGPT and Claude have it: the desktop's file picker.
-        .child(this.round("chat-attach", "mods/chat/plus.svg", t, "ghost", (cx) => this.pickFiles(cx)))
+        .child(this.round("chat-attach", "mods/chat/plus.svg", t, this.attachMenu ? "quiet" : "ghost", () => { this.attachMenu = !this.attachMenu; }))
         .child(div().flex_1().min_w(0).truncate().text_size(12).text_color(t.blocked).child(rec === "idle" ? this.dict.error ?? "" : ""))
         .when(Boolean(this.addr), (el) => el.children(this.pickParts(t, true)))
         .when(!this.addr && this.phase === "fresh" && Boolean(this.choice?.sel) && Boolean(cx), (el) => el.child(this.freshPick(t, cx)))
@@ -4347,14 +4404,15 @@ export default class Chat extends View {
   // The message box gets the keyboard back when its pane does (opened, clicked, gone to), or after a notice; from
   // render, the focus itself from a timer right after.
   refocus(paneFocused, showsBox, cx) {
+    if (this.attachMenu) return;
     // Focus moves only outside render: from a timer callback right after it.
     // Never while a dialog over it holds the keyboard (New space's field, #752): Herdr counts this pane focused under it.
     // Never over a text selection (GitHub #916, SHEP-192): a drag over the messages selects them, and the box taking the
     // keyboard then made Ctrl+C copy nothing. The timers check again when they fire: a drag can start after they're set.
     const dialog = dialogHolds(shared(KEY_HOLDER));
     if (paneFocused && showsBox && !dialog && !this.pressMoved && (!this.wasFocused || !this.hadBox)) {
-      cx.timer.after(0, () => { if (!this.pressMoved && !dialogHolds(shared(KEY_HOLDER))) this.box.focus(); });
-      cx.timer.after(600, () => { if (!this.pressMoved && !dialogHolds(shared(KEY_HOLDER))) this.box.focus(); });
+      cx.timer.after(0, () => { if (!this.attachMenu && !this.pressMoved && !dialogHolds(shared(KEY_HOLDER))) this.box.focus(); });
+      cx.timer.after(600, () => { if (!this.attachMenu && !this.pressMoved && !dialogHolds(shared(KEY_HOLDER))) this.box.focus(); });
     }
     // The pane focused again (a command, a click on its header) can leave the box without the
     // keyboard: give it back, unless the person just pressed something inside the chat.
@@ -4364,7 +4422,7 @@ export default class Chat extends View {
       && !keysElsewhere(liveHolder(shared(KEY_HOLDER)), this.areaKey())
       && Date.now() - (this.refocusAt ?? 0) > 1000) {
       this.refocusAt = Date.now();
-      cx.timer.after(0, () => this.box.focus());
+      cx.timer.after(0, () => { if (!this.attachMenu) this.box.focus(); });
     }
   }
 

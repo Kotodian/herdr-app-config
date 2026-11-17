@@ -22,6 +22,7 @@ dot.js: chat jump tasks
 core/tasklists.js: jump tasks
 core/chat-log.js: chat
 core/chat-view.js: chat
+core/context-source.js: chat
 core/screens.js: chat
 core/send.js: chat
 core/person.js: chat shepherdr-settings tabs-tasks

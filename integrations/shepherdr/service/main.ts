@@ -27,6 +27,7 @@ import { windowSection, setWindow, offList, offPlugins } from "./window.ts";
 import { record, deleteAll, note as noteUsage, followSwitch, isOn as insightsOn, logLines } from "./usage.ts";
 import { insightsSummary } from "./voice-data.ts";
 import { Chats } from "./chats.ts";
+import { sourceAttachment } from "./context-source.ts";
 import { act, findMachines, hc as hcRun } from "./actions.ts";
 import { AgentWatch } from "./watch.ts";
 import { Compat, activity, newsKey, placeKey } from "./compat.ts";
@@ -770,6 +771,12 @@ const server = Bun.serve<{ who: string }>({
       let rel = "";
       try { rel = decodeURIComponent(art[3]); } catch { return json({ error: "not found" }, 404); }
       return artifacts.file(art[1], v, rel, on, req.headers.get("range"));
+    }
+    if (path === "/api/context-source" && req.method === "POST") {
+      try {
+        const body = await req.json();
+        return json(await sourceAttachment(body, (cmd, args) => exec(hub, [cmd, ...args], null, 90), ATTACH));
+      } catch (err) { return json({ error: (err as Error).message }, 400); }
     }
     if (path === "/api/upload" && req.method === "POST") {
       // a file from the message box (+, the camera, a paste or a drop): kept where the window keeps pasted ones,
