@@ -184,9 +184,58 @@ Assistant 暂时未启动或正在接收输入时，交接请求会保留并自�
 | Issues | 列出当前 Space 仓库的开放 Issue，搜索、查看正文和讨论，拖到 Assistant。 | 仓库的 GitHub `origin`、该机器的 `gh` 登录。 |
 | Map | 查看 Agent 的工作进度图。 | 启动相关功能需要 Node.js / npx。 |
 
-工具与任务共用右侧面板，切换工具不会替换或删除 Tasks、PR 和 Artifacts 的结构。
+工具与任务共用右侧面板。**导入布局只会安装面板，不会替你安装 Magpie、创建云账号或复制登录凭据。** 按需完成下面的首次配置，配置好一个就打开对应面板验证。
+
+### Magpie：连接本机网关和资源库
+
+1. 先在本机安装、启动你使用的 Magpie，在 Magpie 中配置自己的提供商、账号和资源库，并启用本机网关。
+2. 此面板默认读取 `http://127.0.0.1:3425`。在终端运行下面的只读请求，能返回 JSON 就说明用量接口可达：
+
+   ```sh
+   curl -fsS 'http://127.0.0.1:3425/v1/magpie/usage?period=today'
+   ```
+
+3. 点底部 **Magpie**，确认用量、配额能加载；切换资源库，确认技能、MCP、子代理和指令列表。资源目录读取 `~/.config/magpie/library.json`，技能正文来自 `~/.config/magpie/library/skills/`，需要先在 Magpie 中添加相应资源。
+4. 提示网关离线时先启动 Magpie；用量正常但资源库报错时检查资源库文件是否存在。使用其他端口时，修改 `mods/local-magpie/main.js` 顶部的 `GATEWAY` 后刷新。每台电脑分别设置 Magpie，面板不会替 Codex / Claude 配置模型认证。
+
+### Komari：接入自己的探针站点
+
+1. 先准备已有的 Komari 服务端及节点探针，确认浏览器能访问自己的站点。
+2. 编辑 `mods/local-komari/main.js` 顶部的 `BASE`，改成自己的站点地址，保留协议且不带结尾 `/`。当前随配置保存的是原有站点，换用自己的部署时需要改这里。
+3. 当前面板读取 `/api/nodes`、`/api/rpc2` 的 `common:getNodesLatestStatus`，以及节点的 `/api/recent/<uuid>`。站点需要允许这些只读接口；面板目前没有登录或 API Token 输入框，要求登录的私有站点需先适配认证。
+4. 点底部 **Komari**，看到节点、在线状态和资源数据即配置成功，数据约每 10 秒刷新。只有空列表时先核对服务端是否已收到探针；请求失败时检查地址、网络及接口权限。
+
+### Gitview：安装本机 Git 引擎
+
+1. 本机先有 Git。首次导入工作台时，引导模块会安装与 macOS 架构匹配的 Gitview，并生成本机的 `mods/gitview/config.json`，其中记录 `bin`、`herdr_app`、`hc` 路径。
+2. 若底部 **Gitview** 提示未安装，在本机终端执行工作台自带的安装命令：
+
+   ```sh
+   python3 ~/.config/herdr-app/sync-app.py runtime
+   ```
+
+3. 在一个有 Git 提交记录的项目 Space 打开 Gitview，确认分支、历史和工作目录差异可见。配置中的绝对路径由本机生成，换电脑后重新安装；不要从旧电脑复制执行文件路径。远端项目还需要对应 Herdr 机器连接可用。
+
+### Cloudflare：配置 DNS 访问权限
+
+1. 在 Cloudflare 为要管理的域名创建 API Token，授予读取域名和 DNS 记录的权限；需要在面板新建或修改记录时，再授予对应域名的 DNS 编辑权限。
+2. 在本机 Magpie 的 MCP 资源中配置名为 **`cloudflare-mcp-pro`** 的连接，将 Token 填入环境变量 **`CLOUDFLARE_API_TOKEN`**。桥接程序从 `~/.config/magpie/library.json` 的 `mcp` 列表读取这个连接的 `env.CLOUDFLARE_API_TOKEN`，名称和字段需匹配。
+3. 点底部 **Cloudflare**，能列出授权域名并展开 DNS 记录即读取成功。看不到域名时检查 Token 的资源范围；能看不能保存时检查编辑权限。更新凭据后刷新面板即可，桥接每次请求都会重新读取。
+4. 新电脑需要重新配置此连接。工作台同步不携带 Magpie 的 Token。
 
 ### GitHub Issue：选择、拖入和监听
+
+首次使用先在**仓库所在的机器**安装 GitHub CLI 并登录，再到项目仓库目录检查：
+
+```sh
+gh auth login
+gh auth status
+git remote get-url origin
+```
+
+`origin` 应指向你要处理的 GitHub 仓库。尚未设置时，用自己的地址执行 `git remote add origin git@github.com:OWNER/REPO.git`；已有但地址错误时用 `git remote set-url origin ...` 修改。确认 Space 打开的是这个仓库目录，再点 **Issues → 刷新**。显示仓库名和 Issue 列表、或正常的零条空状态即接入成功；“未配置 origin”和权限错误需要先修好仓库或登录。远端 Space 要在远端完成这些步骤。
+
+![当前 Space 的 Issues 面板，主工作区保持 Chat 模式](docs/screenshots/07-issues.png)
 
 1. 在左侧选中项目 Space。**Issues** 面板和 `+ → GitHub Issue` 使用这个 Space 文件夹的 GitHub `origin`，无需选择项目或另设绑定；切换 Space 后列表跟随切换。
 2. 在仓库所在机器安装 GitHub CLI，执行 `gh auth login`，确认 `gh auth status` 正常并具有仓库权限。远端 Space 使用远端机器的 Git 和 `gh`。
@@ -198,13 +247,32 @@ Assistant 暂时未启动或正在接收输入时，交接请求会保留并自�
 
 ### TAPD：从现有 mod 拖入 Bug
 
+首次接入需要 TAPD 账号有项目访问权限，并在本机配置个人访问令牌。macOS 推荐用「钥匙串访问」新建密码项目：项目 / 服务名称填 **`codex.tapd.access_token`**，账户填 **`default`**，密码填自己的 TAPD 个人令牌。面板会从钥匙串读取，不需要把令牌写进工作台目录。
+
+也支持由 **Herdr App 进程环境**提供 `TAPD_ACCESS_TOKEN`，或同时提供 `TAPD_API_USER`、`TAPD_API_PASSWORD`。只在一个终端中 `export` 不会更新已经运行的桌面 App；应让 App 从带有这些变量的启动环境重新启动，或使用钥匙串方案。桥接会调用 TAPD 确认当前用户昵称，并只查询分配给这个用户的 Bug。
+
+配置后点底部 **TAPD → 刷新**，看到当前处理人、参与项目和 Bug 列表即成功；显示零条也可能只是没有分配给自己的 Bug。有连接或项目错误时，先检查令牌、钥匙串授权和项目权限。换电脑需重新配置钥匙串或启动环境。
+
+![TAPD 当前处理人及跨项目 Bug 列表，主工作区保持 Chat 模式](docs/screenshots/08-tapd.png)
+
 1. 点底部 **TAPD**。沿用现有 TAPD 账号连接，列表跨你能访问的项目展示**分配给自己**的 Bug，可按项目、状态和关键词筛选，每两分钟刷新。
 2. 单击卡片查看详情。拖动列表卡片或详情标题到 Assistant 输入框，松手后会重新读取 Bug，生成包含编号、项目、状态、优先级、描述和 TAPD 原始链接的附件。
 3. 补充处理要求后发送。可以连续拖入多个 Bug，也可以移除附件后再发；每条消息最多 20 个附件。
 
 TAPD 不绑定 Space，也不需要配置项目映射。你决定把 Bug 拖进哪个 Assistant。凭据沿用本机 TAPD 连接；新电脑需要单独配置，令牌不随 Git 同步。Bug 已不再分配给自己或没有权限时会报错，刷新面板后重试。
 
+### Map：启动项目进度图
+
+1. 在本机安装 Node.js，确认终端中的 `node --version`、`npx --version` 能执行。首次启动需要能访问 npm。
+2. 先选中**本机 Git 项目中的终端**，再点底部 **Map** 和启动按钮。面板会新开 `Agenttrail Map` 标签，运行固定版本 `npx -y agenttrail@0.4.1 <仓库目录> --no-open`；保留这个进程运行。
+3. 面板默认从本机 `5330–5344` 端口寻找匹配当前仓库的 Map。出现项目名、提交或任务卡片即成功；启动失败先看 `Agenttrail Map` 标签内的错误。有进程却没有卡片时检查仓库是否有提交；需要组件规划图时，在仓库执行 `npx agenttrail@0.4.1 init`。
+4. 这个 mod 当前跟随本机终端的仓库，不会自动连接远端 Space 的 Map。自定义实例可在布局中 `agenttrail` 的 `content.props` 设置 `port` 或 `portBase`；新电脑需重新安装 Node.js 并启动自己的 Map 进程。
+
+### Artifacts 和通知
+
 Artifacts 适合放实现说明、测试报告、截图和可交互预览，供审核时查看。产生 Artifact 不代表测试一定通过，也不代表代码已经合并。
+
+Artifacts、Inbox 和 Tasks 不需要额外账号连接，随 Shepherdr 安装。若这些核心面板缺失或服务未就绪，在本机运行 `shepherdr doctor` 查看安装情况。配置同步入口见下一节。
 
 ![Artifacts 成果列表](docs/screenshots/05-artifacts.png)
 
