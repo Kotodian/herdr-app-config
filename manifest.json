@@ -6,6 +6,7 @@
     "art-c-ts-swift-kotlin-proof-0217",
     "art-go-proof-81f9",
     "art-go-proof-f2db",
+    "art-kitty-solarized-proof-657c",
     "art-planner-proof-bc3f",
     "art-proof-2982",
     "art-rust-proof-f00a",
@@ -3430,6 +3431,36 @@
     },
     "mods/art-go-proof-f2db/toolchain.txt": {
       "sha256": "70f94d37a097ca424ec1a1c0d5a81288ec60b4ceeae67edc3a75aeb6ce378600"
+    },
+    "mods/art-kitty-solarized-proof-657c/artifact-main.js": {
+      "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
+    },
+    "mods/art-kitty-solarized-proof-657c/artifact-markup.js": {
+      "sha256": "146fca169dc1a80cf173e77b16db5b2a9d95719dd2e817d310cc4c02918c9bd1"
+    },
+    "mods/art-kitty-solarized-proof-657c/artifact.js": {
+      "sha256": "6a8b564ed613c1b65b7955614617b2ca0f0c4334fc314917cb6b44fb5f16a3ea"
+    },
+    "mods/art-kitty-solarized-proof-657c/core/paths.js": {
+      "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
+    },
+    "mods/art-kitty-solarized-proof-657c/dirs.js": {
+      "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
+    },
+    "mods/art-kitty-solarized-proof-657c/main.js": {
+      "sha256": "374be9b5cce5935607c81391521342fab467e96c9ab4daae69dc64870b148f2a"
+    },
+    "mods/art-kitty-solarized-proof-657c/mod.json": {
+      "sha256": "7f3d7fa21806bc6e8a01445cc03378d7a5425b29fa948a8bbd4e35e8b5828268"
+    },
+    "mods/art-kitty-solarized-proof-657c/recipe-data.js": {
+      "sha256": "b6cc0326d204d2557982475278369df59746589c561ca6d7128adb0a01c1d514"
+    },
+    "mods/art-kitty-solarized-proof-657c/recipe-view.js": {
+      "sha256": "5db98a2f3b33f9735415f74fcb61ae4e8a5d863b7995c82224b3aa7b0d41b4c8"
+    },
+    "mods/art-kitty-solarized-proof-657c/recipe.js": {
+      "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
     },
     "mods/art-planner-proof-bc3f/artifact-main.js": {
       "sha256": "99e6ddb5b8b4be21b0e55e2a3a5dc55e166374881a2512e5d0e3c4df28efa8a3"
