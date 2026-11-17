@@ -949,7 +949,7 @@
       "sha256": "b07cb18d3cf3994e108d42e5c4b0fde631e2b41d2da3bac3882273b9f7368f9e"
     },
     "integrations/shepherdr/mods/chat/core/tapd-attachment.js": {
-      "sha256": "95eba2a4a1f358fed030d770ff933a921b2c62a65258455db8b840d5f3a4d23b"
+      "sha256": "c6c61644c0afde74e08a39c186662b6bbdd0b600777ca428242ebb3d40a44665"
     },
     "integrations/shepherdr/mods/chat/core/task-artifacts.js": {
       "sha256": "450b814d6ac5b1b6c41f69053c22a2e9bcc38b09dc66aaeaf75fc446b3c7fc4c"
