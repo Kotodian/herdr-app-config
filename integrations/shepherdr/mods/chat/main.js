@@ -48,6 +48,7 @@ import { SecretCards } from "./secret-card.js";
 import * as secrets from "./secrets.js";
 import { taskDot, ownProgress } from "./dot.js";
 import * as attach from "./attach.js";
+import { SourceAssistant } from "./source-assistant.js";
 import { SOURCES, spaceIssues } from "./core/context-source.js";
 import * as slash from "./slash.js";
 import * as mentions from "./core/mentions.js";
@@ -512,7 +513,14 @@ export default class Chat extends View {
     if (!this.addr && this.role) this.phase = "fresh";
     if (this.phase === "fresh") this.loadChoice(cx);
     this.loadFirst(cx, labels);
-    if (this.addr || this.role) cx.spawn(async (cx) => { await this.loadDraft(cx); attach.prune(); });
+    this.sourceAssistant = new SourceAssistant(this);
+    cx.timer.every(500, (cx) => this.sourceAssistant.tick(cx));
+    if (this.addr || this.role) cx.spawn(async (cx) => {
+      await this.loadDraft(cx);
+      this.draftLoaded = true;
+      this.sourceAssistant.tick(cx);
+      attach.prune();
+    });
     if (this.addr) cx.spawn(async (cx) => this.follow(cx));
     // A Coordinator tab's chat that missed its agent (started, or Herdr restarted, before this
     // copy saw it) takes the slot's live agent as soon as one shows, instead of staying empty.
@@ -616,6 +624,7 @@ export default class Chat extends View {
   async close(cx) {
     if (this.host) return this.host.close(cx);
     this.sourceClosed = true;
+    this.sourceAssistant?.close();
     this.sourceBox.release();
     this.box.release();
     this.findBox.release();
