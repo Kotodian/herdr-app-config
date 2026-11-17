@@ -617,7 +617,8 @@ export async function act(hub: Hub, b: any, compat: Compat): Promise<unknown> {
     if (!t) throw new Error("That task isn't here any more.");
     b = { ...b, ref: t.ref, folder: t.folder, machine: t.machine };
   }
-  else if (["evidence", "accept", "review-diff", "approve-review", "review-comment", "request-changes"].includes(b?.type) && typeof b.task === "string") {
+  else if (["evidence", "accept", "review-diff", "approve-review", "review-comment", "request-changes",
+    "sync-review-comments", "resolve-review-comment"].includes(b?.type) && typeof b.task === "string") {
     const t = compat.taskOf(b.task);
     if (!t) throw new Error("That task isn't here any more.");
     b = { ...b, ref: t.ref, folder: t.folder, machine: t.machine };
@@ -675,12 +676,26 @@ export async function act(hub: Hub, b: any, compat: Compat): Promise<unknown> {
     case "review-diff":
     case "approve-review":
     case "review-comment":
+    case "sync-review-comments":
+    case "resolve-review-comment":
     case "request-changes": {
       const { ref, folder, machine } = taskOf(b);
       const args = [b.type, ref];
       if (b.type === "review-diff") {
         if (b.path != null) args.push("--path", str(b.path, 4096));
         if (b.working === true) args.push("--working");
+        if (b.comment_id != null) {
+          const id = str(b.comment_id, 24);
+          if (!/^[a-f0-9]{12}$/.test(id)) throw new Error("bad comment id");
+          args.push("--comment-id", id);
+        }
+      } else if (b.type === "resolve-review-comment") {
+        const id = str(b.comment_id, 24);
+        if (!/^[a-f0-9]{12}$/.test(id)) throw new Error("bad comment id");
+        args.push("--comment-id", id);
+        if (b.reopen === true) args.push("--reopen");
+      } else if (b.type === "sync-review-comments") {
+        // An explicit refresh of remote review state; ordinary Diff reads remain local.
       } else {
         const snapshot = str(b.snapshot, 64);
         if (!/^[a-f0-9]{64}$/.test(snapshot)) throw new Error("bad review snapshot");

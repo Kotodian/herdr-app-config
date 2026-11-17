@@ -74,8 +74,23 @@ def comparison(s, t):
             "comments": t.get("human_comments") or [], "reviews": t.get("human_reviews") or []}
 
 
-def review_diff(s, t, path=None, working=False):
+def review_diff(s, t, path=None, working=False, comment_id=None):
     review = comparison(s, t)
+    if comment_id:
+        if working:
+            raise Fail("A saved review comment refers to a committed version, not the live worktree.")
+        c = next((c for c in t.get("human_comments") or [] if c.get("id") == comment_id), None)
+        if not c or not c.get("path") or not c.get("head"):
+            raise Fail("This review comment has no saved code location.")
+        original_head = commit(s.loc["folder"], c["head"])
+        original_base = commit(s.loc["folder"], c.get("base_head") or t.get("start") or review["merge_base"])
+        original_merge = commit(s.loc["folder"], c["merge_base"]) if c.get("merge_base") else git(
+            s.loc["folder"], "merge-base", original_base, original_head).stdout.strip()
+        review.update(head=original_head, base_head=original_base, merge_base=original_merge,
+                      snapshot=c["snapshot"], approved=False, approval=None, historical=True,
+                      dirty=[], local_matches=True, comment_id=comment_id,
+                      anchor={k: c.get(k) for k in ("path", "line", "side")})
+        path = path or c["path"]
     folder, end = s.loc["folder"], review["head"]
     if working:
         if not review["worktree"] or not os.path.isdir(review["worktree"]):
@@ -196,6 +211,7 @@ def comment(s, t, snapshot, body=None, path=None, line=None, side="RIGHT", remov
         elif line is not None:
             raise Fail("A line comment needs a changed file.")
         comments.append({"id": secrets.token_hex(6), "snapshot": snapshot, "head": current["head"],
+                         "base_head": current["base_head"], "merge_base": current["merge_base"],
                          "path": path, "line": line, "side": side, "body": body, "at": now(),
                          "by": "person", "status": "draft"})
     s.dirty = True
@@ -268,7 +284,8 @@ def cmd_review_diff(args):
     from .store import open_store
     from .output import say
     with open_store(args, write=False) as s:
-        out = review_diff(s, s.find(args.id), getattr(args, "path", None), getattr(args, "working", False))
+        out = review_diff(s, s.find(args.id), getattr(args, "path", None), getattr(args, "working", False),
+                          getattr(args, "comment_id", None))
     say(args, out, json.dumps(out, ensure_ascii=False))
 
 

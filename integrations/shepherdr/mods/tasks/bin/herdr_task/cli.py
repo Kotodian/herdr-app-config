@@ -241,6 +241,7 @@ def main():
     c.add_argument("--evidence", action="store_true", help="with what its Accept card shows: commits, changed files, checks and its proof")
     c = cmd("review-diff", cmd_review_diff, "read the task's exact PR commit comparison for human review")
     c.add_argument("--path", help="a changed file to preview")
+    c.add_argument("--comment-id", help="open a review comment's original committed code location")
     c.add_argument("--working", action="store_true", help="include live worktree edits; this view cannot be approved")
     c = cmd("approve-review", cmd_approve_review, "the person's Diff screen approves the exact displayed commits")
     c.add_argument("--snapshot", required=True, help="the comparison shown by review-diff")

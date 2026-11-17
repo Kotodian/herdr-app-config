@@ -2,7 +2,11 @@
 import json
 
 from .base import Fail
-from .github import gh
+from . import github
+
+
+def gh(*args):
+    return github.gh(*args)
 
 
 def marker(s, t, c):

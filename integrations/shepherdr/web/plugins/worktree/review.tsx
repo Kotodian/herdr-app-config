@@ -8,10 +8,12 @@ import type { Task } from '@shared/types.ts'
 
 type ChangedFile = { path: string; status: string; add: number; del: number }
 type Comment = { id: string; snapshot: string; head: string; path?: string; line?: number; side: 'LEFT' | 'RIGHT'; body: string; status: string; pr_comment?: { url: string }; pr_sync_error?: string }
+type Anchor = { commentId: string; path: string; line?: number; side: 'LEFT' | 'RIGHT' }
 type Target = { snapshot: string; path: string; line: number; side: 'LEFT' | 'RIGHT' }
 type Review = {
   snapshot: string; head: string; merge_base: string; base: string; branch: string; state: string
   approved: boolean; approval?: unknown; dirty: string[]; local_matches: boolean; limited: boolean
+  historical?: boolean
   files: ChangedFile[]; file_count: number; add: number; delete: number
   comments: Comment[]
   title?: string; pr?: { number?: number }; pr_url?: string
@@ -21,22 +23,23 @@ type Side = { number: number; text: string } | null
 type Row = { kind: string; text?: string; left?: Side; right?: Side; inline?: { left: string[]; right: string[] } | null }
 type ReviewItem = { kind: string; key: string; row: Row; index: number; height: number; comments?: Comment[]; editing?: boolean }
 
-let opened: string | null = null
+let opened: { task: string; anchor?: Anchor } | null = null
 const listeners = new Set<() => void>()
-export function openPrReview(task: string) { opened = task; listeners.forEach((f) => f()) }
+export function openPrReview(task: string, anchor?: Anchor) { opened = { task, anchor }; listeners.forEach((f) => f()) }
 function close() { opened = null; listeners.forEach((f) => f()) }
 const btn = 'rounded px-3 py-1.5 text-xs hover:bg-hover disabled:opacity-40 disabled:cursor-default'
 const primary = `${btn} bg-sel font-medium`
 const HEIGHT = 23
 
-const commentStatus: Record<string, string> = { draft: '草稿', changes: '已要求修改', resolved: '已审核解决', commented: '审核意见' }
+const commentStatus: Record<string, string> = { draft: '草稿', changes: '已要求修改', resolved: '已解决', commented: '审核意见' }
 type DiffProps = {
   patch?: Review['patch']; mode: 'split' | 'unified'; path: string; snapshot?: string; working: boolean
   comments: Comment[]; target: Target | null; body: string; busy: string
   onComment: (row: Row) => void; onBody: (body: string) => void
   onSave: (remove?: string) => void; onCancel: () => void
+  onResolve: (comment: Comment) => void; anchor?: Anchor; historical?: boolean
 }
-function Diff({ patch, mode, path, snapshot, working, comments, target, body, busy, onComment, onBody, onSave, onCancel }: DiffProps) {
+function Diff({ patch, mode, path, snapshot, working, comments, target, body, busy, onComment, onBody, onSave, onCancel, onResolve, anchor, historical }: DiffProps) {
   const parsed = useMemo(() => colorDiff(patchRows(patch?.text ?? ''), path), [patch?.text, path])
   const displayMode = diffMode(parsed, mode)
   const rows = parsed[displayMode as 'split' | 'unified'] as Row[]
@@ -51,6 +54,12 @@ function Diff({ patch, mode, path, snapshot, working, comments, target, body, bu
     setTop(0); setHunk(-1)
     if (scroller.current) scroller.current.scrollTop = 0
   }, [path, mode, patch?.text])
+  useEffect(() => {
+    if (!anchor?.line || anchor.path !== path || !patch || !scroller.current) return
+    const field = anchor.side === 'LEFT' ? 'left' : 'right'
+    const at = items.findIndex(item => item.kind === 'code' && item.row[field]?.number === anchor.line)
+    if (at >= 0) scroller.current.scrollTop = Math.max(0, offsets[at] - 100)
+  }, [path, mode, patch?.text, anchor?.line, anchor?.side])
   useEffect(() => {
     if (!target || !scroller.current) return
     const at = items.findIndex((item) => item.kind === 'thread' && item.editing)
@@ -99,7 +108,8 @@ function Diff({ patch, mode, path, snapshot, working, comments, target, body, bu
                 {item.kind === 'thread' ? <div className={clsx('shrink-0 bg-sel/40 py-1 pl-6 pr-3', displayMode === 'split' ? 'w-1/2' : 'w-full')}>
                   {item.comments?.map((c: Comment) => <div key={c.id} className="flex h-[100px] flex-col gap-1 border-l-2 border-work-fg bg-bg p-2 font-sans">
                     <div className="flex items-center text-fg3"><span className="flex-1">{commentStatus[c.status] ?? c.status} · 第 {c.line} 行</span>
-                      {c.status === 'draft' ? <button className={btn} disabled={!!busy} onClick={() => onSave(c.id)}>删除</button> : null}</div>
+                      {c.status === 'draft' ? <button className={btn} disabled={!!busy || historical} onClick={() => onSave(c.id)}>删除</button>
+                        : c.path ? <button className={btn} disabled={!!busy} onClick={() => onResolve(c)}>{c.status === 'resolved' ? '重新打开' : '标记已解决'}</button> : null}</div>
                     <p className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words">{c.body}</p>
                   </div>)}
                   {item.editing && target ? <div className="flex h-[210px] flex-col gap-2 border-l-2 border-work-fg bg-bg p-3 font-sans">
@@ -110,7 +120,7 @@ function Diff({ patch, mode, path, snapshot, working, comments, target, body, bu
                   </div> : null}
                 </div> : <>
                   <div className="w-6 shrink-0 select-none text-center text-work-fg" style={{ lineHeight: `${HEIGHT}px` }}>
-                    {row.kind !== 'hunk' && !working ? <button aria-label={`评论第 ${(row.right ?? row.left)?.number} 行`} className="h-full w-full hover:bg-sel" onClick={() => onComment(row)}>+</button> : null}
+                    {row.kind !== 'hunk' && !working && !historical ? <button aria-label={`评论第 ${(row.right ?? row.left)?.number} 行`} className="h-full w-full hover:bg-sel" onClick={() => onComment(row)}>+</button> : null}
                   </div>
                   <div className={clsx('min-w-0 flex-1', row.kind === 'hunk' ? 'bg-sel px-4 text-fg3' : 'grid')} style={{ lineHeight: `${HEIGHT}px`, gridTemplateColumns: displayMode === 'split' ? '1fr 1fr' : '1fr' }}>
                     {row.kind === 'hunk' ? row.text : displayMode === 'split' ? <>{cell(row.left, row.inline?.left, row.kind !== 'context', true)}{cell(row.right, row.inline?.right, row.kind !== 'context', false)}</>
@@ -127,9 +137,9 @@ function Diff({ patch, mode, path, snapshot, working, comments, target, body, bu
   )
 }
 
-function ReviewContent({ task, wide = false }: { task: string; wide?: boolean }) {
+function ReviewContent({ task, wide = false, anchor }: { task: string; wide?: boolean; anchor?: Anchor }) {
   const [data, setData] = useState<Review | null>(null), [detail, setDetail] = useState<Review | null>(null)
-  const [working, setWorking] = useState(false), [path, setPath] = useState(''), [query, setQuery] = useState('')
+  const [working, setWorking] = useState(false), [path, setPath] = useState(anchor?.path ?? ''), [query, setQuery] = useState('')
   const [mode, setMode] = useState<'split' | 'unified'>('split')
   const [nonce, refresh] = useState(0), [error, setError] = useState(''), [busy, setBusy] = useState(''), [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -140,7 +150,7 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
     const read = async () => {
       setLoading(true)
       try {
-        const result = await act({ type: 'review-diff', task, working }) as Review
+        const result = await act({ type: 'review-diff', task, working, ...(anchor ? { comment_id: anchor.commentId } : {}) }) as Review
         if (!gone) {
           setData(result); setError('')
           setPath((old) => result.files.some((f) => f.path === old) ? old : result.files[0]?.path ?? '')
@@ -151,21 +161,21 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
     void read()
     const timer = setInterval(() => { if (!document.hidden) void read() }, 15_000)
     return () => { gone = true; clearInterval(timer) }
-  }, [task, working, nonce])
+  }, [task, working, nonce, anchor?.commentId])
   useEffect(() => {
     let gone = false
     setDetail(null)
     if (!path) return
-    act({ type: 'review-diff', task, working, path }).then((out) => {
+    act({ type: 'review-diff', task, working, path, ...(anchor ? { comment_id: anchor.commentId } : {}) }).then((out) => {
       if (!gone) setDetail(out as Review)
     }, (e) => { if (!gone) setError(String(e.message ?? e)) })
     return () => { gone = true }
-  }, [task, working, path, data?.snapshot, nonce])
+  }, [task, working, path, data?.snapshot, nonce, anchor?.commentId])
   useEffect(() => { setMessage('') }, [data?.snapshot])
-  const ready = !!data && data.state === 'ready' && !data.dirty.length && data.local_matches && !data.limited
+  const ready = !!data && !data.historical && data.state === 'ready' && !data.dirty.length && data.local_matches && !data.limited
     && !working && !loading && !busy && !detail?.patch?.limited && (detail?.snapshot === data.snapshot || !data.files.length)
   const action = async (kind: 'approve' | 'merge' | 'changes') => {
-    if (!data || busy || working || (kind === 'changes' ? data.state !== 'ready' : !ready)) return
+    if (!data || data.historical || busy || working || (kind === 'changes' ? data.state !== 'ready' : !ready)) return
     setBusy(kind); setError('')
     try {
       if (kind === 'approve') {
@@ -185,7 +195,7 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
     finally { setBusy('') }
   }
   const saveComment = async (remove?: string) => {
-    if (!data || busy || working || (!remove && (!body.trim() || !target))) return
+    if (!data || data.historical || busy || working || (!remove && (!body.trim() || !target))) return
     if (!remove && target && target.snapshot !== data.snapshot) { setError('代码版本已变化，请重新选择评论行。输入的评论已保留。'); return }
     setBusy('comment'); setError('')
     try {
@@ -197,6 +207,16 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
     } catch (e) { setError(String((e as Error).message ?? e)) }
     finally { setBusy('') }
   }
+  const commentAction = async (comment?: Comment) => {
+    if (!data || busy) return
+    setBusy(comment ? 'resolve' : 'sync'); setError('')
+    try {
+      const out = await act(comment ? { type: 'resolve-review-comment', task, comment_id: comment.id, reopen: comment.status === 'resolved' }
+        : { type: 'sync-review-comments', task }) as { comments: Comment[] }
+      setData(old => old ? { ...old, comments: out.comments } : old)
+    } catch (e) { setError(String((e as Error).message ?? e)) }
+    finally { setBusy('') }
+  }
   const comments = data?.comments ?? []
   const drafts = comments.filter((c) => c.snapshot === data?.snapshot && c.status === 'draft')
   const files = fileTree(data?.files ?? [], query, folded) as { kind: string; path: string; name: string; depth: number; folded?: boolean; count?: number; file?: ChangedFile }[]
@@ -204,10 +224,11 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line px-3 py-2 text-xs">
         <button className={clsx(btn, !working && 'bg-sel')} disabled={!!busy} onClick={() => setWorking(false)}>本地 Commit</button>
-        <button className={clsx(btn, working && 'bg-sel')} disabled={!!busy} onClick={() => setWorking(true)}>Worktree 实时</button>
+        <button className={clsx(btn, working && 'bg-sel')} disabled={!!busy || data?.historical} onClick={() => setWorking(true)}>Worktree 实时</button>
         <span className="flex-1 text-fg3">{data?.file_count ?? 0} files</span>
         <span className="text-ready-fg">+{data?.add ?? 0}</span><span className="text-need-fg">−{data?.delete ?? 0}</span>
         <button className={btn} disabled={loading || !!busy} onClick={() => refresh((n) => n + 1)}>刷新</button>
+        {data?.pr?.number ? <button className={btn} disabled={!!busy} onClick={() => void commentAction()}>同步评论</button> : null}
         {wide ? <span className="text-fg3">点击行号左侧 +，在该行上方评论</span> : null}
       </div>
       {data ? <div className="flex shrink-0 flex-wrap items-center gap-3 px-3 py-2 text-xs">
@@ -215,7 +236,7 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
         {data.pr_url ? <a href={data.pr_url} target="_blank" rel="noreferrer" className={btn}>Open on GitHub</a> : null}
       </div> : null}
       <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-2 text-xs">
-        <span className="min-w-0 flex-1 truncate text-fg3">{data ? `${data.branch} → ${data.base}` : '正在读取本地 Commit…'}</span>
+        <span className="min-w-0 flex-1 truncate text-fg3">{data ? `${data.branch} → ${data.base}${data.historical ? ` · 评论原提交 ${data.head.slice(0, 8)} · 只读` : ''}` : '正在读取本地 Commit…'}</span>
         {wide ? <>
           <button className={clsx(btn, mode === 'split' && 'bg-sel')} onClick={() => setMode('split')}>左右对比</button>
           <button className={clsx(btn, mode === 'unified' && 'bg-sel')} onClick={() => setMode('unified')}>统一视图</button>
@@ -243,10 +264,15 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
             <div className="min-h-0 overflow-y-auto px-3 pb-3 text-xs">
               {reviewHistory(comments, data?.snapshot).map((c: Comment & { outdated: boolean }) => <div key={c.id} className="mb-2 space-y-1 rounded bg-sel p-2">
                 <div className="text-fg3">{c.outdated ? '旧提交 · ' : ''}{c.head?.slice(0, 8)} · {c.status === 'changes' ? '待人工复核' : commentStatus[c.status] ?? c.status}</div>
-                <div className="break-all text-fg3">{c.path ?? 'PR'}{c.line ? `:${c.line}` : ''}</div>
+                {c.path ? <button className="break-all text-left text-work-fg underline" onClick={() => {
+                  if (body.trim()) { setError('请先保存或取消正在编辑的评论。'); return }
+                  openPrReview(task, { commentId: c.id, path: c.path!, line: c.line, side: c.side })
+                }}>{c.path}{c.line ? `:${c.line}` : ''}</button> : <div className="text-fg3">PR</div>}
                 <div className="whitespace-pre-wrap break-words">{c.body}</div>
+                {c.status !== 'draft' && c.path && data?.pr?.number ? <button className={btn} disabled={!!busy}
+                  onClick={() => void commentAction(c)}>{c.status === 'resolved' ? '重新打开' : '标记已解决'}</button> : null}
                 {c.pr_comment?.url ? <a href={c.pr_comment.url} target="_blank" rel="noreferrer" className="underline">在 PR 查看</a> : null}
-                {c.pr_sync_error ? <div className="text-need-fg">PR 同步未完成，评论已保留</div> : null}
+                {c.pr_sync_error ? <div className="text-need-fg">PR 同步未完成：{c.pr_sync_error}</div> : null}
               </div>)}
             </div>
           </div> : null}
@@ -254,6 +280,7 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
         {wide ? <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="grid shrink-0 grid-cols-2 border-b border-line px-3 py-2 text-xs text-fg3"><span>基准 · {data?.merge_base.slice(0, 8)}</span><span>{working ? '当前 Worktree' : `本地 Commit · ${data?.head.slice(0, 8) ?? ''}`}</span></div>
           <Diff patch={detail?.patch} path={path} mode={mode} snapshot={detail?.snapshot} working={working} comments={comments} target={target} body={body} busy={busy}
+            anchor={anchor} historical={data?.historical} onResolve={(c) => void commentAction(c)}
             onBody={setBody} onSave={(remove) => void saveComment(remove)} onCancel={() => { setBody(''); setTarget(null) }}
             onComment={(row) => {
               if (working || !detail) return
@@ -267,7 +294,7 @@ function ReviewContent({ task, wide = false }: { task: string; wide?: boolean })
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line px-3 py-3 text-xs">
         <span className="min-w-0 flex-1 text-fg3">{message || (data?.approved ? `已审核 ${data.head.slice(0, 8)}` : data?.approval ? '版本已变化，之前的审核已失效' : '待人工审核 · 审核通过后才能合并')}</span>
         {wide ? <>
-          <button className={primary} disabled={!!busy || !drafts.length || data?.state !== 'ready' || working || loading || !!message} onClick={() => void action('changes')}>要求修改 · {drafts.length} 条评论</button>
+          <button className={primary} disabled={!!busy || !drafts.length || data?.state !== 'ready' || data?.historical || working || loading || !!message} onClick={() => void action('changes')}>要求修改 · {drafts.length} 条评论</button>
           <button className={primary} disabled={!ready || data?.approved} onClick={() => void action('approve')}>{busy === 'approve' ? '正在记录…' : data?.approved ? '已审核通过' : '审核通过'}</button>
           <button className={primary} disabled={!ready || !data?.approved || !!message} onClick={() => void action('merge')}>{busy === 'merge' ? '正在合并…' : `合并到 ${data?.base ?? ''}`}</button>
         </> : null}
@@ -281,6 +308,6 @@ export function PrReviewDialog() {
   const task = useSyncExternalStore((f) => { listeners.add(f); return () => listeners.delete(f) }, () => opened)
   if (!task) return null
   return <Dialog title="PR · Diff 审核" closer large maxWidth="96vw" safe cancel="关闭" onCancel={close} buttons={null}>
-    <ReviewContent key={task} task={task} wide />
+    <ReviewContent key={`${task.task}:${task.anchor?.commentId ?? ''}`} task={task.task} anchor={task.anchor} wide />
   </Dialog>
 }

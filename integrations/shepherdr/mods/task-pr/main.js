@@ -24,6 +24,7 @@ async function cli(w, args) {
 export default class PullRequest extends View {
   init(_props, cx) {
     this.fixed = props()?.where ?? null; this.wide = Boolean(props()?.wide); this.path = props()?.path ?? null;
+    this.commentId = props()?.commentId ?? null; this.jumpTarget = props()?.jumpTarget ?? null;
     this.current = null; this.error = null; this.rows = []; this.mode = "split"; this.host = cx;
     this.patch = null; this.patchSnapshot = null; this.working = false; this.fileSeq = 0;
     this.scroll = VirtualListScrollHandle.new(); this.handle = cx.focus_handle();
@@ -66,7 +67,7 @@ export default class PullRequest extends View {
   context() {
     const w = this.where();
     // GitHub's checked-at timestamp changes while this view reads a file. Only a different task changes context.
-    return JSON.stringify(w ? [w.machine, w.ref, w.listFolder, w.folder, w.branch, w.base, w.pr?.repo, w.pr?.number] : null);
+    return JSON.stringify(w ? [w.machine, w.ref, w.listFolder, w.folder, w.branch, w.base, w.pr?.repo, w.pr?.number, this.commentId] : null);
   }
   refresh(cx) {
     const w = this.where(), key = this.context();
@@ -78,7 +79,8 @@ export default class PullRequest extends View {
     this.loading = true;
     cx.spawn(async (cx) => {
       try {
-        const current = await cli(w, ["review-diff", w.ref, ...(this.working ? ["--working"] : [])]);
+        const current = await cli(w, ["review-diff", w.ref, ...(this.working ? ["--working"] : []),
+          ...(this.commentId ? ["--comment-id", this.commentId] : [])]);
         if (key !== this.context()) return;
         if (this.current?.snapshot !== current.snapshot) this.message = null;
         this.current = current; this.error = null;
@@ -95,12 +97,19 @@ export default class PullRequest extends View {
     if (reset) { this.rows = []; this.patch = null; this.patchSnapshot = null; this.commentTarget = null; }
     cx.notify();
     try {
-      const out = await cli(w, ["review-diff", w.ref, "--path", path, ...(working ? ["--working"] : [])]);
+      const out = await cli(w, ["review-diff", w.ref, "--path", path, ...(working ? ["--working"] : []),
+        ...(this.commentId ? ["--comment-id", this.commentId] : [])]);
       if (seq !== this.fileSeq || key !== this.context() || working !== this.working) return;
       this.current = out; this.patch = out.patch; this.patchSnapshot = out.snapshot; this.error = null;
       this.parsed = colorDiff(patchRows(out.patch.text), path); this.setRows();
       this.prepareThreads(cx);
       if (reset) this.scroll.scroll_to_item(0);
+      if (this.jumpTarget?.path === path) {
+        const target = this.jumpTarget, field = target.side === "LEFT" ? "left" : "right";
+        const at = this.items().findIndex(item => item.kind === "code" && item.row[field]?.number === target.line);
+        if (at >= 0) this.scroll.scroll_to_item(at, "center");
+        this.jumpTarget = null;
+      }
     } catch (e) { if (seq === this.fileSeq) this.error = String(e?.message ?? e); }
     finally { if (seq === this.fileSeq) this.fileLoading = false; cx.notify(); }
   }
@@ -157,6 +166,32 @@ export default class PullRequest extends View {
     openOverlay({ kind: "dialog", mod: "task-pr", width: 0.96, height: 0.92,
       props: { wide: true, where: this.where(), path } });
   }
+  jumpComment(comment) {
+    if (!comment.path) return;
+    if (this.commentBox.value().trim()) {
+      this.error = "请先保存或取消正在编辑的评论。"; this.invalidate(); return;
+    }
+    openOverlay({ kind: "dialog", mod: "task-pr", width: 0.96, height: 0.92,
+      props: { wide: true, where: this.where(), path: comment.path, commentId: comment.id,
+        jumpTarget: { path: comment.path, line: comment.line, side: comment.side } } });
+  }
+  async commentAction(comment, cx) {
+    if (this.busy) return;
+    this.busy = comment ? "resolve" : "sync"; this.error = null; this.invalidate();
+    try {
+      const w = this.where(), out = await cli(w, comment
+        ? ["resolve-review-comment", w.ref, "--comment-id", comment.id, ...(comment.status === "resolved" ? ["--reopen"] : [])]
+        : ["sync-review-comments", w.ref]);
+      this.current = { ...this.current, ...out }; this.prepareThreads(cx);
+    } catch (e) { this.error = String(e?.message ?? e); }
+    finally { this.busy = false; this.invalidate(); }
+  }
+  resolveButton(comment) {
+    return button(`pr-comment-resolve-${comment.id}`, comment.status === "resolved" ? "重新打开" : "标记已解决", {
+      kind: "plain", disabled: Boolean(this.busy),
+      onClick: (_e, cx) => this.commentAction(comment, cx),
+    });
+  }
   scope(working, cx) {
     if (working === this.working || this.loading || this.busy) return;
     this.working = working; this.fileSeq++; this.rows = []; this.patchSnapshot = null;
@@ -170,7 +205,7 @@ export default class PullRequest extends View {
   }
   async action(command, cx) {
     const current = this.current, w = this.where();
-    if (this.busy || !current || this.working) return;
+    if (this.busy || !current || this.working || current.historical) return;
     this.busy = command; this.error = null; cx.notify();
     try {
       if (command === "approve") {
@@ -195,7 +230,7 @@ export default class PullRequest extends View {
     const item = this.items().find((x) => x.key === key);
     if (!item) return div();
     const target = this.commentTarget;
-    const labels = { draft: "草稿", changes: "已要求修改", resolved: "已审核解决", commented: "审核意见" };
+    const labels = { draft: "草稿", changes: "已要求修改", resolved: "已解决", commented: "审核意见" };
     return h_flex().h(item.height).w_full().bg(t.raised)
       .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
       .on_click((_e, cx) => cx.stop_propagation())
@@ -206,7 +241,9 @@ export default class PullRequest extends View {
               .child(`${labels[comment.status] || comment.status} · 第 ${comment.line} 行`))
             .when(comment.status === "draft" && comment.snapshot === this.current?.snapshot, (el) => el.child(
               button(`pr-comment-delete-${comment.id}`, "删除", { kind: "plain", disabled: this.busy,
-                onClick: (_e, cx) => this.saveComment(cx, comment.id) }))))
+                onClick: (_e, cx) => this.saveComment(cx, comment.id) })))
+            .when(comment.status !== "draft" && Boolean(comment.path && this.current?.pr?.number),
+              el => el.child(this.resolveButton(comment))))
           .child(div().flex_1().min_h(0).overflow_y_scrollbar().text_size(12).child(comment.body))))
         .when(item.editing, (el) => el.child(v_flex().h(210).flex_none().p(10).gap(8).border_l(2).border_color(t.accent).bg(t.background)
           .child(div().text_size(11).text_color(t.accent).child(`第 ${target.line} 行`))
@@ -224,7 +261,7 @@ export default class PullRequest extends View {
   }
   ready() {
     const c = this.current;
-    return Boolean(c && c.state === "ready" && !c.dirty.length && c.local_matches && !c.limited
+    return Boolean(c && !c.historical && c.state === "ready" && !c.dirty.length && c.local_matches && !c.limited
       && !this.working && !this.loading && !this.fileLoading && !this.busy
       && this.patchSnapshot === c.snapshot && !this.patch?.limited);
   }
@@ -268,13 +305,19 @@ export default class PullRequest extends View {
           .child(v_flex().id("pr-review-history").flex_1().min_h(0).overflow_y_scrollbar().px(10).pb(10).gap(10)
             .children(reviewHistory(this.current.comments, this.current.snapshot).map(comment =>
               v_flex().flex_none().gap(5).p(8).rounded(6).bg(t.raised)
-                .child(div().text_size(10).text_color(t.accent).child(`${comment.outdated ? "旧提交 · " : ""}${comment.head?.slice(0, 8) ?? ""} · ${comment.status === "changes" ? "待人工复核" : comment.status === "resolved" ? "已审核解决" : comment.status === "draft" ? "草稿" : "审核意见"}`))
-                .child(div().text_size(10).text_color(t.dim).child(`${comment.path ?? "PR"}${comment.line ? `:${comment.line}` : ""}`))
+                .child(div().text_size(10).text_color(t.accent).child(`${comment.outdated ? "旧提交 · " : ""}${comment.head?.slice(0, 8) ?? ""} · ${comment.status === "changes" ? "待人工复核" : comment.status === "resolved" ? "已解决" : comment.status === "draft" ? "草稿" : "审核意见"}`))
+                .child(div().id(`pr-comment-location-${comment.id}`).text_size(10).text_color(comment.path ? t.accent : t.dim)
+                  .when(Boolean(comment.path), el => el.cursor_pointer().tooltip("打开评论时的代码并定位到行")
+                    .hover(s => s.bg(t.hover)).on_click(() => this.jumpComment(comment)))
+                  .child(`${comment.path ?? "PR"}${comment.line ? `:${comment.line}` : ""}`))
                 .child(div().text_size(12).child(comment.body))
+                .when(comment.status !== "draft" && Boolean(comment.path && this.current?.pr?.number),
+                  el => el.child(this.resolveButton(comment)))
                 .when(Boolean(comment.pr_comment?.url), el => el.child(button(`pr-comment-link-${comment.id}`, "在 PR 查看", {
                   kind: "plain", onClick: (_e, cx) => cx.open_url(comment.pr_comment.url),
                 })))
-                .when(Boolean(comment.pr_sync_error), el => el.child(div().text_size(10).text_color(t.ansi1).child("PR 同步未完成，评论已保留"))))))));
+                .when(Boolean(comment.pr_sync_error), el => el.child(div().text_size(10).text_color(t.ansi1)
+                  .child(`PR 同步未完成：${comment.pr_sync_error}`))))))));
   }
   code(side, pieces, changed, t, direction) {
     const color = direction === "left" ? t.ansi1 : t.ansi2;
@@ -353,16 +396,20 @@ export default class PullRequest extends View {
         .child(svg("mods/task-pr/git-pull-request.svg").size(17).text_color(t.accent))
         .child(v_flex().flex_1().min_w(0).gap(3)
           .child(div().font_semibold().truncate().child(`${c.pr?.number ? `#${c.pr.number} · ` : ""}${c.title}`))
-          .child(div().text_size(11).text_color(t.dim).truncate().child(`${c.branch} → ${c.base}  ·  本地 Commit`)))
+          .child(div().text_size(11).text_color(t.dim).truncate()
+            .child(`${c.branch} → ${c.base}  ·  ${c.historical ? `评论原提交 ${c.head.slice(0, 8)} · 只读` : "本地 Commit"}`)))
         .when(!this.wide, (el) => el.child(button("pr-expand", "查看 Diff", { onClick: () => this.expand() })))
         .when(Boolean(c.pr_url), (el) => el.child(button("pr-github", VIEW_WORDS.openOnGitHub, { kind: "plain", onClick: (_e, cx) => cx.open_url(c.pr_url) })))
         .when(Boolean(props()?.overlay), (el) => el.child(button("pr-close", "关闭", { kind: "plain", onClick: () => closeOverlay(props().overlay) }))))
       .child(h_flex().h(38).flex_none().px(12).gap(8).items_center().border_b(1).border_color(t.border).text_size(11)
         .child(button("pr-committed", "本地 Commit", { kind: !this.working ? "secondary" : "plain", disabled: this.busy, onClick: (_e, cx) => this.scope(false, cx) }))
-        .child(button("pr-working", "Worktree 实时", { kind: this.working ? "secondary" : "plain", disabled: this.busy, onClick: (_e, cx) => this.scope(true, cx) }))
+        .child(button("pr-working", "Worktree 实时", { kind: this.working ? "secondary" : "plain", disabled: this.busy || c.historical, onClick: (_e, cx) => this.scope(true, cx) }))
         .child(div().flex_1()).child(div().text_color(t.dim).child(`${c.file_count} files`))
         .child(div().text_color(t.ansi2).child(`+${c.add}`)).child(div().text_color(t.ansi1).child(`−${c.delete}`))
         .when(this.wide, (el) => el.child(div().text_color(t.dim).child("点击行号左侧 +，在该行上方评论")))
+        .when(Boolean(c.pr?.number), el => el.child(button("pr-sync-comments", "同步评论", {
+          kind: "plain", disabled: this.busy, onClick: (_e, cx) => this.commentAction(null, cx),
+        })))
         .child(button("pr-refresh", "刷新", { kind: "plain", disabled: this.loading || this.busy, onClick: (_e, cx) => this.refresh(cx) })))
       .when(Boolean(c.dirty.length || !c.local_matches), (el) => el.child(this.note(
         !c.local_matches ? "Worktree 与任务分支的本地 Commit 不同，请检查分支并刷新。" : `Worktree 另有 ${c.dirty.length} 个未提交文件。`, t, true)))
