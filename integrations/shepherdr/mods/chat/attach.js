@@ -107,7 +107,8 @@ export async function droppedFile(path, where) {
   const snapshot = tapdSnapshot(reply.data, ref);
   const file = await textFile(snapshot.text);
   if (!file) throw new Error("Bug 已读取，但附件保存失败，请重试。");
-  return { ...file, name: snapshot.name, source: snapshot.source, url: snapshot.url };
+  return { ...file, name: snapshot.name, source: snapshot.source, url: snapshot.url,
+    bugId: snapshot.bugId, title: snapshot.title, project: snapshot.project };
 }
 
 // The message's file lines: each file's path where the agent is. For another machine, a copy

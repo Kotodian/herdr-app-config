@@ -8,6 +8,9 @@ test("TAPD drag resolves a Bug reference without a Space or project mapping", ()
     status_label: "处理中", current_owner: "我", description: "复现步骤与预期结果" }, ref);
   for (const s of ["登录失败", "客户端", "处理中", "复现步骤与预期结果", out.url, ref.id]) expect(out.text).toContain(s);
   expect(out.source).toBe("tapd");
+  expect(out).toMatchObject({ bugId: ref.id, title: "登录失败", project: "客户端" });
+  expect(out.name).toBe("TAPD #456789000 · 登录失败");
+  expect(out.url).toBe(`https://www.tapd.cn/${ref.workspace}/bugtrace/bugs/view/${ref.id}`);
 });
 
 test("invalid references and mismatched details are rejected", () => {

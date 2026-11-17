@@ -3879,7 +3879,35 @@ export default class Chat extends View {
         .when(Boolean(c.state), (el) => el.child(div().flex_none().text_size(11).text_color(t.dim).child(c.state)))));
   }
 
-  // Files waiting to go: small tiles above the box, each removable.
+  tapdTile(f, i, t) {
+    // Older saved drafts already have the canonical URL and name, but no separate Bug fields.
+    const id = f.bugId ?? f.url?.match(/\/bugs\/view\/(\d+)$/)?.[1] ?? "";
+    const number = String(id).slice(-9).replace(/^0+/, "") || id;
+    const title = f.title || f.name.replace(/^TAPD Bug · /, "").replace(/^TAPD #\d+ · /, "");
+    return v_flex().id(`file-${i}`).w(Math.min(280, Math.max(160, (this.width ?? 336) - 56))).h(82).flex_none().p(10).gap(5)
+      .rounded(8).border_1().border_color(t.border).bg(t.surface).cursor_pointer().hover((s) => s.bg(t.hover))
+      .tooltip(`${f.project ? f.project + "\n" : ""}${title}\nBug ID: ${id}\n${f.url ?? ""}\n点击查看详情`)
+      .on_click((_e, cx) => { cx.stop_propagation(); this.openText(f); })
+      .child(h_flex().w_full().gap(6).items_center()
+        .child(svg("mods/chat/tapd.svg").size(14).flex_none().text_color(t.muted))
+        .child(div().flex_1().min_w(0).truncate().text_size(11).font_medium().text_color(t.muted).child(`TAPD Bug${number ? " #" + number : ""}`))
+        .when(Boolean(f.url), (el) => el.child(div().id(`tapd-open-${i}`).flex_none().text_size(11).text_color(t.accent)
+          .tooltip("在 TAPD 打开此 Bug")
+          .on_click((_e, cx) => { cx.stop_propagation(); this.openSource(f); })
+          .child("打开 Bug ↗"))))
+      .child(div().w_full().truncate().text_size(12.5).text_color(t.foreground).child(title))
+      .child(div().w_full().truncate().text_size(10.5).text_color(t.dim).child(f.project || "点击查看缺陷详情"));
+  }
+
+  openSource(f) {
+    const os = window()?.platform;
+    const opened = os === "macos" ? exec("open", [f.url])
+      : os === "windows" ? exec("cmd", ["/c", "start", "", f.url]) : exec("xdg-open", [f.url]);
+    opened.then((r) => { if (r.code !== 0) throw new Error("无法打开 TAPD 链接"); })
+      .catch(() => toast({ title: "无法打开 TAPD 链接", body: f.url, level: "error" }));
+  }
+
+  // Files waiting to go: removable tiles, with a readable Bug card for TAPD.
   tiles(t) {
     if (!this.files.length && !this.quote) return null;
     return v_flex().w_full().px(10).pt(8).gap(6)
@@ -3895,7 +3923,8 @@ export default class Chat extends View {
         const tile = f.image
           ? this.thumb(t, f.path).id(`file-${i}`).cursor_pointer()
             .on_click((_e, cx) => { cx.stop_propagation(); this.openImages(imgs, imgs.indexOf(f.path)); })
-          // Not an image: a tile of the same size with its icon and a short name.
+          : f.source === "tapd" ? this.tapdTile(f, i, t)
+          // Other files: a tile of the same size with its icon and a short name.
           : v_flex().id(`file-${i}`).size(THUMB).flex_none().px(4).gap(3).items_center().justify_center().rounded(8)
             .border_1().border_color(t.border).bg(t.surface)
             // A pasted text opens to read.
