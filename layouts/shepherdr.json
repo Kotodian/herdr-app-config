@@ -103,7 +103,7 @@
                     "width": 1,
                     "color": "accent"
                   },
-                  "radius": 10,
+                  "radius": 14,
                   "gap": 8,
                   "lone": true
                 }
@@ -218,7 +218,7 @@
                             "width": 1,
                             "color": "border"
                           },
-                          "radius": 10,
+                          "radius": 14,
                           "resizable": false
                         }
                       ],
@@ -265,7 +265,7 @@
                             "width": 1,
                             "color": "border"
                           },
-                          "radius": 10,
+                          "radius": 14,
                           "resizable": false
                         }
                       ],
@@ -409,7 +409,13 @@
       "resizable": false
     }
   ],
-  "background": "canvas",
+  "theme": {
+    "light": "shepherdr-glass-light",
+    "dark": "shepherdr-glass-dark"
+  },
+  "window_blur": true,
+  "background": "#00000000",
+  "terminal_opacity": 0.86,
   "terminal_padding": [
     14,
     12

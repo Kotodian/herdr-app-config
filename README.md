@@ -2,6 +2,8 @@
 
 默认使用 **Shepherdr layout**：左边选项目，中间和 Assistant 对话或查看终端，右边跟进任务、检查代码、逐行评论并审核合并。底部有 Magpie、Komari、Gitview、Cloudflare、TAPD 和 Map 的常驻入口。
 
+界面默认使用毛玻璃效果：原生窗口模糊配合半透明侧栏、面板和圆角卡片，提供深浅两套主题并跟随系统外观。终端保留较深的底色，文字和代码保持清晰；可在 Settings 的外观选项中切换主题。
+
 Kanso layout 已移除，工具已接入 Shepherdr。下面的截图来自实际运行的原生界面。
 
 ![工作区与工具栏](docs/screenshots/01-workspace.png)
