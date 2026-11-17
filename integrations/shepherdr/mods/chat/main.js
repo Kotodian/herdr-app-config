@@ -586,6 +586,7 @@ export default class Chat extends View {
         if (c === "call" && addonOn("voice")) this.toggleCall(cx);
         if (c === "mute") this.callMute(cx);
         if (c === "find") this.openFind(cx);
+        if (c === "attachments") this.attachMenu = !this.attachMenu;
         cx.notify();
       }
     });
@@ -4244,15 +4245,15 @@ export default class Chat extends View {
     const ready = this.phase === "ready" || this.phase === "fresh";
     const empty = !this.box.value().trim() && !this.files.length;
     const can = ready && !empty;
-    const list = this.focused || this.paneFocused ? this.suggestions() : [];
+    const list = !this.attachMenu && (this.focused || this.paneFocused) ? this.suggestions() : [];
     const rec = this.dict.state;
     const recallable = !list.length && (!this.box.value() || this.recall >= 0);
     const take = (fn) => (_e, cx) => { fn(cx); cx.stop_propagation(); cx.notify(); };
     const sel = Math.min(this.slashSel, Math.max(0, list.length - 1));
     return div().flex_none().w_full().max_w(COLUMN + 28).mx_auto().px(14).pt(8).child(v_flex().id("chat-composer").w_full().rounded(10).border_1()
       // Esc stops a working agent while the box is empty and nothing is open over it.
-      .key_context([list.length ? "chat_slash" : recallable ? "chat_recall" : "chat_composer",
-        st === "working" && !list.length && !this.box.value().trim() && !this.quote ? "chat_stop" : null].filter(Boolean).join(" "))
+      .key_context([this.attachMenu ? "chat_source" : list.length ? "chat_slash" : recallable ? "chat_recall" : "chat_composer",
+        !this.attachMenu && st === "working" && !list.length && !this.box.value().trim() && !this.quote ? "chat_stop" : null].filter(Boolean).join(" "))
       .on_action("chat_stop", take((cx) => this.stop(cx)))
       .on_action("chat_slash_up", take(() => { this.slashSel = (sel + list.length - 1) % list.length; }))
       .on_action("chat_slash_down", take(() => { this.slashSel = (sel + 1) % list.length; }))

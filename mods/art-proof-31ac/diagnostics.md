@@ -78,6 +78,10 @@ Rust 业务 counters/resources 为会话累积，events 为最近 256 条事件�
 与新增的 60 秒探测窗口独立。默认不输出目标名，目标捕获沿原 opt-in。
 Go Business 为最近 60 秒内保留的最多 256 条 headers/body 记录，带出口编号、协议、代际，
 不包含 URL/正文。正文在调用方关闭 Body 时结算，活跃正文尚无最终观测。
+TimedOut 保留 SDK 预算、调用方 deadline 和实际 I/O 超时；Canceled 仅表示调用方/实例取消，
+不会因 SDK 预算内部使用 cancelRequest 终止 HTTP/2 而冒充取消。
+HTTP/1 上传失败触发的立即读 deadline 只是唤醒读者，诊断通过同步保存的写失败原因区分，
+不会把普通上传错误变成超时。
 旧代正文仍能读取，但迟到记录不进入当前代诊断；Restart 的新句柄读取新 session。
 
 正文 bytes 与 elapsed 是被动业务数据，不是主动带宽测试或可跨目标排名的吞吐值；

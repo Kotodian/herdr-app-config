@@ -819,8 +819,9 @@ export function Menu({ label, onClose, tabs, select, className, children }: { la
     // + while typing leaves a phone's keyboard up
     if (opener?.matches(':focus-visible') && !opener.matches('input, textarea')) ((select && rows().find((r) => r.getAttribute('aria-checked') === 'true')) || rows()[0])?.focus({ preventScroll: true })
     const on = (e: KeyboardEvent) => {
-      // a picker in it (a menu setting with many choices) takes its own arrow keys
-      if (document.activeElement instanceof HTMLSelectElement && el.contains(document.activeElement) && e.key !== 'Escape' && e.key !== 'Tab') return
+      // A picker or link field keeps its editing keys, including Home/End.
+      if ((document.activeElement instanceof HTMLSelectElement || document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement)
+        && el.contains(document.activeElement) && e.key !== 'Escape' && e.key !== 'Tab') return
       const all = rows()
       const at = all.indexOf(document.activeElement as HTMLElement)
       const go = (i: number) => {

@@ -11,12 +11,14 @@ import { fakeHerdr } from "./fake-herdr";
 let os = "macos";
 let answer: (argv: string[]) => { code: number; stdout: string } = () => ({ code: 0, stdout: "" });
 const calls: string[][] = [];
+const transfers: string[][] = [];
 mock.module("herdr", () => fakeHerdr({
   exec: async (cmd: string, args: string[]) => { calls.push([cmd, ...args]); return { stderr: "", ...answer([cmd, ...args]) }; },
   window: () => ({ platform: os }), appHome: () => "/app", settings: () => ({}), theme: () => new Proxy({}, { get: () => "#000000" }),
   shared: () => undefined, setShared: () => {}, agents: () => [], panes: () => [], terminals: () => [], spaces: () => [],
   machines: () => [], knownAgents: () => [], focused: () => null, home: () => "/nonexistent-home", props: () => ({}),
-  hc: async () => ({ code: 1, stdout: "", stderr: "" }), readTextFile: async () => null, writeTextFile: async () => {}, watchFolder: () => {},
+  hc: async (args: string[]) => { transfers.push(args); return { code: 0, stdout: JSON.stringify({ path: "/remote/issue.txt" }), stderr: "" }; },
+  readTextFile: async () => null, writeTextFile: async () => {}, watchFolder: () => {},
 }));
 const attach = await import("../mods/chat/attach.js");
 
@@ -76,5 +78,14 @@ describe("attach and paste on macOS (GitHub #774)", () => {
       expect(r.exitCode).toBe(0);
     } finally { rmSync(dir, { recursive: true, force: true }); }
     expect(attach.MAC_CLIPBOARD).toContain('"file\\t"');
+  });
+
+  test("a source snapshot stays local here and is copied before a remote agent receives it", async () => {
+    const file = { path: "/app/data/chat-attach/pasted-issue.txt", name: "GitHub Issue · #12", source: "github", text: true, temp: true };
+    transfers.length = 0;
+    expect(await attach.deliver([file], "t1", null)).toEqual([file.path]);
+    expect(transfers).toHaveLength(0);
+    expect(await attach.deliver([file], "server/t1", "server")).toEqual(["/remote/issue.txt"]);
+    expect(transfers).toEqual([["put", "server/t1", file.path, "--json"]]);
   });
 });

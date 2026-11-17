@@ -71,6 +71,8 @@ C-only 返回空接入点列表，没有原站样本。读窗口不会影响熔�
 Go probeBatch/probeLoop → recordProbe。业务 record_outcome/record 不写探测样本，
 取消不进入 completed，旧代反馈不污染新代。网络失效时 Rust source 返回 None，
 发布后读取新 Registry；Go 锁内读取 current session/routes。
+同端点的后台探测即使只由其中一条线路到期触发，也向全部关联 Health 记录同一完成结果，
+因此不同 jitter/due 不会使导出的首条线路窗口漏掉其他线路触发的真实探测。
 
 测试源码：Rust `diagnostics_read_expires_without_new_feedback_and_reports_truncation`、
 `recorder_reads_live_deduplicated_probe_windows_and_new_generation`；
@@ -95,6 +97,13 @@ pool.take 实际命中标记单次复用，responseBody.Read/Close 记录真实�
 EOF、错误、提前关闭。Mode.Diagnostics.Business 返回最近 60 秒内最多 256 条记录，
 带 route/generation/protocol，不含 URL/正文；旧代迟到事件不进入当前代。
 没有缓存实现，CacheAvailable=false，不能声称命中率为零。
+Go 的 TimedOut 与 Canceled 分别保留超时和调用方/实例取消，
+SDK 预算触发内部 cancelRequest 不被写成业务取消；
+`TestHTTPDiagnosticsSeparateSDKTimeoutFromCallerCancellation` 包含 HTTP/1、HTTP/2 两种来源对比，
+只编译，不执行。Rust 窗口集成用例也覆盖共享接入点不同 due 下的失败与取消。
+同轮进一步修正 HTTP/1 上传失败通过立即读 deadline 唤醒读者的诊断口径：
+原写失败是否超时通过 atomic 状态同步传递，避免把普通上传错误归为超时；
+`TestHTTP1UploadFailureWakeupIsNotRecordedAsTimeout` 为对应测试源码，未执行。
 
 准确限制：Rust 精确逐 HTTP 请求首字节尚未支持，只有完整响应头耗时和字节流首字节；
 Go HTTP/2 trace 的真实边界是首个完整 HEADERS，显式 FirstByteBoundary=http2-response-headers，

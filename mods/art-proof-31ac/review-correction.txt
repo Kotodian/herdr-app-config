@@ -1,0 +1,251 @@
+
+  >_ OpenAI Codex (v0.169.0)
+     ~/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-9-task
+
+
+› Review SPS-9 read-only in the current task folder. This is the only formal development review round, round 1 of 1, not PR human approval. Read the complete brief at /private/tmp/sps9-proof/
+  brief.txt and __HERDR_SYNC_HOME__/.config/herdr-core/templates/reviewer.md. Review the actual complete patch against dev at /private/tmp/sps9-proof/final.diff.txt and verify it against git diff
+  dev...HEAD yourself. Candidate SHA is 9e1719f3997bb527b91bfdec84b99d795356e779, base dev is 3861d8c332b5269b3b112ee17a048ce3b5a254c0. Read docs/sps9-ledger.md and docs/diagnostics.md, the verified
+  original design at /private/tmp/sps9-proof/design-original.md, and final compile-only evidence /private/tmp/sps9-proof/checks-summary.json plus its logs. Check production wiring, address
+  replacement for HTTP and TCP, budget/cancellation/generation isolation, current probe windows and diagnostic consumption, zero/expiry/timeout/cancel separation, real business metrics and
+  unsupported boundaries, all original chapters and 23 scenarios, ABI/config compatibility, recovery old/new flow test sources. No tests or init or application binaries may run on dev. No race/
+  feature matrices, traffic, devices, Steam or real nodes, dependency downloads, agents, commits, pushes, modifications, approvals or merge commands. Only cargo check --offline --locked --tests,
+  cargo fmt --all -- --check, git diff --check and Go GOWORK=off CGO_ENABLED=0 go build or go test -c are permitted checks; compilation may be unavailable in your read-only sandbox, then state Not
+  run in my sandbox and inspect worker logs. Inspect source/tests meaningfully, do not equate compilation with behavior passing. Return findings as your last message, each with blocker/major/minor,
+  concrete file/line and evidence; otherwise explicitly state no findings at each relevant severity. Include exact reviewed SHA and what was not run. If worker corrections are necessary, stay
+  available so this SAME reviewer can verify the real final SHA in this SAME round.
+
+
+• I’ll read the review brief and reviewer instructions, compare the supplied patch with git diff dev...HEAD, then inspect the implementation, test sources, and compile evidence. I’ll keep the review
+  read-only and won’t run tests or application binaries.
+
+• Ran cat __HERDR_SYNC_HOME__/.codex/RTK.md /private/tmp/sps9-proof/brief.txt __HERDR_SYNC_HOME__/.config/herdr-core/templates/reviewer.md
+  └ 来源：《GameHub 新人开发向导》，版本 1044，整理于 2026-10-21。
+    https://gamesirworld.feishu.cn/docx/GX4tdchOLo2hNfxBm5jc631in9f
+    <!-- local-gamehub-git-release:end -->
+    + 144 lines (⌃t to expand)
+
+• Ran pwd; git status --short; git rev-parse HEAD dev; git merge-base dev HEAD; git diff --stat dev...HEAD; rg --files -g AGENTS.md -g CLAUDE.md; cat /private/tmp/sps9-proof/checks-summary.json; ls /…
+  └ go-compile.txt
+    go-format.txt
+    ledger.md
+    + 178 lines (⌃t to expand)
+
+• Ran cat docs/sps9-ledger.md docs/diagnostics.md /private/tmp/sps9-proof/design-original.md
+  └ | 取消 / 关闭 | 探测、排队、backoff、连接和池全部收敛释放 |
+
+    以上为设计验收要求。本次仅更新文档，未修改 SDK 实现，未执行 Steam 请求或设备测试。
+    + 866 lines (⌃t to expand)
+
+• Ran python3 - <<'PY' …
+  └          tunnel: Arc<TunnelOutbound<T>>,
+             dialer: Arc<dyn TcpDialer>,
+             sockets: Arc<Connections>,
+    + 2521 lines (⌃t to expand)
+
+• HEAD and dev match the supplied SHAs. The worker’s logs report successful compilation, with Rust warnings; they provide no behavioral test results. I’m applying the Go context and concurrency review
+  guidance while tracing cancellation, generation changes, and diagnostic writes.
+
+• Ran python3 -c 'import subprocess,pathlib,hashlib,json; p=subprocess.run(["git","diff","dev...HEAD"],capture_output=True); f=pathlib.Path("/private/tmp/sps9-proof/final.diff.txt").read_bytes(); pri…
+  └ +    Elapsed  time.Duration
+    +}
+    +
+    + 642 lines (⌃t to expand)
+
+• Explored
+  └ Read final.diff.txt, diagnostics.md, design-original.md, http_proxy.rs, direct.rs, reverse.rs, http.go
+    + Show details
+
+• The supplied patch matches git diff dev...HEAD byte-for-byte, and every source hash in the compile manifest matches the checkout. I’ve traced both address strategies into production HTTP/TCP paths
+  and the probe windows into host-readable snapshots. Next I’m checking metric attribution, timeout versus cancellation handling, and the recovery tests’ assertions.
+
+• Ran sed -n '760,815p' src/http_proxy.rs; rg -n 'HttpConnect|domain:|acquisition|connect_http' src/http_connector.rs src/outbound/*.rs src/routing/attempt.rs; sed -n '530,670p' bindings/go/routing.g…
+  └         assert_eq!(retained, 0);
+        }
+    }
+    + 876 lines (⌃t to expand)
+
+• Ran git diff --check dev...HEAD
+  └ git: error: couldn't create cache file '/tmp/xcrun_db-Qn6mMLS0' (errno=Operation not permitted)
+    git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+    git: error: couldn't create cache file '/tmp/xcrun_db-qMnq5aJe' (errno=Operation not permitted)
+    + 1 line (⌃t to expand)
+
+• Explored
+  └ Read native_plane.rs
+    Read attempt.rs
+    Search recordProbe|func .*probe|generation\+|business =|accessFeedbackAllowed in routing.go
+    + Show details
+
+• Ran cargo fmt --all -- --check
+  └ (no output)
+
+• Ran sed -n '215,455p' bindings/go/routing.go; cat bindings/go/probe.go; rg -n 'networkChanged|networkChange|generation\+|generation =|func .*current' bindings/go/*.go; rg -n 'UpstreamFirstByte|Http…
+  └     "src/probe/scheduler.rs": "c4ebfd3e9e0561ef04aa165adec35834729c019f49069b01b8e61af6f26e5549"
+      }
+    }
+    + 632 lines (⌃t to expand)
+
+• Ran git diff --stat 67145a825b263e47a2953c2e94d7fb65bed62fb2 dev; git log -6 --format='%h %s' dev; sed -n '225,355p' /private/tmp/sps9-proof/design-original.md; sed -n '355,570p' /private/tmp/sps9-…
+  └         result
+        }
+    }
+    + 784 lines (⌃t to expand)
+
+• Ran rg -n 'RoutesRecovery|route_first_ready|struct RouteDialer|impl crate::TcpDialer for RouteDialer|h2_stream_window|with_mode|serve_connection' src/http_proxy_tests.rs; sed -n '100,160p' src/http…
+  └ func localNetworkRevision(ctx context.Context) (string, error) {
+        return "", errors.New("steamproxy: local network observer unavailable")
+    }
+    + 666 lines (⌃t to expand)
+
+• Ran sed -n '1,100p' src/http_proxy_tests.rs; rg -n 'store.steampowered.com|steamstatic' src/policy.rs src/domains* assets; sed -n '870,925p' src/observation.rs; rg -n 'H2_UPSTREAM_STREAM_WINDOW|fn …
+  └     }
+        deps := f.dependencies
+        if deps.Dialer == nil {
+    + 427 lines (⌃t to expand)
+
+• Two diagnostic issues have emerged from source inspection: Rust’s deduplicated endpoint snapshot can omit probes recorded only for another route sharing that endpoint, and Go can label an SDK HTTP
+  timeout as cancellation. The recovery test sources exercise new requests selecting A while an existing B response remains readable, but those tests have not run. The permitted formatting and diff
+  checks passed independently.
+
+• Ran nl -ba src/outbound/registry.rs | sed -n '25,60p'; nl -ba src/native_plane.rs | sed -n '875,930p'; nl -ba src/health/state.rs | sed -n '145,200p'; nl -ba bindings/go/http.go | sed -n '158,180p'…
+  └ git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+    git: error: couldn't create cache file '/tmp/xcrun_db-zO6EtGNR' (errno=Operation not permitted)
+    9e1719f3997bb527b91bfdec84b99d795356e779
+    + 403 lines (⌃t to expand)
+
+• Explored · 1 nonzero exit
+  └ List python3 -c "import pathlib,hashlib,re; p=pathlib.Path(\"/private/tmp/sps9-proof/design-original.md\"); print(\"original sha256\",hashlib.sha256(p.read_bytes()).hexdigest());
+         snapshot=pathlib.Path(\"/private/tmp/steam-sdk-routing-design-20261115.md\"); print(\"original matches saved snapshot\",snapshot.exists() and snapshot.read_bytes()==p.read_bytes());
+         ledger=pathlib.Path(\"docs/sps9-ledger.md\").read_text(); sources=\"\\n\".join(p.read_text() for d,glob in [(\"src\",\"*.rs\"),(\"bindings/go\",\"*.go\")] for p in pathlib.Path(d).rglob(glob…
+    + Show details
+
+• Reviewed 9e1719f3997bb527b91bfdec84b99d795356e779 against dev 3861d8c332b5269b3b112ee17a048ce3b5a254c0, formal development review round 1 of 1.
+
+  Blocker: no findings.
+
+  1. Major — Rust endpoint diagnostics silently omit samples from other routes sharing the endpoint.
+     Location: src/outbound/registry.rs:45 (src/outbound/registry.rs:45).
+
+     The snapshot groups matching endpoints but takes their window exclusively from the first route’s Health. Those histories can diverge in production: Health::update independently jitters each
+     route’s next probe time (src/health/state.rs:187), and check_routes_until selects only due routes, then records results only into those selected indexes (src/native_plane.rs:867–893).
+
+     A concrete source-level counterexample is two routes sharing an endpoint: their successful startup probe populates both histories; subsequently only the second route becomes due and its probe
+     fails. The exported endpoint window still reports 1 completed, 1 successful, 100%, omitting the second physical probe. The new deduplication test covers startup and generation replacement, but
+     not divergent background schedules.
+
+     Maintain endpoint-level probe history, or otherwise ensure each physical probe updates the shared endpoint evidence exactly once. Add a test source exercising different due times for duplicate
+     routes and verifying completion, failure, and cancellation counts.
+
+  2. Major — Go business diagnostics classify SDK-budget expiry as cancellation.
+     Location: bindings/go/http.go:260 (bindings/go/http.go:260).
+
+     The new header-failure observation sets Canceled whenever requestCtx.Err() is non-nil. However, the SDK’s own attempt-budget callback calls cancelRequest() at http.go:168–169. For an HTTP/2
+     request whose server stalls after commitment, expiry of Runtime.ConnectTimeout therefore produces Canceled=true even while the caller/session context remains active. The diagnostic contains no
+     timeout classification to recover that distinction. HTTP/1 attribution can additionally depend on whether the socket deadline or cancellation callback wins.
+
+     Preserve the SDK timeout cause in the diagnostic and distinguish it from caller/session cancellation. Add HTTP/1 and HTTP/2 test sources comparing SDK-budget expiry with explicit caller
+     cancellation. This finding concerns the newly added diagnostic attribution; it is not a claim that the pre-existing return-error behavior was introduced by this patch.
+
+  Minor: no findings.
+
+  The supplied complete patch matches git diff dev...HEAD byte-for-byte. All 26 source hashes in the compile manifest match the checkout. The original-design hash and saved snapshot also match. I
+  checked the ledger’s coverage of all original chapters and 23 scenarios, production wiring, compatibility boundaries, and recovery test sources. These are source-review conclusions, not behavioral
+  passes.
+
+  Independently passed: cargo fmt --all -- --check and git diff --check dev...HEAD.
+
+  Not run in my sandbox: Rust and Go compilation, because build outputs/caches require writes. I inspected the worker’s summary and logs, which report successful cargo check --offline --locked --tests
+  and GOWORK=off CGO_ENABLED=0 go test -c, with Rust warnings retained. No tests, test/application binaries or init code, race/feature matrices, traffic, devices, Steam requests, real nodes,
+  dependency downloads, agents, modifications, commits, pushes, approvals, or merges were run.
+
+  Corrections remain eligible for verification by this same reviewer against the real final SHA in this same review round.
+
+  Worked for 4m 11s • 12:19 AM
+
+
+› <hc from="t6q sps-9">Continue SAME formal review round 1 of 1, not another review round. Both major findings were accepted and corrected in commit b4f3b2a89220fcf90fb9ba029ee16e85e84a0370, the real
+  final HEAD. Please verify this SHA and git diff 9e1719f3997bb527b91bfdec84b99d795356e779..HEAD, plus complete final patch /private/tmp/sps9-proof/final.diff.txt against unchanged dev
+  3861d8c332b5269b3b112ee17a048ce3b5a254c0. Rust now records each completed/canceled physical endpoint probe into every associated Health even when only one route was due; the integration test
+  exercises different due times with failure and cancellation. Go business diagnostics has separate TimedOut/Canceled and detects both context budgets and real net.Error timeouts; HTTP/1 and HTTP/2
+  test sources compare SDK-budget expiry against explicit caller cancellation. Docs and ledger updated. Final checks-summary.json and all logs now bind b4f3b2a; all five allowed compile/format/diff
+  checks passed with Rust warnings, no tests or init executed. Previous evidence archived with 9e1719f suffix; initial raw report is review-initial.txt. Verify corrections and any consequences read-
+  only under the SAME constraints, no tests/init/binaries/traffic/matrices/other agents, and give your FINAL report as last message with exact reviewed final SHA, dispositions of both findings,
+  remaining severity findings and Not run in my sandbox. Do not record reviewed or create PR; worker does that after your final SHA verification.</hc>
+
+
+• I’ll verify the new HEAD, inspect both corrections and their test sources, and compare the refreshed full patch and compile evidence against the unchanged dev base. This continues the same review
+  round under the same read-only constraints.
+
+• Ran git rev-parse HEAD dev; git status --short; git diff 9e1719f3997bb527b91bfdec84b99d795356e779..HEAD; cat /private/tmp/sps9-proof/checks-summary.json
+  └     "src/outbound/stream.rs": "511f345b881bae09f1dfdadfb3325ed97ed298d3b009bf148b5dad430aa63cce"
+      }
+    }
+    + 420 lines (⌃t to expand)
+
+• Ran git diff --check dev...HEAD; git merge-base dev HEAD; sed -n '850,905p' src/native_plane.rs; sed -n '990,1135p' src/native_plane.rs; sed -n '200,345p' bindings/go/http.go; sed -n '395,470p' bin…
+  └ bindings/go/review_regression_test.go:340:                data, err := io.ReadAll(response.Body)
+    bindings/go/tunnel_vless_test.go:55:                        w.WriteHeader(failure.status)
+    bindings/go/tunnel_vless_test.go:121:            body, err := io.ReadAll(r.Body)
+    + 461 lines (⌃t to expand)
+
+• Ran python3 -c 'import subprocess,pathlib,hashlib,json; p=subprocess.run(["git","diff","dev...HEAD"],capture_output=True,check=True).stdout; f=pathlib.Path("/private/tmp/sps9-proof/final.diff.txt")…
+  └
+    warning: `steam-proxy` (lib test) generated 7 warnings (2 duplicates) (run `cargo fix --lib -p steam-proxy --tests` to apply 3 suggestions)
+        Finished `dev` profile [unoptimized + debuginfo] target(s) in 20.65s
+    + 142 lines (⌃t to expand)
+
+• Ran cargo fmt --all -- --check
+  └ (no output)
+
+• Both reported paths are corrected in source, and the refreshed patch and all 26 source hashes match the new HEAD. The added tests cover divergent Rust probe schedules and Go HTTP/1/HTTP/2 timeout-
+  versus-cancellation attribution. I found one narrower follow-on issue: HTTP/1 uses an immediate read deadline to wake the reader after an upload error, and the new diagnostic can mistake that wake-
+  up for a real timeout.
+
+• Ran nl -ba bindings/go/http.go | sed -n '225,266p'; nl -ba bindings/go/diagnostics.go | sed -n '1,52p'; nl -ba bindings/go/diagnostics_http_test.go | sed -n '160,230p'; nl -ba src/native_plane.rs |…
+  └  docs/sps9-ledger.md                  |  6 ++++
+     src/native_plane.rs                  | 57 +++++++++++++++++++++++++++++--
+     6 files changed, 153 insertions(+), 10 deletions(-)
+    + 198 lines (⌃t to expand)
+
+• Verified final HEAD b4f3b2a89220fcf90fb9ba029ee16e85e84a0370 against unchanged dev 3861d8c332b5269b3b112ee17a048ce3b5a254c0, continuing the same formal review round 1 of 1.
+
+  Both original major findings are resolved at source level:
+
+  • Rust endpoint-window omission — resolved. src/native_plane.rs:887 (src/native_plane.rs:887) now records each endpoint probe result into every associated route’s Health, including routes that were
+    not due. The updated integration test explicitly separates due times and checks failure and cancellation accounting through the diagnostic snapshot.
+
+  • Go SDK timeout misclassified as cancellation — resolved for the reported paths. bindings/go/http.go:260 (bindings/go/http.go:260) derives cancellation from the caller/session context and records
+    timeout separately. The new HTTP/1 and HTTP/2 test sources compare SDK-budget expiry with explicit caller cancellation.
+
+  Remaining blocker findings: none.
+  Remaining major findings: none.
+
+  Minor — HTTP/1 upload failure can be reported as a timeout.
+  Location: bindings/go/http.go:262 (bindings/go/http.go:262).
+
+  When out.Write(conn) fails, the writer deliberately calls SetReadDeadline(time.Now()) at line 237 to wake the response reader. A non-timeout request-body error, while both contexts remain active,
+  can therefore make http.ReadResponse return a timeout error. The newly added businessTimeout(err) then records TimedOut=true, although the initiating failure was the upload error. The added tests
+  use bodyless GET requests and do not cover this path.
+
+  Preserve the writer’s failure cause or explicitly identify the forced reader wake-up when classifying diagnostics, with synchronized access to writer state. Add a test source using a request body
+  that returns a non-timeout error before the SDK budget expires. This is a source-level finding; it was not reproduced by execution.
+
+  The refreshed complete patch matches git diff dev...HEAD byte-for-byte. All 26 manifest source hashes match the checkout and cover the changed files. HEAD remains the stated final SHA, and the
+  working tree is clean. I inspected the six-file corrective diff and carried forward the complete source/design review from this same round.
+
+  Independently passed: cargo fmt --all -- --check and git diff --check dev...HEAD. The refreshed worker summary and all named logs report successful checks bound to this SHA, including compile-only
+  Rust/Go checks; Rust warnings remain recorded.
+
+  Not run in my sandbox: Rust/Go compilation, which requires writable build outputs and caches. No tests, test/application binaries or init code, traffic, devices, real nodes, Steam requests, race/
+  feature matrices, dependency downloads, or other agents were run. Compilation and source review do not establish behavioral acceptance.
+
+  No reviewed status, PR, approval, commit, push, modification, or merge was created.
+
+  Worked for 1m 24s • 12:29 AM
+
+
+› Ask Codex to do anything
+
+  GPT-6 Astra · routing group medium · ~/.local/share/shepherdr/worktrees/steam-proxy-sdk/task-9-task · Review SPS-9 complete patch
+  ← for agents · ? for shortcuts                                                                                                                                               ⚠ 1 warning · f2 to view

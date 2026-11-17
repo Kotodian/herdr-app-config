@@ -26,13 +26,22 @@ index 6c02f5a..c3ff5a7 100644
  
 diff --git a/bindings/go/diagnostics.go b/bindings/go/diagnostics.go
 new file mode 100644
-index 0000000..023a95e
+index 0000000..eb011bc
 --- /dev/null
 +++ b/bindings/go/diagnostics.go
-@@ -0,0 +1,109 @@
+@@ -0,0 +1,119 @@
 +package steamproxy
 +
-+import "time"
++import (
++	"errors"
++	"net"
++	"time"
++)
++
++func businessTimeout(err error) bool {
++	var timeout net.Error
++	return errors.As(err, &timeout) && timeout.Timeout()
++}
 +
 +type ProbeWindow struct {
 +	Completed   uint64
@@ -59,6 +68,7 @@ index 0000000..023a95e
 +	BodyBytes         uint64
 +	Interrupted       bool
 +	Canceled          bool
++	TimedOut          bool
 +	Status            int
 +	Completed         time.Time
 +}
@@ -141,10 +151,10 @@ index 0000000..023a95e
 +}
 diff --git a/bindings/go/diagnostics_http_test.go b/bindings/go/diagnostics_http_test.go
 new file mode 100644
-index 0000000..05034e5
+index 0000000..b8c8f63
 --- /dev/null
 +++ b/bindings/go/diagnostics_http_test.go
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,256 @@
 +//go:build reverse_proxy || (!tunnel_proxy && !vless_xhttp && !websocket && !shadowsocks)
 +
 +package steamproxy
@@ -152,6 +162,7 @@ index 0000000..05034e5
 +import (
 +	"context"
 +	"crypto/tls"
++	"errors"
 +	"io"
 +	"net"
 +	"net/http"
@@ -303,6 +314,101 @@ index 0000000..05034e5
 +				t.Fatal("old-generation response leaked")
 +			}
 +		})
++	}
++}
++
++func TestHTTPDiagnosticsSeparateSDKTimeoutFromCallerCancellation(t *testing.T) {
++	for _, test := range []struct {
++		name             string
++		h2, cancelCaller bool
++	}{
++		{"http1-budget", false, false},
++		{"http2-budget", true, false},
++		{"http1-cancel", false, true},
++		{"http2-cancel", true, true},
++	} {
++		t.Run(test.name, func(t *testing.T) {
++			ca := newTestCA(t)
++			entered := make(chan struct{})
++			server := namedRelay(t, ca, "relay.example.test", test.h2, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				close(entered)
++				<-r.Context().Done()
++			}))
++			config := reverseConfig()
++			config.Runtime.ConnectTimeout = time.Second
++			if test.cancelCaller {
++				config.Runtime.ConnectTimeout = 5 * time.Second
++			}
++			mode := startMode(t, config, Dependencies{Dialer: relayDialer(t, server), TLSClientConfig: &tls.Config{RootCAs: ca.roots}})
++			ctx, cancel := context.WithCancel(t.Context())
++			defer cancel()
++			finished := make(chan error, 1)
++			go func() {
++				request, _ := http.NewRequestWithContext(ctx, "GET", "https://example.test/", nil)
++				response, err := mode.Request(request)
++				if response != nil {
++					response.Body.Close()
++				}
++				finished <- err
++			}()
++			select {
++			case <-entered:
++			case <-time.After(3 * time.Second):
++				t.Fatal("request did not commit")
++			}
++			if test.cancelCaller {
++				cancel()
++			}
++			select {
++			case err := <-finished:
++				if err == nil {
++					t.Fatal("stalled request succeeded")
++				}
++			case <-time.After(3 * time.Second):
++				t.Fatal("request failed to drain")
++			}
++			events := mode.Diagnostics().Business
++			if len(events) != 1 {
++				t.Fatalf("missing failure diagnostic %+v", events)
++			}
++			event := events[0]
++			if !event.Interrupted || event.Canceled != test.cancelCaller || event.TimedOut == test.cancelCaller {
++				t.Fatalf("timeout/cancel attribution %+v", event)
++			}
++			if !test.cancelCaller && ctx.Err() != nil {
++				t.Fatal("SDK timeout canceled caller")
++			}
++		})
++	}
++}
++
++type failedUpload struct{}
++
++func (failedUpload) Read([]byte) (int, error) { return 0, errors.New("upload source failed") }
++func (failedUpload) Close() error             { return nil }
++
++func TestHTTP1UploadFailureWakeupIsNotRecordedAsTimeout(t *testing.T) {
++	ca := newTestCA(t)
++	server := namedRelay(t, ca, "relay.example.test", false, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		io.Copy(io.Discard, r.Body)
++		<-r.Context().Done()
++	}))
++	config := reverseConfig()
++	config.Runtime.ConnectTimeout = 5 * time.Second
++	mode := startMode(t, config, Dependencies{Dialer: relayDialer(t, server), TLSClientConfig: &tls.Config{RootCAs: ca.roots}})
++	ctx, cancel := context.WithCancel(t.Context())
++	defer cancel()
++	request, _ := http.NewRequestWithContext(ctx, "POST", "https://example.test/", failedUpload{})
++	response, err := mode.Request(request)
++	if response != nil {
++		response.Body.Close()
++	}
++	if err == nil || ctx.Err() != nil {
++		t.Fatal("upload failure did not preserve caller context")
++	}
++	events := mode.Diagnostics().Business
++	if len(events) != 1 || !events[0].Interrupted || events[0].TimedOut || events[0].Canceled {
++		t.Fatalf("forced reader wakeup was misattributed: %+v", events)
 +	}
 +}
 diff --git a/bindings/go/diagnostics_test.go b/bindings/go/diagnostics_test.go
@@ -603,7 +709,7 @@ index 0000000..e73728b
 +	}
 +}
 diff --git a/bindings/go/http.go b/bindings/go/http.go
-index 53b145f..3dacea0 100644
+index 53b145f..274ba14 100644
 --- a/bindings/go/http.go
 +++ b/bindings/go/http.go
 @@ -17,6 +17,7 @@ import (
@@ -639,7 +745,13 @@ index 53b145f..3dacea0 100644
  		}))
  		response, err = conn.client.RoundTrip(out)
  		releaseHeaders()
-@@ -233,6 +239,9 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+@@ -228,11 +234,15 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+ 				out.Body.Close()
+ 			}
+ 			if writer.err != nil {
++				writer.failure.Store(&http1WriteFailure{timedOut: businessTimeout(writer.err)})
+ 				conn.SetReadDeadline(time.Now())
+ 			}
  			close(writer.done)
  		}()
  		reader := conn.reader
@@ -649,20 +761,28 @@ index 53b145f..3dacea0 100644
  		for {
  			response, err = http.ReadResponse(reader, out)
  			if err != nil || response.StatusCode == http.StatusSwitchingProtocols || response.StatusCode >= 200 {
-@@ -245,6 +254,12 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+@@ -245,6 +255,20 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
  		}
  	}
  	if err != nil {
++		timedOut := businessTimeout(err)
++		if writer != nil {
++			if failure := writer.failure.Load(); failure != nil {
++				timedOut = failure.timedOut
++			}
++		}
 +		m.recordBusiness(BusinessObservation{
 +			Route: selected.id, Generation: selected.generation, Protocol: conn.protocol,
 +			Stage: "headers", Reused: reused, Elapsed: time.Since(started),
-+			Interrupted: true, Canceled: ctx.Err() != nil || requestCtx.Err() != nil,
++			Interrupted: true, Canceled: errors.Is(ctx.Err(), context.Canceled),
++			TimedOut: errors.Is(ctx.Err(), context.DeadlineExceeded) ||
++				errors.Is(attempt.Err(), context.DeadlineExceeded) || timedOut,
 +			Completed: time.Now(),
 +		})
  		m.healthMu.Lock()
  		if ctx.Err() == nil && requestCtx.Err() == nil && attempt.Err() == nil && conn.key.generation == m.generation &&
  			(selected.ctx == nil || selected.ctx.Err() == nil) {
-@@ -279,6 +294,32 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
+@@ -279,6 +303,33 @@ func (m *session) Request(r *http.Request) (*http.Response, error) {
  	}
  	response.Header.Del("Alt-Svc")
  	body := &responseBody{ReadCloser: response.Body, mode: m}
@@ -681,21 +801,22 @@ index 53b145f..3dacea0 100644
 +	}
 +	m.recordBusiness(event)
 +	bodyStarted := time.Now()
-+	body.onDiagnostic = func(bytes uint64, complete, failed bool) {
++	body.onDiagnostic = func(bytes uint64, complete, failed, timedOut bool) {
 +		event.Stage = "body"
 +		event.FirstByte = nil
 +		event.FirstByteBoundary = ""
 +		event.Elapsed = time.Since(bodyStarted)
 +		event.BodyBytes = bytes
 +		event.Interrupted = failed || (!complete && response.ContentLength != 0)
-+		event.Canceled = ctx.Err() != nil
++		event.Canceled = errors.Is(ctx.Err(), context.Canceled)
++		event.TimedOut = timedOut || errors.Is(ctx.Err(), context.DeadlineExceeded)
 +		event.Completed = time.Now()
 +		m.recordBusiness(event)
 +	}
  	body.onError = func(err error) {
  		if ctx.Err() == nil {
  			m.businessFailure(selected, host, conn.key.generation, err)
-@@ -353,20 +394,25 @@ func (m *session) RoundTrip(request *http.Request) (*http.Response, error) {
+@@ -353,21 +404,30 @@ func (m *session) RoundTrip(request *http.Request) (*http.Response, error) {
  
  type responseBody struct {
  	io.ReadCloser
@@ -715,7 +836,8 @@ index 53b145f..3dacea0 100644
 +	onError      func(error)
 +	bytes        atomic.Uint64
 +	failed       atomic.Bool
-+	onDiagnostic func(uint64, bool, bool)
++	timedOut     atomic.Bool
++	onDiagnostic func(uint64, bool, bool, bool)
  }
  
  func (b *responseBody) Read(buffer []byte) (int, error) {
@@ -723,21 +845,43 @@ index 53b145f..3dacea0 100644
 +	b.bytes.Add(uint64(count))
  	if err == io.EOF {
  		b.eof.Store(true)
- 	} else if err != nil && b.onError != nil {
+-	} else if err != nil && b.onError != nil {
+-		b.onError(err)
++	} else if err != nil {
 +		b.failed.Store(true)
- 		b.onError(err)
++		b.timedOut.Store(businessTimeout(err))
++		if b.onError != nil {
++			b.onError(err)
++		}
  	}
  	return count, err
-@@ -377,6 +423,9 @@ func (b *responseBody) Close() error {
+ }
+@@ -377,6 +437,9 @@ func (b *responseBody) Close() error {
  			b.beforeClose()
  		}
  		b.err = b.ReadCloser.Close()
 +		if b.onDiagnostic != nil {
-+			b.onDiagnostic(b.bytes.Load(), b.eof.Load(), b.failed.Load() || b.err != nil)
++			b.onDiagnostic(b.bytes.Load(), b.eof.Load(), b.failed.Load() || b.err != nil, b.timedOut.Load() || businessTimeout(b.err))
 +		}
  		b.mode.detach(b)
  		b.done()
  	})
+@@ -461,8 +524,13 @@ type onceRequestBody struct {
+ }
+ 
+ type http1Writer struct {
+-	done chan struct{}
+-	err  error
++	done    chan struct{}
++	err     error
++	failure atomic.Pointer[http1WriteFailure]
++}
++
++type http1WriteFailure struct {
++	timedOut bool
+ }
+ 
+ func (b *onceRequestBody) Close() error {
 diff --git a/bindings/go/mode.go b/bindings/go/mode.go
 index 7d6521a..5fe4ab7 100644
 --- a/bindings/go/mode.go
@@ -902,10 +1046,10 @@ index 9c6545e..7cd967d 100644
  }
 diff --git a/docs/diagnostics.md b/docs/diagnostics.md
 new file mode 100644
-index 0000000..38868e4
+index 0000000..c0d722a
 --- /dev/null
 +++ b/docs/diagnostics.md
-@@ -0,0 +1,136 @@
+@@ -0,0 +1,140 @@
 +# 地址策略与本地诊断
 +
 +本地诊断不创建监控服务、后台原站测速或额外 HTTP 请求。
@@ -986,6 +1130,10 @@ index 0000000..38868e4
 +与新增的 60 秒探测窗口独立。默认不输出目标名，目标捕获沿原 opt-in。
 +Go Business 为最近 60 秒内保留的最多 256 条 headers/body 记录，带出口编号、协议、代际，
 +不包含 URL/正文。正文在调用方关闭 Body 时结算，活跃正文尚无最终观测。
++TimedOut 保留 SDK 预算、调用方 deadline 和实际 I/O 超时；Canceled 仅表示调用方/实例取消，
++不会因 SDK 预算内部使用 cancelRequest 终止 HTTP/2 而冒充取消。
++HTTP/1 上传失败触发的立即读 deadline 只是唤醒读者，诊断通过同步保存的写失败原因区分，
++不会把普通上传错误变成超时。
 +旧代正文仍能读取，但迟到记录不进入当前代诊断；Restart 的新句柄读取新 session。
 +
 +正文 bytes 与 elapsed 是被动业务数据，不是主动带宽测试或可跨目标排名的吞吐值；
@@ -1044,10 +1192,10 @@ index 0000000..38868e4
 +Go Diagnostics 使用独立方法。没有为此修改 C/TS/Swift/Kotlin 绑定。
 diff --git a/docs/sps9-ledger.md b/docs/sps9-ledger.md
 new file mode 100644
-index 0000000..5d9a83b
+index 0000000..55ef53d
 --- /dev/null
 +++ b/docs/sps9-ledger.md
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,196 @@
 +# SPS-9 设计、源码与验收台账
 +
 +核对日期：2026-11-17。范围：剩余直连地址策略和本地诊断消费链，保留 SPS-1～8 实现。
@@ -1121,6 +1269,8 @@ index 0000000..5d9a83b
 +Go probeBatch/probeLoop → recordProbe。业务 record_outcome/record 不写探测样本，
 +取消不进入 completed，旧代反馈不污染新代。网络失效时 Rust source 返回 None，
 +发布后读取新 Registry；Go 锁内读取 current session/routes。
++同端点的后台探测即使只由其中一条线路到期触发，也向全部关联 Health 记录同一完成结果，
++因此不同 jitter/due 不会使导出的首条线路窗口漏掉其他线路触发的真实探测。
 +
 +测试源码：Rust `diagnostics_read_expires_without_new_feedback_and_reports_truncation`、
 +`recorder_reads_live_deduplicated_probe_windows_and_new_generation`；
@@ -1145,6 +1295,13 @@ index 0000000..5d9a83b
 +EOF、错误、提前关闭。Mode.Diagnostics.Business 返回最近 60 秒内最多 256 条记录，
 +带 route/generation/protocol，不含 URL/正文；旧代迟到事件不进入当前代。
 +没有缓存实现，CacheAvailable=false，不能声称命中率为零。
++Go 的 TimedOut 与 Canceled 分别保留超时和调用方/实例取消，
++SDK 预算触发内部 cancelRequest 不被写成业务取消；
++`TestHTTPDiagnosticsSeparateSDKTimeoutFromCallerCancellation` 包含 HTTP/1、HTTP/2 两种来源对比，
++只编译，不执行。Rust 窗口集成用例也覆盖共享接入点不同 due 下的失败与取消。
++同轮进一步修正 HTTP/1 上传失败通过立即读 deadline 唤醒读者的诊断口径：
++原写失败是否超时通过 atomic 状态同步传递，避免把普通上传错误归为超时；
++`TestHTTP1UploadFailureWakeupIsNotRecordedAsTimeout` 为对应测试源码，未执行。
 +
 +准确限制：Rust 精确逐 HTTP 请求首字节尚未支持，只有完整响应头耗时和字节流首字节；
 +Go HTTP/2 trace 的真实边界是首个完整 HEADERS，显式 FirstByteBoundary=http2-response-headers，
@@ -1555,7 +1712,7 @@ index 3d07ff5..98fad3c 100644
      Admission, AdmissionPolicy, AdmissionRequest, DomainRegistry, DomainRoute, DomainRule,
      NoopAdmission, Whitelist,
 diff --git a/src/native_plane.rs b/src/native_plane.rs
-index c6584a3..d53b4fb 100644
+index c6584a3..8345f5e 100644
 --- a/src/native_plane.rs
 +++ b/src/native_plane.rs
 @@ -655,6 +655,9 @@ pub(crate) async fn prepare_routes(
@@ -1576,10 +1733,32 @@ index c6584a3..d53b4fb 100644
          )
          .await?;
          #[cfg(feature = "reverse-proxy")]
-@@ -987,6 +991,77 @@ mod outlet_probe_tests {
+@@ -880,8 +884,11 @@ async fn check_routes_until(
+         .await?
+     {
+         let mut health = registry.health.write();
+-        for index in &groups[&result.target] {
+-            health[*index].record_at(
++        for (index, route) in registry.routes.iter().enumerate() {
++            if route.endpoint.as_ref() != Some(&result.target) {
++                continue;
++            }
++            health[index].record_at(
+                 &result.result,
+                 startup,
+                 registry.generation,
+@@ -987,6 +994,127 @@ mod outlet_probe_tests {
          })
      }
  
++    struct FailedAccess;
++    #[async_trait::async_trait]
++    impl crate::TcpDialer for FailedAccess {
++        async fn connect(&self, _: &str, _: u16) -> Result<BoxStream> {
++            Err(Error::Transport)
++        }
++    }
++
 +    #[tokio::test(start_paused = true)]
 +    async fn recorder_reads_live_deduplicated_probe_windows_and_new_generation() {
 +        let source = changing_network(false);
@@ -1625,6 +1804,48 @@ index c6584a3..d53b4fb 100644
 +        assert_eq!(first.endpoints[0].routes, [0, 1]);
 +        assert_eq!(first.endpoints[0].window.completed, 1);
 +        assert_eq!(first.endpoints[0].window.success_rate, Some(1.0));
++        {
++            let mut health = root.health.write();
++            health[0].due = Instant::now() + Duration::from_secs(120);
++            health[1].due = Instant::now();
++        }
++        check_routes(
++            &root,
++            Arc::new(FailedAccess),
++            &CancellationToken::new(),
++            false,
++        )
++        .await
++        .unwrap();
++        let window = &recorder.snapshot().probes.unwrap().endpoints[0].window;
++        assert_eq!(
++            (window.completed, window.success, window.canceled),
++            (2, 1, 0)
++        );
++        assert_eq!(window.success_rate, Some(0.5));
++        assert!(
++            root.health
++                .read()
++                .iter()
++                .take(2)
++                .all(|health| health.samples.len() == 2)
++        );
++        {
++            let mut health = root.health.write();
++            health[0].due = Instant::now() + Duration::from_secs(120);
++            health[1].due = Instant::now();
++        }
++        let canceled_probe = CancellationToken::new();
++        canceled_probe.cancel();
++        assert!(matches!(
++            check_routes(&root, Arc::new(FailedAccess), &canceled_probe, false).await,
++            Err(Error::Canceled)
++        ));
++        let window = &recorder.snapshot().probes.unwrap().endpoints[0].window;
++        assert_eq!(
++            (window.completed, window.success, window.canceled),
++            (2, 1, 1)
++        );
 +        let old = root.current();
 +        source.revision.store(1, Ordering::SeqCst);
 +        tokio::time::advance(Duration::from_secs(2)).await;
