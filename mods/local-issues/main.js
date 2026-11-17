@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { h_flex, v_flex, InputState, Input, TextView } from "gpui-base";
-import { spaces, theme, exec, appHome, nextCommand } from "herdr";
+import { spaces, theme, exec, appHome, nextCommand, focused, shared, setShared } from "herdr";
 import * as fs from "fs/promises";
 import { spaceIssues, spaceIssue } from "./context-source.js";
 import { commitLayout } from "./panels.js";
@@ -15,6 +15,7 @@ export default class IssuesPanel extends View {
     this.closing = false; this.closeConfirm = false; this.closeReason = "completed";
     this.follow(cx);
     cx.timer.every(1000, (cx) => this.follow(cx));
+    cx.timer.every(500, (cx) => this.assistantResult(cx));
     cx.spawn(async (cx) => { for (;;) { if (String(await nextCommand()).endsWith("refresh")) this.load(cx); } });
   }
   close() { this.generation++; this.search.release(); }
@@ -75,6 +76,44 @@ export default class IssuesPanel extends View {
       .when(disabled,el=>el.opacity(.5))
       .on_click((_e, cx) => { cx.stop_propagation(); if(!disabled)fn(cx); }).child(label);
   }
+  addToAssistant(row, cx) {
+    const space = focused()?.space, target = space && shared(`context.assistant.${space}`);
+    this.assistantMessage = null; this.assistantError = null;
+    if (!row.dragPath || this.space?.id !== space) {
+      this.assistantError = "Issue 列表尚未跟上当前 Space，请刷新后重试。"; cx.notify(); return;
+    }
+    if (!target || Date.now() - target.at > 3500) {
+      this.assistantError = "请先打开当前 Space 的 Assistant 聊天，等待草稿就绪后重试。"; cx.notify(); return;
+    }
+    const key = `context.request.${space}`, previous = shared(key);
+    if (["pending", "loading"].includes(previous?.status) && Date.now() - previous.at < 190000) {
+      this.assistantError = "正在向此 Space 的 Assistant 添加附件，请稍候。"; cx.notify(); return;
+    }
+    const request = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    this.assistantSpace = space; this.assistantPending = { space, request };
+    setShared(key, { request, target: target.target, draft: target.draft, source: "github", url: row.url, status: "pending", at: Date.now() });
+    this.assistantMessage = "正在读取 Issue 正文和讨论，加入当前 Space 的 Assistant 草稿…"; cx.notify();
+  }
+  assistantResult(cx) {
+    if (this.assistantSpace && this.assistantSpace !== focused()?.space) {
+      this.assistantMessage = null; this.assistantError = null; this.assistantSpace = null; cx.notify();
+    }
+    const pending = this.assistantPending;
+    if (!pending) return;
+    const result = shared(`context.request.${pending.space}`);
+    if (result?.request !== pending.request) {
+      this.assistantPending = null; this.assistantMessage = null; this.assistantError = "添加请求已失效，请重试。"; cx.notify(); return;
+    }
+    if (["pending", "loading"].includes(result.status) && pending.space !== focused()?.space) {
+      setShared(`context.request.${pending.space}`, { ...result, status: "error", message: "Space 已切换，请回到目标 Assistant 后重新添加。" });
+    } else if (["done", "error"].includes(result.status)) {
+      this.assistantPending = null;
+      this.assistantMessage = result.status === "done" ? result.message : null;
+      this.assistantError = result.status === "error" ? result.message : null; cx.notify();
+    } else if (Date.now() - result.at > (result.status === "pending" ? 10000 : 190000)) {
+      setShared(`context.request.${pending.space}`, { ...result, status: "error", message: "Assistant 未能接收此 Issue，请打开目标聊天后重试。" });
+    }
+  }
   render() {
     const t = theme(), selected = this.selected;
     const q = this.search.value().trim().toLowerCase();
@@ -87,12 +126,15 @@ export default class IssuesPanel extends View {
         .child(this.button("issues-close", "×", () => commitLayout({ panel: null }), t)))
       .child(v_flex().flex_none().p(12).gap(8)
         .child(div().text_color(t.dim).child(this.data?.repo ?? this.space?.name ?? "当前 Space"))
-        .child(div().text_size(11.5).text_color(t.dim).child("拖动 Issue 到 Assistant 输入框，单击查看正文和讨论"))
+        .child(div().text_size(11.5).text_color(t.dim).child("加入当前 Space 的 Assistant 草稿，确认后随下一条消息发送"))
         .when(!selected, (el) => el.child(Input.new(this.search).w_full().h(30).px(8).rounded(6).bg(t.input))))
       .when(Boolean(this.error), (el) => el.child(div().px(12).py(8).text_color(t.blocked).child(this.error ?? "")))
       .when(Boolean(this.message),el=>el.child(div().px(12).py(8).text_color(t.done).child(this.message??"")))
+      .when(Boolean(this.assistantMessage || this.assistantError), el => el.child(div().px(12).py(8)
+        .text_color(this.assistantError ? t.blocked : t.done).child(this.assistantError || this.assistantMessage)))
       .when(Boolean(selected), (el) => el.child(v_flex().id("issue-detail").flex_1().min_h(0).overflow_y_scrollbar().p(12).gap(12)
-        .child(div().id("issue-detail-drag").drag_paths([selected.dragPath]).cursor_pointer().font_medium().text_size(16).child(`#${selected.number} ${selected.title}`))
+        .child(div().font_medium().text_size(16).child(`#${selected.number} ${selected.title}`))
+        .child(this.button("issue-detail-assistant", "加入 Assistant", cx => this.addToAssistant(selected, cx), t, Boolean(this.assistantPending) || !selected.dragPath))
         .child(this.button("issue-close-action","关闭 Issue",cx=>{this.closeConfirm=true;cx.notify();},t,this.closing))
         .when(this.closeConfirm,el=>el.child(v_flex().p(10).gap(8).rounded(6).border_1().border_color(t.border)
           .child(div().child(`关闭 ${this.data?.repo} #${selected.number}`))
@@ -105,12 +147,13 @@ export default class IssuesPanel extends View {
         .child(TextView.markdown("issue-detail-content", this.detail ?? (this.error ? "读取失败，请返回列表重试。" : "正在读取正文和讨论…")).text_size(12.5).text_color(t.foreground))))
       .when(!selected, (el) => el.child(v_flex().id("issue-list").flex_1().min_h(0).overflow_y_scrollbar().px(12).pb(12).gap(4)
         .when(!rows.length, (el) => el.child(div().py(20).text_color(t.dim).child(this.busy ? "正在读取当前仓库的 Issue…" : this.error ? "列表读取失败，请刷新重试。" : this.data?.issues.length ? "没有符合搜索条件的 Issue。" : "当前仓库没有开放的 Issue。")))
-        .children(rows.map((x) => v_flex().id(`space-issue-${x.number}`).drag_paths([x.dragPath]).w_full().p(10).gap(6).rounded(6)
+        .children(rows.map((x) => v_flex().id(`space-issue-${x.number}`).w_full().p(10).gap(6).rounded(6)
           .cursor_pointer().hover((s) => s.bg(t.hover)).border_b(1).border_color(t.border)
           .on_click((_e, cx) => this.show(x, cx))
           .child(div().text_color(t.dim).text_size(11.5).child(`#${x.number}`))
           .child(div().text_size(13.5).child(x.title))
-          .child(div().text_color(t.dim).text_size(11).child(`更新于 ${x.updated ?? "—"}`))))))
+          .child(div().text_color(t.dim).text_size(11).child(`更新于 ${x.updated ?? "—"}`))
+          .child(this.button(`issue-assistant-${x.number}`, "加入 Assistant", cx => this.addToAssistant(x, cx), t, Boolean(this.assistantPending) || !x.dragPath))))))
       .child(div().h(28).flex_none().px(12).pt(6).border_t(1).border_color(t.border).text_color(t.dim).text_size(11)
         .child(this.data ? `${this.data.issues.length} 个开放 Issue · 监听由此 Space 的 Autopilot 控制` : "沿用当前 Space 的仓库和 gh 登录"));
   }

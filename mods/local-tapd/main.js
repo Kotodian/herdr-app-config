@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { h_flex, v_flex, Button, Input, InputState, TextView } from "gpui-base";
-import { theme, exec, appHome, home, nextCommand } from "herdr";
+import { theme, exec, appHome, home, nextCommand, focused, shared, setShared } from "herdr";
 import { tokens, G, T, quietTabs, iconButton, section, controlInput, quietLink } from "./ui.js";
 import { commitLayout } from "./panels.js";
 import * as fs from "fs/promises";
@@ -17,6 +17,7 @@ export default class TapdPanel extends View {
     this.owner=null;this.picker=null;this.generation=0;this.detailGeneration=0;this.saving=false;this.fieldInputs={};
     this.data=null;this.busy=false;this.error=null;this.selected=null;this.detail=null;this.detailError=null;this.project="all";this.filter="open";
     this.load(cx);cx.timer.every(120000,cx=>this.load(cx));
+    cx.timer.every(500,cx=>this.assistantResult(cx));
     cx.spawn(async cx => {for (;;) {
       const cmd=String(await nextCommand()).replace(/^local-tapd\./,"");
       if(cmd==="refresh")this.load(cx);
@@ -30,6 +31,39 @@ export default class TapdPanel extends View {
     Object.values(this.fieldInputs).forEach(input=>input.release());
   }
   back(cx) {this.detailGeneration++;this.selected=null;this.detail=null;this.detailError=null;this.picker=null;cx.notify();}
+  addToAssistant(row,cx) {
+    const space=focused()?.space,target=space&&shared(`context.assistant.${space}`);
+    this.assistantMessage=null;this.assistantError=null;
+    if(!row.dragPath){this.assistantError="Bug 引用尚未就绪，请刷新列表后重试。";cx.notify();return;}
+    if(!target||Date.now()-target.at>3500){this.assistantError="请先打开当前 Space 的 Assistant 聊天，等待草稿就绪后重试。";cx.notify();return;}
+    const key=`context.request.${space}`,previous=shared(key);
+    if(["pending","loading"].includes(previous?.status)&&Date.now()-previous.at<190000){
+      this.assistantError="正在向此 Space 的 Assistant 添加 Bug，请稍候。";cx.notify();return;
+    }
+    const request=`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    this.assistantSpace=space;
+    this.assistantPending={space,request};
+    setShared(key,{request,target:target.target,draft:target.draft,source:"tapd",workspace:String(row.workspace_id),bug:String(row.id),status:"pending",at:Date.now()});
+    this.assistantMessage="正在读取 Bug 并加入当前 Space 的 Assistant 草稿…";cx.notify();
+  }
+  assistantResult(cx) {
+    if(this.assistantSpace&&this.assistantSpace!==focused()?.space){
+      this.assistantMessage=null;this.assistantError=null;this.assistantSpace=null;cx.notify();
+    }
+    const pending=this.assistantPending;if(!pending)return;
+    const result=shared(`context.request.${pending.space}`);
+    if(result?.request!==pending.request){
+      this.assistantPending=null;this.assistantMessage=null;this.assistantError="添加请求已失效，请重试。";cx.notify();return;
+    }
+    if(["pending","loading"].includes(result.status)&&pending.space!==focused()?.space){
+      setShared(`context.request.${pending.space}`,{...result,status:"error",message:"Space 已切换，请回到目标 Assistant 后重新添加。"});
+    }else if(["done","error"].includes(result.status)){
+      this.assistantPending=null;this.assistantMessage=result.status==="done"?result.message:null;
+      this.assistantError=result.status==="error"?result.message:null;cx.notify();
+    }else if(Date.now()-result.at>(result.status==="pending"?10000:190000)){
+      setShared(`context.request.${pending.space}`,{...result,status:"error",message:"Assistant 未能接收此 Bug，请打开目标聊天后重试。"});
+    }
+  }
   async request(args) {
     const r=await exec("/usr/bin/python3",[`${appHome()}/mods/local-tapd/tapd_bridge.py`,JSON.stringify(args)],{timeout:180000});
     if(r.code!==0)throw new Error("TAPD 查询未完成，请检查现有连接后刷新");
@@ -138,7 +172,6 @@ export default class TapdPanel extends View {
           .child(div().text_size(T.card).child(this.busy?"正在读取我的 Bug…":!complete?"暂未取得完整列表":!projectRows.length?"当前没有分配给你的 Bug":"没有符合筛选条件的 Bug"))
           .child(this.text(!complete?"请查看上方连接提示后刷新。":`所选处理人：${this.owner}。可切换“全部”查看已结束的记录。`,c))))
         .children(shown.map(r=>v_flex().id(`tapd-bug-${r.workspace_id}-${r.id}`).w_full().p(G.md).rounded(6).cursor_pointer().hover(s=>s.bg(c.subtle))
-          .when(Boolean(r.dragPath),el=>el.drag_paths([r.dragPath]))
           .accessibility_label(`查看 Bug ${shortId(r)} ${r.title}`).on_click((_e,cx)=>this.show(r,cx))
           .child(v_flex().w_full().min_w(0).gap(G.sm)
             .child(h_flex().gap(G.sm).items_center().child(this.text(`#${shortId(r)}`,c)).child(div().flex_1())).child(div().text_size(T.card).child(r.title||"未命名缺陷"))
@@ -146,16 +179,16 @@ export default class TapdPanel extends View {
               .child(this.text(r.status_label,c,r.closed?c.dim:c.text))
               .child(this.text(r.priority_label||priorityName[r.priority]||r.priority||"未设优先级",c,["urgent","high","1","2"].includes(String(r.priority))?c.yellow:c.dim)))
             .child(this.text(`${r.project} · ${r.modified||"—"}`,c)))
+          .child(this.action(`tapd-assistant-${r.workspace_id}-${r.id}`,"加入 Assistant",cx=>this.addToAssistant(r,cx),c,Boolean(this.assistantPending)||!r.dragPath))
           .border_b(1).border_color(c.border))));
   }
   details(c) {
     const r=this.detail??this.selected;
     return v_flex().id("tapd-detail").flex_1().min_h(0).overflow_y_scrollbar().p(G.lg).gap(G.lg)
       .child(this.text(`${r.project} · #${shortId(r)}`,c))
-      .child(div().id(`tapd-detail-drag-${r.id}`).text_size(T.page).cursor_pointer()
-        .when(Boolean(this.selected?.dragPath),el=>el.drag_paths([this.selected.dragPath]))
-        .child(r.title||"未命名缺陷"))
-      .child(this.text("拖动标题到 Assistant 输入框，添加此 Bug 的详情附件",c))
+      .child(div().text_size(T.page).child(r.title||"未命名缺陷"))
+      .child(this.action("tapd-detail-assistant","加入 Assistant",cx=>this.addToAssistant(this.selected,cx),c,Boolean(this.assistantPending)||!this.selected?.dragPath))
+      .child(this.text("加入当前 Space 的 Assistant 草稿，确认后随下一条消息发送",c))
       .child(v_flex().child(this.row("状态",r.status_label,c)).child(this.row("优先级",r.priority_label||priorityName[r.priority]||r.priority,c))
         .child(this.row("严重程度",severityName[r.severity]||r.severity,c)).child(this.row("当前处理人",r.current_owner,c))
         .child(this.row("报告人",r.reporter,c)).child(this.row("更新时间",r.modified,c)).child(this.row("截止日期",r.deadline,c)))
@@ -193,6 +226,8 @@ export default class TapdPanel extends View {
         .child(iconButton("tapd-close","close","关闭面板",()=>commitLayout({panel:null}),c,{disabled:this.saving})))
       .when(Boolean(this.error),el=>el.child(div().flex_none().px(G.lg).py(G.sm).child(this.text(`${this.error}${this.data?" · 下方为上次缓存":""}`,c,c.yellow))))
       .when(Boolean(this.message),el=>el.child(div().flex_none().px(G.lg).py(G.sm).child(this.text(this.message,c,c.green))))
+      .when(Boolean(this.assistantMessage||this.assistantError),el=>el.child(div().flex_none().px(G.lg).py(G.sm)
+        .child(this.text(this.assistantError||this.assistantMessage,c,this.assistantError?c.yellow:c.green))))
       .children((this.data?.errors??[]).map(e=>div().flex_none().px(G.lg).py(G.sm).child(this.text(`${e.project}：${e.message}`,c,c.yellow))))
       .child(this.selected?this.details(c):this.list(c))
       .child(h_flex().flex_none().h(30).px(G.lg).items_center().border_t(1).border_color(c.border).text_size(T.small).text_color(c.dim)
