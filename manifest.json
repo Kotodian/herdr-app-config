@@ -62,13 +62,13 @@
       "sha256": "660a80bfa8bf605fd1dd4c1ec730b837719cda0e130c35dc098732c7e39c80d1"
     },
     "README.md": {
-      "sha256": "1367d64aa30ba6056809bc71d205f92a5442b7f373b693db11132786507369b8"
+      "sha256": "ab5e2e02109f2e06309e8ef9e75134cc4e612c4400835d165e57a24b9306769c"
     },
     "docs/screenshots/01-workspace.png": {
-      "sha256": "e58abf793c8468b8e0efff5cb4c9e4c3fb1c3c59e16e09126a7f229d21ef1c0c"
+      "sha256": "c2b3f6ba7d24227d8e4b825cd5055ddc923f6f6530aa191ebcfc6af4b4d6ba3d"
     },
     "docs/screenshots/02-tasks.png": {
-      "sha256": "c1281d26666e1ffc046425b66d64fa1dcba2ab786ed7429234ab206dde983e48"
+      "sha256": "34bc82842d6f84b193e53b058c960f987bf876846649522d3d3ba18fb1af5f02"
     },
     "docs/screenshots/03-local-diff.png": {
       "sha256": "44a2855a3ee87354fb83f9cf5af24eb01722501a8644a713ba919a380d312cc0"

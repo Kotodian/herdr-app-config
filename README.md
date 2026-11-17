@@ -4,7 +4,7 @@
 
 界面按参考图使用深青色毛玻璃效果：半透明底配合原生窗口模糊、半透明侧栏和圆角面板，背后内容呈现模糊轮廓，文字和代码保持清晰。配色和透明度保存在 `layouts/shepherdr.json`，随配置同步。
 
-Kanso layout 已移除，工具已接入 Shepherdr。下面的截图来自实际运行的原生界面。
+Kanso layout 已移除，工具已接入 Shepherdr。下面的截图均来自实际运行的毛玻璃原生界面，主工作区统一使用 **Chat 模式**。
 
 ![工作区与工具栏](docs/screenshots/01-workspace.png)
 
