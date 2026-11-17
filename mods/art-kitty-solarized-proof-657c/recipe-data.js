@@ -4,17 +4,17 @@ export default {
   "blocks": [
     {
       "type": "text",
-      "md": "已按参考图调整 Kitty：深蓝青背景、灰青正文、黄色强调、底部蓝青矩形标签及更紧凑的 Menlo 字体。\n保存透明度与磨砂设置；下次启动 Kitty 后完整生效。"
+      "md": "用户确认第一版遮罩太厚、模糊太重后，本次已降低背景不透明度与模糊，改用更中性的暗灰青底色。\n新窗口不再记住铺满屏幕的尺寸，按普通窗口 1100×720 启动。最终玻璃观感仍待用户查看。"
     },
     {
       "type": "table",
-      "columns": ["项目", "修改前", "保存后"],
+      "columns": ["项目", "用户反馈时", "本次保存后"],
       "rows": [
-        ["字体 / 行高", "Menlo 15 / 110%", "Menlo 13 / 100%"],
-        ["内边距", "14", "8"],
-        ["背景透明度 / 模糊", "1.0 / 0", "0.78 / 32"],
-        ["标签栏", "顶部斜角，至少两个标签", "底部矩形，单标签也显示"],
-        ["活动 / 非活动标签", "Mocha 主题", "亮蓝底深色字 / 深青底灰字"]
+        ["背景不透明度 / 模糊", "0.78 / 32", "0.50 / 8"],
+        ["背景底色", "#002b36 深蓝青", "#0b2024 暗灰青"],
+        ["窗口尺寸", "记住上次尺寸和最大化状态", "不记忆，初始 1100×720 像素"],
+        ["字体 / 标签", "Menlo 13 / 底部矩形", "保持不变"],
+        ["正文 / 强调", "灰青 / 黄色", "保持不变"]
       ]
     },
     {
@@ -24,7 +24,7 @@ export default {
     {
       "type": "code",
       "lang": "text",
-      "text": "PASS font_size: 13.0\nPASS background_opacity: 0.78\nPASS background_blur: 32\nPASS tab_bar_style: 'separator'\nPASS tab_bar_min_tabs: 1\nPASS tab_title_template: '  {title}  '\nPASS enable_audio_bell: False\nPASS scrollback_lines: 10000\nPASS cursor_shape: 2\nPASS hide_window_decorations: 1\nPASS macos_show_window_title_in: 'menubar'\nPASS cursor_blink_interval: 0.7\nPASS installed Menlo, bottom tabs, padding and all requested colors\nPASS Kitty 0.49.2 parsed the real configuration with zero errors"
+      "text": "PASS font_size: 13.0\nPASS background_opacity: 0.5\nPASS background_blur: 8\nPASS remember_window_size: False\nPASS initial_window_width: (1100, 'px')\nPASS initial_window_height: (720, 'px')\nPASS tab_bar_style: 'separator'\nPASS tab_bar_min_tabs: 1\nPASS tab_title_template: '  {title}  '\nPASS enable_audio_bell: False\nPASS scrollback_lines: 10000\nPASS cursor_shape: 2\nPASS hide_window_decorations: 1\nPASS macos_show_window_title_in: 'menubar'\nPASS cursor_blink_interval: 0.7\nPASS installed Menlo, bottom tabs, padding and all requested colors\nPASS Kitty 0.49.2 parsed the real configuration with zero errors"
     },
     {
       "type": "text",
@@ -33,11 +33,20 @@ export default {
     {
       "type": "code",
       "lang": "text",
-      "text": "Upstream: https://raw.githubusercontent.com/kovidgoyal/kitty-themes/master/themes/Solarized_Dark.conf\nDownloaded SHA-256:\nfc23242afc7cbbc7b6b97ac45a4607e1e9181d4823b42054dc3d9099fd9e1743\nkitty.conf SHA-256:\n5c7cc0fc5e7d03b9e8fc082e0f39de42b3dc3e6f2051ba919a864b327175a6d0\nsolarized-glass.conf SHA-256:\nfc0eb506565d00b498cc955b80e8dae6b9cea26864d15c13ea5497cd1348e390"
+      "text": "Upstream: https://raw.githubusercontent.com/kovidgoyal/kitty-themes/master/themes/Solarized_Dark.conf\nDownloaded SHA-256:\nfc23242afc7cbbc7b6b97ac45a4607e1e9181d4823b42054dc3d9099fd9e1743\nkitty.conf SHA-256:\n670ae4ab77072a5a06c44e1f920452424cd195d6f0afb7666af47a2c853a7024\nsolarized-glass.conf SHA-256:\n68736df9ffc837543aec0d077a4623974630217ad8e458486bb944ea2f8e5173"
     },
     {
       "type": "text",
-      "md": "生效检查：初查存在 Kitty 进程；准备重载前按程序路径复查及再次搜索 kitty/kitten 均无结果。未发送信号，未终止会话。下次直接启动 Kitty 即可读取全部配置。原进程未开启动态透明度，因此若旧进程仍存在，单纯重载不能完整改变透明度，需保留工作并稍后重启该进程。"
+      "md": "依据：本机文档确认 background_opacity 表示背景不透明度，background_blur 在 macOS 控制模糊半径；remember_window_size no 会改用 initial_window_width/height，不再继承上次最大化状态。本机 AppKit 实测 Reduce Transparency 为 false。参考图中可辨认的横竖轮廓来自背后的景物，配色本身无法生成这些轮廓；未改壁纸或其他应用。"
+    },
+    {
+      "type": "text",
+      "md": "如何生效：保留现有会话，在终端执行下方命令，启动独立 Kitty 进程的普通窗口。新标签不会改变现有窗口尺寸，单纯重载也无法保证原进程的透明度变化。当前窗口如在全屏，需用户先退出全屏；本次未操控或关闭任何窗口。"
+    },
+    {
+      "type": "code",
+      "lang": "sh",
+      "text": "open -na /Applications/kitty.app --args --start-as normal"
     },
     {
       "type": "details",
@@ -58,9 +67,9 @@ export default {
     {
       "type": "list",
       "items": [
-        "未做 Kitty 窗口视觉验证：Computer Use 明确拒绝访问 Kitty；遵照要求未换手段截图。",
-        "未确认 macOS 合成后的磨砂强度、桌面透色、文字可读性或与参考图的视觉贴合程度。",
-        "未确认运行中配置重载：执行前 Kitty 已不再运行。"
+        "两张用户提供的图分别是参考图和第一版效果；本次修正后没有新效果图，不能宣称已与参考一致。",
+        "Computer Use 明确拒绝访问 Kitty；未换手段截图、打开或操控 Kitty，未确认新窗口实际尺寸与合成后的玻璃效果。",
+        "仍需用户用普通新窗口确认背景轮廓与正文可读性。不同壁纸或背后窗口会呈现不同景物，不保证完全复现参考素材。"
       ]
     }
   ]
