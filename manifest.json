@@ -1865,7 +1865,7 @@
       "sha256": "240854267a491d28ec62023450e19e840f574b8de79a266593250481d94f9d00"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/cli.py": {
-      "sha256": "a3263334419d488b774a6d4dceac32d236573baad391f57a2816597a41eb79f3"
+      "sha256": "ce973e99dc402d4a62cbe80830ed4329b63fda63176da80960628b71c79da7c6"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/commands.py": {
       "sha256": "86c9315c3fa5095b1735ade25c00032f644d69470b1add0376e1076883e50f2c"
@@ -1889,7 +1889,7 @@
       "sha256": "77baa7d6c647664382559ac8258c49aaf083a161412754d98d9092d4d22635db"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/human_review.py": {
-      "sha256": "fbfb34925684b9a31eec1f288f31d7f2671ac72dfd182dbc5fc2c11a2b282aa8"
+      "sha256": "bd61e92bb856d5d588b6d9eb99d3e7c07cf24efe976129185da3a827ebef1205"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/launch.py": {
       "sha256": "05bf72ca1eacc65091bb9543009ffa212324ab04e89762230b4c099c0611d58f"
@@ -1898,7 +1898,7 @@
       "sha256": "7ff1caf3f6c8a6400dbeafc0edbe70ea40625e5e11525aaaf0e05f38ff7c19b5"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/link.py": {
-      "sha256": "e2c06191d860f91badbdbe07e030c33280f1faa21b5e31d7a41b7d6d9e2e5547"
+      "sha256": "ccefbf44f4b3fae074c62aabb2b5240509584189e4e218ba501af85222b02664"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/machine.py": {
       "sha256": "ba5c3d36704ddebb014a0fb5f8b9852ed128125e09f577b76d8a7a19f57c8e89"
@@ -1911,6 +1911,9 @@
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/output.py": {
       "sha256": "7dcbc18493afe02e76cd2c1150be61e8be4befd43504348f3764267f90a8210b"
+    },
+    "integrations/shepherdr/mods/tasks/bin/herdr_task/pr_comments.py": {
+      "sha256": "885139dd25c07299a0919e602db977e6e8ed34b4805e5c7b0b3f1d62445678f3"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/proof.py": {
       "sha256": "d33114fedc2447bad3ff60ee430694a7183d70e9e9d87ac13d0a13afb995449a"
