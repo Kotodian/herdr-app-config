@@ -48,6 +48,7 @@
     "local-cloudflare-entry",
     "local-git-tools",
     "local-gitview-entry",
+    "local-issues",
     "local-komari",
     "local-magpie",
     "local-sync-bootstrap",
@@ -63,7 +64,7 @@
       "sha256": "660a80bfa8bf605fd1dd4c1ec730b837719cda0e130c35dc098732c7e39c80d1"
     },
     "README.md": {
-      "sha256": "62cc38bad3ccc1691e7e99f52e3835b7cf979b4e3984c28168a23e9a01f911e0"
+      "sha256": "2f172ea567ef2ad9fa9ae8207464ff947799251695a2d3a2b9d226d6783604a6"
     },
     "docs/screenshots/01-workspace.png": {
       "sha256": "76a2e65339e3fda04d6a83f1a505feead9c0d80d01b5f49393545fb157ff917a"
@@ -174,7 +175,7 @@
       "sha256": "8dd23e71ae4db2bd3fd96da3d9af4c8e56130709b5534d5f02f062b2a89e0fc4"
     },
     "integrations/shepherdr/core/chat-log.js": {
-      "sha256": "d78fbca2503c35b41d1a68fbf739949f25d4f679882f222a867599c582dae947"
+      "sha256": "5f4b0c98276988bcc4ec6035feb29d8a7c820158fce21f7d9c427488c72a8dec"
     },
     "integrations/shepherdr/core/chat-log.test.js": {
       "sha256": "41d1e22e0b2813dfe6f9584ea3a04c7c1269300017a8a2b34e14ddfe3d45256f"
@@ -210,7 +211,7 @@
       "sha256": "9990eb64769aab6de7572a5d915be71a174e2e6f25e1c69fd0d905657bef2563"
     },
     "integrations/shepherdr/core/context-source.test.js": {
-      "sha256": "1b8f8466dca47ba0296562e2d8de02dde1fbe12320c2c51ccb9f67985e7cf3c7"
+      "sha256": "f1f1045e48f729c41bdb81fc5c541dbc1dea52f5e42d90aa0964d7e551f55773"
     },
     "integrations/shepherdr/core/decision.test.py": {
       "sha256": "5a748d74b043b30e3a79397f15858f49121bd9e91222e60630de41252cd9e1e1"
@@ -344,6 +345,12 @@
     "integrations/shepherdr/core/send.test.js": {
       "sha256": "44b287935d7179969316349435a44dac8781c974cf7c6e355fb4d39a127b307d"
     },
+    "integrations/shepherdr/core/session-inbox.js": {
+      "sha256": "26e94866517bfa8a846ff5952383003b77a295bfc28d24883a179e522fbbc715"
+    },
+    "integrations/shepherdr/core/session-inbox.test.js": {
+      "sha256": "ff308416cb40f1f7ea228a82ddce61200fe85b34f95a102fcd301637fb0d0699"
+    },
     "integrations/shepherdr/core/settings.js": {
       "sha256": "2a60fbb55aff4998cfdd32ad7f1640c377bb8d0cff9109299d7e5c88bc163efa"
     },
@@ -361,6 +368,9 @@
     },
     "integrations/shepherdr/core/tapd-attachment.js": {
       "sha256": "95eba2a4a1f358fed030d770ff933a921b2c62a65258455db8b840d5f3a4d23b"
+    },
+    "integrations/shepherdr/core/tapd-attachment.test.js": {
+      "sha256": "475d1bfb7f52266cd37b7bc57fb422b0a3e5b79c7a633b1f8fc587fbd785b95f"
     },
     "integrations/shepherdr/core/task-artifacts.js": {
       "sha256": "450b814d6ac5b1b6c41f69053c22a2e9bcc38b09dc66aaeaf75fc446b3c7fc4c"
@@ -483,7 +493,7 @@
       "sha256": "663af52d0ffd63148f9638de409c838c958715f903b2ee18200a85cd7c0d8696"
     },
     "integrations/shepherdr/lib/COPIES": {
-      "sha256": "ed49d97e25350a7bf441783c78134dbd0f47089facc69754f2815216871cf9d9"
+      "sha256": "32813f657713c1897b33b7da0cf73b6d59ae074f66823e98ad42812bbc60d9c9"
     },
     "integrations/shepherdr/lib/UI.md": {
       "sha256": "cb9d134dd33ba03bb996d14df1f0630f7d337a605221a085f00cc4aa69e1abee"
@@ -831,7 +841,7 @@
       "sha256": "a57aa74b7f3f721675e987bbfc15ff6f69058b95d5d772c930c5fff3592f48f6"
     },
     "integrations/shepherdr/mods/chat/attach.js": {
-      "sha256": "96ced79aba63b4b30391d43e13890ec09e0f18b82a18bc9cd79c64f1c85f2e55"
+      "sha256": "05d1ab232c98da29b6ce041b92b2835caf5924649542fcda30f65e95f76f9bb2"
     },
     "integrations/shepherdr/mods/chat/audio-lines.svg": {
       "sha256": "bf1bf09f8cd42e13ee631f630b27ab57328ce2dafaae383b801edc6095db4a37"
@@ -873,7 +883,7 @@
       "sha256": "7db7120b62fc259c55797941c187c36b6b320f8323f9cef834026eb2ce809b00"
     },
     "integrations/shepherdr/mods/chat/core/chat-log.js": {
-      "sha256": "d78fbca2503c35b41d1a68fbf739949f25d4f679882f222a867599c582dae947"
+      "sha256": "5f4b0c98276988bcc4ec6035feb29d8a7c820158fce21f7d9c427488c72a8dec"
     },
     "integrations/shepherdr/mods/chat/core/chat-reader.js": {
       "sha256": "7dd07b7adc4e9efea3f45cd4404b1993091794b2801243c807f1fa563be572dd"
@@ -885,7 +895,7 @@
       "sha256": "5eeca3b301d62c790d788e061c7e57ea85dde29832e27556977a21fc65249e1f"
     },
     "integrations/shepherdr/mods/chat/core/context-source.js": {
-      "sha256": "8799cb4264dec5003a8b0560a47e1cbe7251aba75e7e7ee696c2b31839b2e20e"
+      "sha256": "9990eb64769aab6de7572a5d915be71a174e2e6f25e1c69fd0d905657bef2563"
     },
     "integrations/shepherdr/mods/chat/core/host.js": {
       "sha256": "8b1b19bdf795b17fca3efcb0549d90df12e6ac803afda573d60922179f352191"
@@ -931,6 +941,9 @@
     },
     "integrations/shepherdr/mods/chat/core/spaces.js": {
       "sha256": "b07cb18d3cf3994e108d42e5c4b0fde631e2b41d2da3bac3882273b9f7368f9e"
+    },
+    "integrations/shepherdr/mods/chat/core/tapd-attachment.js": {
+      "sha256": "95eba2a4a1f358fed030d770ff933a921b2c62a65258455db8b840d5f3a4d23b"
     },
     "integrations/shepherdr/mods/chat/core/task-artifacts.js": {
       "sha256": "450b814d6ac5b1b6c41f69053c22a2e9bcc38b09dc66aaeaf75fc446b3c7fc4c"
@@ -996,7 +1009,7 @@
       "sha256": "bb7f49c0d1db74ac4245a0112d072ec85b9e3d57c1ca94033d33ca25fc94a689"
     },
     "integrations/shepherdr/mods/chat/main.js": {
-      "sha256": "daa5b210e2b9e6ceb3f260892ca131cc3b6d219a64ebca2b9d329353d4916630"
+      "sha256": "dd6728743a6f9024307871965d11f75fec2464531df4c510959c8bd39c23341e"
     },
     "integrations/shepherdr/mods/chat/message.svg": {
       "sha256": "02b280ca9c74aa6c4bb082031f22718f4ab89d22c5c8adc0ef4de9bbd9d06eb4"
@@ -1610,6 +1623,9 @@
     "integrations/shepherdr/mods/spaces-chat/core/paths.js": {
       "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
     },
+    "integrations/shepherdr/mods/spaces-chat/core/session-inbox.js": {
+      "sha256": "26e94866517bfa8a846ff5952383003b77a295bfc28d24883a179e522fbbc715"
+    },
     "integrations/shepherdr/mods/spaces-chat/core/spaces.js": {
       "sha256": "b07cb18d3cf3994e108d42e5c4b0fde631e2b41d2da3bac3882273b9f7368f9e"
     },
@@ -1619,11 +1635,20 @@
     "integrations/shepherdr/mods/spaces-chat/emoji-data.js": {
       "sha256": "7398868e758ba7d5c27cfaf0e101e1eb7b52371b8c4cba4222e025e5cfe426d5"
     },
+    "integrations/shepherdr/mods/spaces-chat/gpui-kit.d.ts": {
+      "sha256": "6258d95fbb65c8930f99c0ec5fc15a489bc1a04d02e3bcd76c36463c07891dae"
+    },
     "integrations/shepherdr/mods/spaces-chat/icon.js": {
       "sha256": "35b7579151c76436d634070217f807e7dd1d6e07375a039274c1543ed8fe4e75"
     },
     "integrations/shepherdr/mods/spaces-chat/inbox.js": {
       "sha256": "54c1508c4a569b6499a284238d3b6179d037206f95c7908656bb94f26298a3dd"
+    },
+    "integrations/shepherdr/mods/spaces-chat/inbox.svg": {
+      "sha256": "6520fc46984d8baf82917442d8a35bb9a72355595f3c3b3266f8016aaa8abf9f"
+    },
+    "integrations/shepherdr/mods/spaces-chat/jsconfig.json": {
+      "sha256": "76f43dd8eb9005eee9ed713cc437052788bd3900bfb81f9b71d6f0a609e47f5c"
     },
     "integrations/shepherdr/mods/spaces-chat/live.js": {
       "sha256": "eb9aa31a4e0e08b223afbe5b4052efb3207fc8ad1b1703c5591eaa4ac6f9ae81"
@@ -1635,7 +1660,7 @@
       "sha256": "78d35e5659a8bdd6e67013d35bbef6f6cf3a5a52d2db0987adf4193fbaf0e31c"
     },
     "integrations/shepherdr/mods/spaces-chat/main.js": {
-      "sha256": "56eca578298d8adc2cd5e93e94da7dcbd02085e3d3361b52176f7347c470b3b3"
+      "sha256": "85ff73a973ad15854b76607d4812fdaeb8e27e9d9da988f7415d290dd4795c25"
     },
     "integrations/shepherdr/mods/spaces-chat/mod.json": {
       "sha256": "5b5d03a83a5f8da0e3a7c77c27d0d306afa7eef0556114dc1438612ef1c7e473"
@@ -1878,13 +1903,13 @@
       "sha256": "93ff2efb6c9d08bc4decb10c0c22d69416596b2e7ef1ea7cd11f876c0e37278d"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/autopilot.py": {
-      "sha256": "5fc10e3738afb09b67ff544509db2f66bef0cf2d35589d338c5276ce4e63f29a"
+      "sha256": "59525d331525ba251e7b8b8be948c2fdfc3689f948b47f44c09922d77f4d9d82"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/backups.py": {
       "sha256": "7990e6333b28bc98e487c919d3167a6fd3241cef166219d645c6a21302e94195"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/base.py": {
-      "sha256": "793437339749f98ae44a09b77ca10a490d6a5893ec0d14a0ee6673807299876a"
+      "sha256": "8420fb4108c508f3e00f64eebb0a099c8ebf30d6a6c5bd8f728c30202c9bc1a2"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/browsers.py": {
       "sha256": "240854267a491d28ec62023450e19e840f574b8de79a266593250481d94f9d00"
@@ -1909,6 +1934,9 @@
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/github.py": {
       "sha256": "08fedca37aa9ee847932d397c9550ebdee18a4c2b97056d5e684977d5543df04"
+    },
+    "integrations/shepherdr/mods/tasks/bin/herdr_task/github_watch.py": {
+      "sha256": "c38c20da7dcef250254a8c9fa0a8405ad077d9f1c2ad8f1061ed3ad5611afd4c"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/home.py": {
       "sha256": "77baa7d6c647664382559ac8258c49aaf083a161412754d98d9092d4d22635db"
@@ -2406,7 +2434,7 @@
       "sha256": "c3be7e20caeba735c3b77e8492afc0ed73edd1a18342cee43d2edbd7e83c3e08"
     },
     "integrations/shepherdr/service/context-source.test.ts": {
-      "sha256": "7d835822608cbe52502fab47549945cc6a446af78b68d6f887bf9942c2d9b35a"
+      "sha256": "0212368357d945ce7ed2567b9dd5449449226f91f9ff895e5aae50d345e26bd7"
     },
     "integrations/shepherdr/service/context-source.ts": {
       "sha256": "bd9421f1793dfc7c9f2ac3bed6a31d96e9e55f6c7ebc940a6e3817fccb1ccd7b"
@@ -2688,7 +2716,7 @@
       "sha256": "4a2f43ce46b5b6e3722c95088f88d26ef91e6a8c2e598e70642a1c54367386e4"
     },
     "integrations/shepherdr/web/dist/artifact-viewer.html": {
-      "sha256": "31da79a4343ae02e952914b6007c997c576f59871c28b3a319936d9f55437f2f"
+      "sha256": "31439e5340373ff0fe85068483889ad079df15e78c18e690d66c75e2dbdf4b82"
     },
     "integrations/shepherdr/web/dist/assets/InterVariable-DiVDrmQJ.woff2": {
       "sha256": "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3"
@@ -2704,6 +2732,12 @@
     },
     "integrations/shepherdr/web/dist/assets/emoji-data-2mkAH_hx.js": {
       "sha256": "64e7428a1eff00a2c7596592d0a0718322c3a17d2db6a7188916b7214608642c"
+    },
+    "integrations/shepherdr/web/dist/assets/index-BZu8cqP0.js": {
+      "sha256": "f9606a5ee615e8cae74e3b4113fb06991a2070b42f0d6022c20495ac4b9e3135"
+    },
+    "integrations/shepherdr/web/dist/assets/index-BgsqbUkw.css": {
+      "sha256": "5d2c1e4e1ef119a82fa08402eadc8e58b30ed08558c4ceaadbfae4b9dbc6d08f"
     },
     "integrations/shepherdr/web/dist/assets/index-BmyuswqK.js": {
       "sha256": "730f4b01b5794e8c0b1fb8e788471a2973bd5234bb544acdcb061c78d35c7431"
@@ -2748,7 +2782,7 @@
       "sha256": "bcf4b3373dcfc941fe3fe534e85e9d7491cccda5cd13cf18d3d243c34fa96760"
     },
     "integrations/shepherdr/web/dist/index.html": {
-      "sha256": "a4324afcd1980f8f7a584254425917879b9e0791b082b293ef0d0f5a0203fcc7"
+      "sha256": "2ae28ac8c8bc6c2ebe7cc621c5805d73f5201f8df569529f475ab192d92d63a1"
     },
     "integrations/shepherdr/web/dist/manifest.webmanifest": {
       "sha256": "f01389b0b16c46d432ce59047f27ce8c347986396e32667960b41302f294e59f"
@@ -3300,7 +3334,7 @@
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
     },
     "layouts/shepherdr.json": {
-      "sha256": "3bdba4694be8e79a52a20c518cabbb37d2bd187780aa585fea0449bab86e0920"
+      "sha256": "5f442e8b94fce0c8f7e49095b4012df63eda8a01cc85748460e325f598972f5a"
     },
     "mods/agenttrail/agent-claude.svg": {
       "sha256": "1d8de3564ab1604c3d51954cf5b10e18d71c24d55f45d92980951f1d11e48de0"
@@ -5592,7 +5626,7 @@
       "sha256": "5d1ddd06d277aacd4b7ee5bd12e4f5648a201bffd0996dcef89a9cb2983f26bc"
     },
     "mods/local-cloudflare/panels.js": {
-      "sha256": "8a77a305e159d6e0d9647c49ee81a326af8ead61fd0f6686f236e1b2082d2b39"
+      "sha256": "3cfc0848a28e96c31aa311f13cbde8d9552da1efe21e3e30356394dc83745131"
     },
     "mods/local-cloudflare/ui.js": {
       "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
@@ -5612,6 +5646,21 @@
     "mods/local-gitview-entry/mod.json": {
       "sha256": "f27c83fb4fd4b98511a7a89070560e2ee6fab9aa31b1b44a48985045a19179b0"
     },
+    "mods/local-issues/context-source.js": {
+      "sha256": "9990eb64769aab6de7572a5d915be71a174e2e6f25e1c69fd0d905657bef2563"
+    },
+    "mods/local-issues/github.svg": {
+      "sha256": "2a4f86a88ba564f741c8fe6b95df377c77d3ac5ec6c0bb895ecd43e75a33cfbb"
+    },
+    "mods/local-issues/main.js": {
+      "sha256": "de4292ac18c40b1602a20ce30ac86d62f62ceb6cfdceb3a46d9846118900fab9"
+    },
+    "mods/local-issues/mod.json": {
+      "sha256": "49cb779576ddf913caf027a638e4cff3d32baee0314a9d80e72e6ca0f73a57f6"
+    },
+    "mods/local-issues/panels.js": {
+      "sha256": "3cfc0848a28e96c31aa311f13cbde8d9552da1efe21e3e30356394dc83745131"
+    },
     "mods/local-komari/DESIGN.md": {
       "sha256": "95918e0593f0dfad2da15e10fd353b6c2aad4b1885827b7821dd62178874ed28"
     },
@@ -5625,7 +5674,7 @@
       "sha256": "228ca62c4f3fc489e99f5dae6225a6b7d15fc8a2940f8fcb02835915898b81b9"
     },
     "mods/local-komari/panels.js": {
-      "sha256": "8a77a305e159d6e0d9647c49ee81a326af8ead61fd0f6686f236e1b2082d2b39"
+      "sha256": "3cfc0848a28e96c31aa311f13cbde8d9552da1efe21e3e30356394dc83745131"
     },
     "mods/local-komari/ui.js": {
       "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
@@ -5649,7 +5698,7 @@
       "sha256": "80957e7e44c27a336ba455cedf0c6ae3da0798c05a487555c0bc63e7850b55ad"
     },
     "mods/local-magpie/panels.js": {
-      "sha256": "8a77a305e159d6e0d9647c49ee81a326af8ead61fd0f6686f236e1b2082d2b39"
+      "sha256": "3cfc0848a28e96c31aa311f13cbde8d9552da1efe21e3e30356394dc83745131"
     },
     "mods/local-magpie/ui.js": {
       "sha256": "be4bf9188bb34c1301885f47b156e389b6352c57495953493c56c1d171c9b588"
@@ -5682,7 +5731,7 @@
       "sha256": "64c721e077fbfbb0b04ddc155ba3f8fad1abb713893779bbeff5869873a33126"
     },
     "mods/local-tapd/panels.js": {
-      "sha256": "8a77a305e159d6e0d9647c49ee81a326af8ead61fd0f6686f236e1b2082d2b39"
+      "sha256": "3cfc0848a28e96c31aa311f13cbde8d9552da1efe21e3e30356394dc83745131"
     },
     "mods/local-tapd/tapd_bridge.py": {
       "sha256": "3703a52e39d163facad49b5846541844eed11ab43e47ac4dd49473575af50845"
@@ -5703,10 +5752,10 @@
       "sha256": "d6bdc0574a47e52391f1d188ac57569045115ce03533d949d0c897a3d09f54a4"
     },
     "mods/local-tools/panels.js": {
-      "sha256": "8a77a305e159d6e0d9647c49ee81a326af8ead61fd0f6686f236e1b2082d2b39"
+      "sha256": "3cfc0848a28e96c31aa311f13cbde8d9552da1efe21e3e30356394dc83745131"
     },
     "mods/local-tools/sync-panels.py": {
-      "sha256": "41c352ee4caf5796917cb9eff8308a61c71c82e743d609a51d5d350c1712e023"
+      "sha256": "3443c0a1bfeb1493b7fe378ed2976e604b61933ab2be45cd4e9cb44b39a9f8b6"
     },
     "mods/open-with/kinds.js": {
       "sha256": "2395563ce706ead4c13b46aa0abcae90cc50a0633e82d75bcfe6309cee4adf0e"

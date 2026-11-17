@@ -1,9 +1,32 @@
 import { describe, expect, test } from "bun:test";
-import { fetchSource, sourceRef } from "./context-source.js";
+import { fetchSource, sourceRef, githubRepo, spaceIssues, spaceIssue } from "./context-source.js";
 
 const ok = (value) => ({ code: 0, stdout: JSON.stringify(value), stderr: "" });
 
 describe("composer context sources", () => {
+  test("current Space repository accepts GitHub HTTPS and SSH origins only", () => {
+    for (const value of ["https://github.com/org/repo.git", "git@github.com:org/repo.git", "ssh://git@github.com/org/repo.git"]) expect(githubRepo(value)).toBe("org/repo");
+    for (const value of ["https://evil.test/org/repo", "/tmp/org/repo", "git@github.com:org/repo;cmd", "https://github.com/org/repo/issues/1"]) expect(() => githubRepo(value)).toThrow();
+  });
+  test("Issue list resolves this folder, reads every page, and excludes PRs", async () => {
+    const calls = [];
+    const out = await spaceIssues("/repo with spaces", async (cmd, args) => {
+      calls.push([cmd, ...args]);
+      return cmd === "git" ? { code: 0, stdout: "git@github.com:org/current.git\n" } : ok([
+        [{ number: 2, title: "Bug", updated_at: "today" }, { number: 3, pull_request: {} }],
+        [{ number: 4, title: "Feature" }],
+      ]);
+    });
+    expect(calls[0]).toEqual(["git", "-C", "/repo with spaces", "remote", "get-url", "origin"]);
+    expect(calls[1]).toContain("--paginate");
+    expect(out.repo).toBe("org/current");
+    expect(out.issues.map((x) => x.number)).toEqual([2, 4]);
+  });
+  test("a mismatched Issue never reaches the GitHub API", async () => {
+    const calls = [];
+    await expect(spaceIssue("org/other#12", "/repo", async (cmd) => { calls.push(cmd); return { code: 0, stdout: "git@github.com:org/current.git" }; })).rejects.toThrow("当前 Space");
+    expect(calls).toEqual(["git"]);
+  });
   test("GitHub links and shorthand normalize to an issue", () => {
     expect(sourceRef("github", "org/repo#12").url).toBe("https://github.com/org/repo/issues/12");
     expect(sourceRef("github", " https://github.com/org/repo/issues/12?x=1#issuecomment-2 ").repo).toBe("org/repo");

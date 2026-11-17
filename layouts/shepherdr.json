@@ -201,13 +201,6 @@
                                   "content": {
                                     "mod": "task-artifacts"
                                   }
-                                },
-                                {
-                                  "id": "tasks-thread-term",
-                                  "type": "block",
-                                  "content": {
-                                    "agent": "focused"
-                                  }
                                 }
                               ],
                               "active": "tasks-thread-chat"
@@ -324,6 +317,16 @@
                       "content": {
                         "mod": "agenttrail"
                       }
+                    },
+                    {
+                      "id": "issues",
+                      "type": "block",
+                      "content": {
+                        "mod": "local-issues",
+                        "props": {
+                          "role": "panel"
+                        }
+                      }
                     }
                   ],
                   "active": "tasks",
@@ -383,7 +386,7 @@
                 "mod": "local-tools"
               },
               "size": {
-                "px": 438
+                "px": 510
               }
             },
             {

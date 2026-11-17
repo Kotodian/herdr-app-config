@@ -7,6 +7,7 @@ export const TOOLS = [
   { id: "gitview", label: "Gitview", mod: "gitview", icon: "mods/kanso-chrome/icons/changes.svg" },
   { id: "cloudflare", label: "Cloudflare", mod: "local-cloudflare", icon: "mods/local-cloudflare/icon.svg" },
   { id: "tapd", label: "TAPD", mod: "local-tapd", icon: "mods/local-tapd/icon.svg" },
+  { id: "issues", label: "Issues", mod: "local-issues", icon: "mods/local-issues/github.svg" },
   { id: "agenttrail", label: "Map", mod: "agenttrail", icon: "mods/kanso-chrome/icons/chart.svg" },
 ];
 

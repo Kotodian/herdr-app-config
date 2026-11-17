@@ -287,6 +287,7 @@ export function pilotWhy(reason) {
   const r = String(reason ?? "").trim();
   if (r === "schedule") return "on schedule";
   if (r === "run now") return "Run now";
+  if (r === "github issues") return "GitHub Issues 更新";
   const ev = /^event:([\w-]+)\s+(.+)$/.exec(r);
   if (ev) return `${ev[2]} ${EVENT_WORDS[ev[1]] ?? ev[1]}`;
   return r || "on schedule";

@@ -1,6 +1,6 @@
 # Herdr 开发工作台
 
-默认使用 **Shepherdr layout**：左边选项目，中间和 Assistant 对话或查看终端，右边跟进任务、检查代码、逐行评论。你点审核通过后，由 Assistant 执行合并。底部有 Magpie、Komari、Gitview、Cloudflare、TAPD 和 Map 的常驻入口。
+默认使用 **Shepherdr layout**：左边通过 Inbox 查看通知、选择项目，中间和 Assistant 对话或查看终端，右边跟进任务、检查代码、逐行评论。你点审核通过后，由 Assistant 执行合并。底部有 Magpie、Komari、Gitview、Cloudflare、TAPD、Issues 和 Map 的常驻入口。
 
 界面按参考图使用深青色毛玻璃效果：半透明底配合原生窗口模糊、半透明侧栏和圆角面板，背后内容呈现模糊轮廓，文字和代码保持清晰。配色和透明度保存在 `layouts/shepherdr.json`，随配置同步。
 
@@ -12,6 +12,7 @@ Kanso layout 已移除，工具已接入 Shepherdr。下面的六张截图均于
 
 | 位置 | 用途 |
 | --- | --- |
+| 左侧 Inbox | 集中显示有新回复、待处理问题、Agent 通知和待人工审核的 session。同一会话合并显示，点击跳到对应会话；已读消息会消失，待授权或待审核事项处理后才消失。点 Inbox 标题可以折叠。 |
 | 左侧 Spaces | 选择项目和机器。开始前先核对项目，避免在错误仓库里下任务。 |
 | 中间 Assistant / 任务标签 | 给 Assistant 需求、补充限制、回答问题；在 Chat / Terminal 间查看聊天和命令输出。 |
 | 右上角 Tasks | 查看任务、需要你处理的问题和待审核结果。点任务后可切换 Chat、Terminal、Pull request、Artifacts、Browser。 |
@@ -34,7 +35,7 @@ Kanso layout 已移除，工具已接入 Shepherdr。下面的六张截图均于
 
 Assistant 分类并安排任务，Worker 在任务分支和 worktree 内实现。整体需求继续和 Assistant 说；单项实现细节可以在 Tasks 中打开对应任务的 Chat 补充。
 
-输入框下方的 **`+`** 可以添加本地文件、**GitHub Issue** 和**飞书文档**。选择来源后粘贴链接，点「添加」读取；附件会先留在输入框，和下一条消息一起发送。桌面端可点击附件预览、点击 `×` 移除。Issue 包含正文和讨论，飞书支持 `/docx/` 文档及 `/wiki/` 知识库链接；权限沿用本机 `gh`、`lark-cli` 的登录状态。
+输入框下方的 **`+`** 可以添加本地文件、**GitHub Issue** 和**飞书文档**。GitHub Issue 直接列出当前 Space 仓库的开放 Issue，可以搜索后选择；飞书粘贴 `/docx/` 文档或 `/wiki/` 知识库链接，点「添加」读取。也可以从底部 **Issues**、**TAPD** 面板把问题拖到输入框。附件会先留在输入框，和下一条消息一起发送；可点击预览、点击 `×` 移除。
 
 业务仓库遵守这些分支规则：
 
@@ -118,10 +119,29 @@ Assistant 暂时未启动或正在接收输入时，交接请求会保留并自�
 | Komari | 看节点状态和资源情况，辅助排查环境问题。 | 现有只读探针接口。 |
 | Gitview | 检查当前项目的工作目录改动；任务人工审核在任务的 Pull request 完成。 | 本机 Gitview 执行文件，由引导模块安装。 |
 | Cloudflare | 查看和管理已有账号连接的 DNS。 | 本机连接和凭据。 |
-| TAPD | 看分配给自己的 Bug 和详情，给开发任务补充问题背景。 | 本机 TAPD 账号连接。 |
+| TAPD | 跨项目看分配给自己的 Bug，查看详情或拖到 Assistant。 | 本机 TAPD 账号连接。 |
+| Issues | 列出当前 Space 仓库的开放 Issue，搜索、查看正文和讨论，拖到 Assistant。 | 仓库的 GitHub `origin`、该机器的 `gh` 登录。 |
 | Map | 查看 Agent 的工作进度图。 | 启动相关功能需要 Node.js / npx。 |
 
 工具与任务共用右侧面板，切换工具不会替换或删除 Tasks、PR 和 Artifacts 的结构。
+
+### GitHub Issue：选择、拖入和监听
+
+1. 在左侧选中项目 Space。**Issues** 面板和 `+ → GitHub Issue` 使用这个 Space 文件夹的 GitHub `origin`，无需选择项目或另设绑定；切换 Space 后列表跟随切换。
+2. 在仓库所在机器安装 GitHub CLI，执行 `gh auth login`，确认 `gh auth status` 正常并具有仓库权限。远端 Space 使用远端机器的 Git 和 `gh`。
+3. 点底部 **Issues**，搜索编号或标题。单击 Issue 查看正文和讨论；拖动列表卡片或详情标题到 Assistant 输入框，松手后会读取完整内容并加入附件。也可从 `+ → GitHub Issue` 直接点选。列表只显示开放 Issue，Pull Request 不混入列表；点「刷新」重新读取。
+4. 发消息时说明要求，例如“根据这个 Issue 排查并创建修复任务”。读取和拖入不会自动发消息、创建任务或修改 GitHub。
+5. 要持续监听，打开此 Space Assistant 的 **Autopilot** 开关。现有后台调度器会约每分钟检查 Issue 的新增和更新（含讨论和状态变化），合并重复提醒，等 Assistant 空闲且你没有正在输入时再交给它处理。首次启用或切换仓库先建立基线，不把历史 Issue 批量唤醒；监听期间关闭 Autopilot 就停止检查。读取失败会保留进度，恢复后重试。
+
+监听不会替你在 GitHub 评论、关闭 Issue 或通过 PR。后续动作遵守 Autopilot 的指令、任务分支规则和人工审核流程。
+
+### TAPD：从现有 mod 拖入 Bug
+
+1. 点底部 **TAPD**。沿用现有 TAPD 账号连接，列表跨你能访问的项目展示**分配给自己**的 Bug，可按项目、状态和关键词筛选，每两分钟刷新。
+2. 单击卡片查看详情。拖动列表卡片或详情标题到 Assistant 输入框，松手后会重新读取 Bug，生成包含编号、项目、状态、优先级、描述和 TAPD 原始链接的附件。
+3. 补充处理要求后发送。可以连续拖入多个 Bug，也可以移除附件后再发；每条消息最多 20 个附件。
+
+TAPD 不绑定 Space，也不需要配置项目映射。你决定把 Bug 拖进哪个 Assistant。凭据沿用本机 TAPD 连接；新电脑需要单独配置，令牌不随 Git 同步。Bug 已不再分配给自己或没有权限时会报错，刷新面板后重试。
 
 Artifacts 适合放实现说明、测试报告、截图和可交互预览，供审核时查看。产生 Artifact 不代表测试一定通过，也不代表代码已经合并。
 
@@ -177,7 +197,19 @@ Artifacts 适合放实现说明、测试报告、截图和可交互预览，供�
 
 ## 新 Mac 安装和自动同步
 
-先安装 Herdr、Git 和系统 Python 3，配置此私仓访问权限，登录要使用的 Codex 或 Claude。在目标目录不存在时，**首次启动 Herdr App 前**执行：
+### 下载 Herdr App
+
+到 [Herdr 官方下载页](https://herdr.dev/download/) 下载桌面 App；macOS Apple Silicon 可使用官网的 [最新版 DMG](https://releases.herdr.dev/app/Herdr.dmg)，下载后打开 DMG，将 Herdr App 放入「应用程序」。其他系统或架构以官网当前提供的安装方式为准。
+
+官网也提供终端安装方式，适合需要一并安装 `herdr-app`、`hc` 等命令的环境：
+
+```sh
+curl -fsSL https://releases.herdr.dev/app/install.sh | sh
+```
+
+### 导入这个工作台
+
+安装 Git 和系统 Python 3，配置此私仓访问权限，登录要使用的 Codex 或 Claude。在目标目录不存在时，**首次启动 Herdr App 前**执行：
 
 ```sh
 git clone --branch main git@github.com:Kotodian/herdr-app-config.git ~/.config/herdr-app

@@ -39,6 +39,39 @@ async function jsonCommand(run, command, args) {
   return j;
 }
 
+export function githubRepo(remote) {
+  const raw = String(remote ?? "").trim();
+  const m = /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([\w.-]+)\/([\w.-]+?)\/?$/.exec(raw);
+  if (!m) throw new Error("当前 Space 没有 GitHub origin 仓库。");
+  return `${m[1]}/${m[2].replace(/\.git$/, "")}`;
+}
+
+export async function spaceRepo(folder, run) {
+  if (!folder) throw new Error("当前对话没有 Space 仓库。");
+  const r = await run("git", ["-C", folder, "remote", "get-url", "origin"]);
+  if (r.code !== 0) throw new Error("当前 Space 不是 Git 仓库，或没有 origin。");
+  return githubRepo(r.stdout);
+}
+
+export async function spaceIssues(folder, run) {
+  const repo = await spaceRepo(folder, run);
+  const pages = await jsonCommand(run, "gh", ["api", "--paginate", "--slurp",
+    `repos/${repo}/issues?state=open&sort=updated&direction=desc&per_page=100`]);
+  if (!Array.isArray(pages)) throw new Error("GitHub Issue 列表格式异常，请重试。");
+  const issues = pages.flat().filter((x) => !x.pull_request && Number.isInteger(x.number) && x.number > 0).map((x) => ({
+    number: x.number, title: String(x.title ?? ""), state: x.state, updated: x.updated_at,
+    url: `https://github.com/${repo}/issues/${x.number}`,
+  }));
+  return { repo, issues };
+}
+
+export async function spaceIssue(value, folder, run) {
+  const ref = sourceRef("github", value);
+  const repo = await spaceRepo(folder, run);
+  if (repo.toLowerCase() !== ref.repo.toLowerCase()) throw new Error("请选择当前 Space 仓库中的 Issue。");
+  return fetchSource("github", ref.url, run);
+}
+
 export async function fetchSource(kind, value, run) {
   const ref = sourceRef(kind, value);
   let title, content;

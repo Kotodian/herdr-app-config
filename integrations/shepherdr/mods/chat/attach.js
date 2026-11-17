@@ -90,7 +90,13 @@ export async function pick(title = "Attach files", os = window()?.platform) {
 // Dropped or pasted file paths as attachments.
 export const paths = (list) => list.filter(Boolean).map((p) => ({ path: p, name: base(p), image: isImage(p), temp: false }));
 
-export async function droppedFile(path) {
+export async function droppedFile(path, where) {
+  const github = `${appHome()}/data/github-issue-drag/`;
+  if (path.startsWith(github) && /^[\w.-]+\.issue\.json$/.test(path.slice(github.length))) {
+    const ref = JSON.parse(await fs.readFile(path, "utf8"));
+    if (ref.kind !== "github-issue" || typeof ref.url !== "string") throw new Error("Issue 引用无效，请刷新列表后重试。");
+    return sourceFile("github", ref.url, where);
+  }
   const dir = `${appHome()}/data/tapd-drag/`;
   if (!path.startsWith(dir) || !/^\d+-\d+\.tapd\.json$/.test(path.slice(dir.length))) return paths([path])[0];
   const ref = tapdReference(JSON.parse(await fs.readFile(path, "utf8")));

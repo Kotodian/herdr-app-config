@@ -308,7 +308,9 @@ export default class Chat extends View {
     this.box.set_rows(1);
     this.sourceBox = InputState.new({ placeholder: "" });
     this.sourceBox.on("change", (_e, cx) => { this.sourceError = null; cx.notify(); });
-    this.sourceBox.on("submit", (_e, cx) => this.attachSource(cx));
+    this.sourceBox.on("submit", (_e, cx) => {
+      if (this.sourceKind !== "github") this.attachSource(cx);
+    });
     // Ctrl+Enter (the textarea's secondary submit): held until the agent is free.
     this.box.on("submit", (e, cx) => { if (!e?.shift) this.enter(cx, Boolean(e?.secondary)); });
     this.box.on("focus", (_e, cx) => { this.focused = true; noteChatArea(this.areaKey(), { focus: true, at: Date.now() }); holdKeys(this.areaKey()); cx.notify(); });
@@ -1404,6 +1406,9 @@ export default class Chat extends View {
   // Enter: now (while the agent works, it takes it mid-turn). Ctrl+Enter while it
   // works: held, and sent by itself once it is free.
   send(cx, hold = false) {
+    if (this.sourceBusy || this.dropBusy) {
+      this.error = "附件还在读取，请等附件出现后再发送。"; cx.notify(); return;
+    }
     // A picked "#space" goes as its mention, which names its target (core/mentions.js).
     const text = mentions.expandTasks(mentions.expand(this.box.value().trim(), this.picked), this.pickedTasks);
     this.picked = [];
@@ -4122,20 +4127,22 @@ export default class Chat extends View {
 
   dropFiles(list, cx) {
     const draft = this.draftFile;
+    this.dropBusy = (this.dropBusy ?? 0) + 1; cx.notify();
     cx.spawn(async (cx) => {
-      for (const path of [...new Set(list)]) {
-        if (this.sourceClosed || draft !== this.draftFile) break;
-        if (this.files.length >= 20) { this.error = "每条消息最多添加 20 个附件。"; break; }
-        try {
-          const file = await attach.droppedFile(path);
-          if (this.sourceClosed || draft !== this.draftFile) { attach.drop(file); break; }
-          if (this.files.length >= 20) { attach.drop(file); this.error = "附件已满，请先移除一个附件。"; break; }
-          this.addFiles([file]);
-          this.saveSoon(cx);
-        } catch (e) { this.error = plainError(e); }
-      }
-      if (!this.sourceClosed && draft === this.draftFile) this.box.focus();
-      cx.notify();
+      try {
+        for (const path of [...new Set(list)]) {
+          if (this.sourceClosed || draft !== this.draftFile) break;
+          if (this.files.length >= 20) { this.error = "每条消息最多添加 20 个附件。"; break; }
+          try {
+            const file = await attach.droppedFile(path, this.sourceSpace());
+            if (this.sourceClosed || draft !== this.draftFile) { attach.drop(file); break; }
+            if (this.files.length >= 20) { attach.drop(file); this.error = "附件已满，请先移除一个附件。"; break; }
+            this.addFiles([file]);
+            this.saveSoon(cx);
+          } catch (e) { if (!this.sourceClosed && draft === this.draftFile) this.error = plainError(e); }
+        }
+        if (!this.sourceClosed && draft === this.draftFile) this.box.focus();
+      } finally { this.dropBusy--; cx.notify(); }
     });
   }
 
@@ -4339,6 +4346,7 @@ export default class Chat extends View {
       .border_color(this.focused ? t.accent : t.input).bg(t.background)
       .child(this.slashList(t, list) ?? div())
       .child(this.attachmentMenu(t) ?? div())
+      .when(Boolean(this.dropBusy), (el) => el.child(div().px(12).pt(8).text_size(12).text_color(t.dim).child("正在读取拖入的附件…")))
       .child(this.tiles(t) ?? div())
       // The padding is around the textarea, not on it: its own height is then exactly its rows
       // (auto-grow, 1 to 8), so it never overflows itself by the padding, which showed a

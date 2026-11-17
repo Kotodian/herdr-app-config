@@ -14,9 +14,11 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { machines, run, props, exec, hc, home, theme, shared, setShared, watchFolder, window, layout, nextCommand, readTextFile } from "herdr";
-import { panes, spaces as allSpaces, inRender } from "./live.js";
-import { countsByTab, readyByTab } from "./inbox.js";
-import { spacesWithChats } from "./parked.js";
+import { panes, spaces as allSpaces, terminals, agents, inRender } from "./live.js";
+import { countsByTab, readyByTab, items as inboxItems, ready as inboxReady, toAlert } from "./inbox.js";
+import { spacesWithChats, chatAgents } from "./parked.js";
+import { sessionInbox } from "./core/session-inbox.js";
+import { READ } from "./core/spaces.js";
 import { sectionsOf, sectionOf, iconOf, placeSpace, foldSection, prune, data, pin, foldPinned, machineLook, restoreSection } from "./sections.js";
 import { Menu, openMenu, rectOf } from "./popups.js";
 import { IconPicker } from "./icon.js";
@@ -813,6 +815,47 @@ export default class Spaces extends View {
 
   close() { this.popup?.close?.(); }
 
+  inbox(t, collapsed, sp) {
+    const ts = terminals();
+    const rows = sessionInbox({ terminals: ts, agents: [...agents(), ...chatAgents()], spaces: sp,
+      needs: inboxItems(), ready: inboxReady(), seen: shared("chat.seen") ?? {},
+      alertRead: shared("inbox.session-alerts-read") ?? {}, notify: shared("notify") ?? {} });
+    const folded = shared("inbox.sessions-folded") === true;
+    const open = (row) => {
+      if (row.terminal) {
+        const k = terminals().find((x) => x.address === row.terminal);
+        let alert; try { alert = JSON.parse(k?.labels?.["herdr.alert"] || "null"); } catch {}
+        if (alert?.id) setShared("inbox.session-alerts-read", { ...(shared("inbox.session-alerts-read") ?? {}), [row.terminal]: alert.id });
+        if (k?.turn) {
+          setShared("chat.seen", { ...(shared("chat.seen") ?? {}), [row.terminal]: k.turn });
+          hc(["label", row.terminal, `${READ}=${k.turn}`]).catch(() => {});
+        }
+        toAlert({ terminal: row.terminal });
+      } else if (row.task) {
+        if (row.space) run("space.select", { id: row.space });
+        setShared("tasks.searchreq", { q: row.task.ref, at: Date.now() });
+        run("layout.select", { stack: "panel-body", child: "tasks" });
+        run("layout.select", { stack: "tasks", child: "tasks-list" });
+        run("layout.show", { id: "panel" });
+      }
+    };
+    return v_flex().id("session-inbox").flex_none().max_h(collapsed ? 180 : 250).min_h(0).px(8).pb(6)
+      .child(h_flex().id("session-inbox-toggle").h(32).flex_none().px(8).gap(7).items_center().rounded(6)
+        .cursor_pointer().text_color(rows.length ? t.foreground : t.dim).hover((s) => s.bg(t.hover))
+        .on_click((_e, cx) => { setShared("inbox.sessions-folded", !folded); cx.notify(); })
+        .child(svg("mods/spaces-chat/inbox.svg").size(15).flex_none())
+        .when(!collapsed, (el) => el.child(div().flex_1().font_medium().child("Inbox")))
+        .child(div().text_size(11).child(String(rows.length))))
+      .when(!folded, (el) => el.child(v_flex().id("session-inbox-rows").min_h(0).overflow_y_scrollbar().gap(2)
+        .when(!rows.length && !collapsed, (el) => el.child(div().px(8).py(5).text_size(11.5).text_color(t.dim).child("暂无新通知")))
+        .children(rows.map((row) => h_flex().id(`inbox-session-${row.key}`).min_h(30).flex_none().px(8).py(5).gap(7).items_center()
+          .rounded(6).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => { open(row); cx.notify(); })
+          .child(div().size(6).flex_none().rounded_full().bg(row.priority === 0 ? t.blocked : row.priority === 1 ? t.done : t.accent))
+          .when(!collapsed, (el) => el.child(v_flex().flex_1().min_w(0).gap(2)
+            .child(div().text_size(12.5).text_color(t.foreground).truncate().child(row.title))
+            .child(div().text_size(10.5).text_color(t.dim).truncate().child(`${row.place || "Session"} · ${row.reason}`))))))));
+  }
+
   // One copy of Herdr's live lists for the whole render (live.js): past ~50 ms Herdr stops it.
   render(cx) {
     return inRender(() => this.draw(cx));
@@ -844,6 +887,7 @@ export default class Spaces extends View {
     const voice = this.voiceRow(t, collapsed);
     return v_flex().size_full().min_h(0).bg(t.chrome).text_size(13)
       .when(Boolean(voice), (el) => el.child(voice))
+      .child(this.inbox(t, collapsed, sp))
       .child(h_flex().h(31).pl(16).pr(10).items_center().justify_between().text_size(TEXT.label).font_medium().text_color(t.dim)
         .when(!collapsed, el => el.child("Spaces"))
         // As a machine's +: New space, New section, on the shown space's machine.
