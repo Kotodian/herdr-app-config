@@ -85,7 +85,7 @@ def required_fields(transition,raw):
     out=[]
     for f in transition.get('Appendfield',[]) or []:
         name=f.get('FieldName','')
-        if f.get('Notnull')!='yes' or name in ('current_owner','status'):continue
+        if f.get('Notnull')!='yes' or name in ('current_owner','status','id','workspace_id','current_user'):continue
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,100}',name):continue
         value=raw.get(name) or ''
         for default in f.get('DefaultValue',[]) or []:
@@ -116,6 +116,8 @@ def dispatch(client,args):
         changes=args.get('changes')
         if not isinstance(changes,dict) or not changes or set(changes)-{'current_owner','status','fields'}:
             raise PanelError('请选择处理人或目标状态')
+        if 'current_owner' not in changes and changes.get('status',raw.get('status'))==raw.get('status'):
+            raise PanelError('没有需要保存的修改')
         payload={'workspace_id':ws,'id':rid,'current_user':client.nick}
         if 'current_owner' in changes:
             owner=changes['current_owner']
@@ -156,7 +158,7 @@ def dispatch(client,args):
             else:raise PanelError('缺陷数量超出分页限制')
             # TAPD supports fuzzy owner queries; keep exact owner membership in the UI.
             all_bugs.extend(safe_bug(item['Bug'],project,labels,last) for item in rows
-                if owner in str(item.get('Bug',{}).get('current_owner') or '').rstrip(';').split(';'))
+                if owner in {x.strip() for x in str(item.get('Bug',{}).get('current_owner') or '').split(';')})
         except Exception:
             errors.append({'project':project['name'],'message':'此项目读取失败，请检查连接与权限后刷新'})
     # Any failing project stays visible as an error, never masquerades as a complete empty list.

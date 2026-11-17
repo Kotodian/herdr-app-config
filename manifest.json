@@ -64,7 +64,7 @@
       "sha256": "660a80bfa8bf605fd1dd4c1ec730b837719cda0e130c35dc098732c7e39c80d1"
     },
     "README.md": {
-      "sha256": "329e5475dfd3e9a101a72fc1974e51b5d7779407bf753d4314790ca884923fdf"
+      "sha256": "be884271427fd25318d2004dc1d0cd718e3ee44d592ef04692798f1d30f39c13"
     },
     "docs/screenshots/01-workspace.png": {
       "sha256": "3058f888f033ecba558e6898afbaa6268a821fd19341930b44ba3eedb0c16810"
@@ -5746,7 +5746,7 @@
       "sha256": "3cfc0848a28e96c31aa311f13cbde8d9552da1efe21e3e30356394dc83745131"
     },
     "mods/local-tapd/tapd_bridge.py": {
-      "sha256": "fed280fcb1a4ad0b9444089e330e44558813bb5eb218d5ebc97051e6bf769843"
+      "sha256": "dd434bce7f3ef6e61d643ec53e9137f1f9be9d6427b60b9f592e19017d7b171d"
     },
     "mods/local-tapd/test_tapd_bridge.py": {
       "sha256": "90226fd6d36e62f8c4073b184bae0f11c5d5d6d5befff337bc29ddf97dcd060b"
