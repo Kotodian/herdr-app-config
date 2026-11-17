@@ -409,13 +409,22 @@
       "resizable": false
     }
   ],
-  "theme": {
-    "light": "shepherdr-glass-light",
-    "dark": "shepherdr-glass-dark"
+  "theme": "shepherdr-glass-dark",
+  "colors": {
+    "background": "#062a3133",
+    "canvas": "#03242b00",
+    "chrome": "#052c3426",
+    "surface": "#123b4340",
+    "raised": "#315a6366",
+    "popover": "#10383ff5",
+    "hover": "#b4e6e322",
+    "selected": "#8ad6d42e",
+    "border": "#bededc24",
+    "input": "#d6f0ed20"
   },
   "window_blur": true,
   "background": "#00000000",
-  "terminal_opacity": 0.86,
+  "terminal_opacity": 0.6,
   "terminal_padding": [
     14,
     12

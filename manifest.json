@@ -62,7 +62,7 @@
       "sha256": "660a80bfa8bf605fd1dd4c1ec730b837719cda0e130c35dc098732c7e39c80d1"
     },
     "README.md": {
-      "sha256": "79b776c39614e72c379d72598123322daf08519d4db4f0c2931dd5752bcff296"
+      "sha256": "1367d64aa30ba6056809bc71d205f92a5442b7f373b693db11132786507369b8"
     },
     "docs/screenshots/01-workspace.png": {
       "sha256": "e58abf793c8468b8e0efff5cb4c9e4c3fb1c3c59e16e09126a7f229d21ef1c0c"
@@ -3254,7 +3254,7 @@
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
     },
     "layouts/shepherdr.json": {
-      "sha256": "1b8647c1ba8daa43289516541891c7531b6800812ef3e25a1614f107a324cf44"
+      "sha256": "30e60a74310587101cb9042fe083b603b9571bfe50d6a25e1041ce68a07d5981"
     },
     "mods/agenttrail/agent-claude.svg": {
       "sha256": "1d8de3564ab1604c3d51954cf5b10e18d71c24d55f45d92980951f1d11e48de0"
@@ -5666,7 +5666,7 @@
       "sha256": "e54ef62e9ee9786ce2a54d887af18d14fd47b5b3cd10d9c8992ffb41277e8a53"
     },
     "themes/shepherdr-glass-dark.json": {
-      "sha256": "ab82975ded818a59b446895d91f7d23088effe0f46504694560c15fc5c09e3f9"
+      "sha256": "59cfe109044ddc373d9e717cdec4263ed0f0174da958728b4932051d03387cb1"
     },
     "themes/shepherdr-glass-light.json": {
       "sha256": "5eb37cd3aaccf28e590885d3cdb72b837593c80b6c50e2b5b6d4987d955dcfa5"
