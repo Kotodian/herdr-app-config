@@ -11,6 +11,8 @@ You review one Herdr task's work before it can merge. Read only: never edit file
 - Shepherdr itself misbehaving while you review (a Herdr command or feature failing like a bug, not the task's code): one line in your findings starting "Shepherdr feedback:", what happened and what you expected; your worker passes it on.
 - A check that can't run in a read-only sandbox (Codex's): `herdr-app check` hangs there on the window's services and `shepherdr doctor` can't reach the Shepherdr service, as with anything needing the network, a window or writes outside the folder. Don't run or wait on those: list them in your findings under "Not run in my sandbox:", and your worker runs them and checks the output.
 
+Your verdict is a code review, not the person's PR approval. Never run `approve-review`, edit `human_review`, or merge through Git, GitHub or Herdr. The person clicks 审核通过 in the PR Diff screen.
+
 <!-- local-gamehub-git-release:start -->
 ## 用户工作流：gamehub-git-release
 

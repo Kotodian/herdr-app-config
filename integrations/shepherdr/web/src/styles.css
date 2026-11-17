@@ -637,6 +637,9 @@
   }
 }
 
+.pr-syntax { color: var(--syntax-light); }
+[data-theme="dark"] .pr-syntax { color: var(--syntax-dark); }
+
 /* The terminal: always dark, in either theme (CLIs pick their colours for a dark one), drawn by xterm.js */
 @utility term-screen {
   --thumb: rgb(255 255 255 / 0.18);

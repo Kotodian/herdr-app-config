@@ -1232,6 +1232,10 @@ export interface Snapshot {
 }
 
 export type Action =
+  | { type: 'review-diff'; task: string; path?: string; working?: boolean }
+  | { type: 'approve-review'; task: string; snapshot: string }
+  | { type: 'review-comment'; task: string; snapshot: string; body?: string; path?: string; line?: number; side?: 'LEFT' | 'RIGHT'; remove?: string }
+  | { type: 'request-changes'; task: string; snapshot: string }
   | { type: 'plugin'; plugin: string; method: string; input?: unknown; cid: string }
   /** read every machine's plan limits again, unless they were read a moment ago */
   | { type: 'limits-check' }

@@ -101,6 +101,8 @@ def evidence(s, t):
     list} or None, git (False: not a git folder), scope, checks, proof, artifacts (its others), merges (Accept
     merges its branch first: an open pull request or commits past its base; the button says so)}."""
     main, out = s.loc["folder"], {"summary": t.get("summary"), "details": t.get("details"), "proof": t.get("proof") or find_proof(s, t)}
+    from .human_review import required
+    out["human_review_required"] = required(t)
     out["artifacts"] = task_artifacts(s, t, out["proof"])
     commits, files = [], {}
     fmt = "--format=%h%x09%s"

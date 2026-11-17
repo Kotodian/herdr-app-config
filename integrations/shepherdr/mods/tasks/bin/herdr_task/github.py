@@ -311,7 +311,7 @@ BAD = {"FAILURE", "ERROR", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP
 PENDING = {"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "REQUESTED", "EXPECTED"}
 
 
-VIEW = "state,mergeable,baseRefName,headRefOid,mergeCommit,reviewDecision,mergeStateStatus"
+VIEW = "state,mergeable,baseRefName,baseRefOid,headRefOid,mergeCommit,reviewDecision,mergeStateStatus"
 # SHEP-179: a token that may read a pull request but not its checks (a fine-grained one without Checks: read, as
 # the exe.dev GitHub integration's) gets GitHub's "Resource not accessible" for them: a permission, never a blip.
 DENIED = ("resource not accessible", "http 403", "must have", "not have permission", "insufficient scope")

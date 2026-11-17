@@ -145,7 +145,7 @@ export class PanelHost {
     if (this.cur !== cur) return;
     // Where the task's side views look (taskwhere.js): its worktree, else its list's folder.
     if (this.head) {
-      const w = rec ? { terminal: addr, ref: rec.ref, folder: rec.worktree || rec.folder || null, machine: rec.machine ?? null,
+      const w = rec ? { terminal: addr, ref: rec.ref, folder: rec.worktree || rec.folder || null, listFolder: rec.folder, machine: rec.machine ?? null,
         branch: rec.branch ?? null, base: rec.base ?? null, start: rec.start ?? null, pr: rec.pr ?? null } : null;
       if (JSON.stringify(w) !== JSON.stringify(shared("tasks.thread.where") ?? null)) setShared("tasks.thread.where", w);
     }
@@ -362,7 +362,7 @@ export class PanelHost {
     // The second row, one switcher: Chat, Terminal (dim when the worker has ended), then the task's own views.
     const shownNow = this.busy ? TERM : find(layout(), BODY)?.active ?? CHAT;
     const pick = (child) => () => run("layout.select", { stack: BODY, child });
-    const hasPr = Boolean(this.rec?.pr) || (addr && shared("tasks.thread.pr")?.terminal === addr);
+    const hasPr = Boolean(this.rec?.pr || this.rec?.branch) || (addr && shared("tasks.thread.pr")?.terminal === addr);
     // Pull request only once the task has one; shown while it lost it, back to its chat.
     if (shownNow === PR && !hasPr && this.rec) cx.timer.after(0, () => showWorkerChat());
     const segs = [

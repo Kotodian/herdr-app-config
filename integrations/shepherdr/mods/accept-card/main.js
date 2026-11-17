@@ -153,6 +153,13 @@ export default class AcceptCard extends View {
   accept(cx) {
     if (this.busy || !this.t || this.t.state !== "ready") return;
     const p = props() ?? {};
+    if (this.t.evidence?.human_review_required) {
+      const t = this.t;
+      openOverlay({ kind: "dialog", mod: "task-pr", width: 0.96, height: 0.92,
+        props: { wide: true, where: { ...p, listFolder: p.folder, folder: t.worktree || p.folder,
+          branch: t.branch, base: t.base, start: t.start, pr: t.pr } } });
+      return;
+    }
     note("act", { type: "accept", task: p.ref });
     this.busy = true;
     this.error = null;
@@ -329,6 +336,6 @@ export default class AcceptCard extends View {
         // to accept.
         .child(settled ? dialogFooter({ onCancel: () => this.close(), cancelLabel: ACCEPT.close })
           : dialogFooter({ onCancel: () => this.close(), cancelLabel: ACCEPT.cancel,
-            primary: { id: "accept", label: this.busy ? ACCEPT.accepting : acceptLabel(e), disabled: !(ready && !this.busy), onClick: (_e, cx) => this.accept(cx) } })));
+            primary: { id: "accept", label: this.busy ? ACCEPT.accepting : e?.human_review_required ? "查看 Diff 并审核" : acceptLabel(e), disabled: !(ready && !this.busy), onClick: (_e, cx) => this.accept(cx) } })));
   }
 }

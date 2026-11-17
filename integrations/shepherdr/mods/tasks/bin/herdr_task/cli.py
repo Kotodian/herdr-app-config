@@ -28,6 +28,7 @@ from .assistant_settings import cmd_session_note
 from .feedback import cmd_feedback
 from .sandbox import cmd_sandbox
 from .decision import cmd_decide
+from .human_review import cmd_review_diff, cmd_approve_review
 from .decision_provider import cmd_models as cmd_decision_models
 
 
@@ -153,6 +154,9 @@ def main():
     argv = sys.argv[1:]
     if argv[:1] == ["--on"] and len(argv) > 1:
         try:
+            if argv[2:3] and argv[2] in ("approve-review", "review-comment", "request-changes"):
+                from .human_review import require_person
+                require_person()
             return remote(argv[1], argv[2:])
         except Fail as e:
             if "--json" in argv:
@@ -235,6 +239,21 @@ def main():
     cmd("decision-models", cmd_decision_models, "list Typesafe classifiers offered by the configured agents", id=False)
     c = cmd("show", cmd_show, "one task")
     c.add_argument("--evidence", action="store_true", help="with what its Accept card shows: commits, changed files, checks and its proof")
+    c = cmd("review-diff", cmd_review_diff, "read the task's exact PR commit comparison for human review")
+    c.add_argument("--path", help="a changed file to preview")
+    c.add_argument("--working", action="store_true", help="include live worktree edits; this view cannot be approved")
+    c = cmd("approve-review", cmd_approve_review, "the person's Diff screen approves the exact displayed commits")
+    c.add_argument("--snapshot", required=True, help="the comparison shown by review-diff")
+    from .human_review import cmd_review_comment, cmd_request_changes
+    c = cmd("review-comment", cmd_review_comment, "save a person's draft PR review comment")
+    c.add_argument("--snapshot", required=True)
+    c.add_argument("--body")
+    c.add_argument("--path")
+    c.add_argument("--line", type=int)
+    c.add_argument("--side", choices=("LEFT", "RIGHT"), default="RIGHT")
+    c.add_argument("--remove", help="remove a draft comment by id")
+    c = cmd("request-changes", cmd_request_changes, "send the person's draft comments to the worker for fixes")
+    c.add_argument("--snapshot", required=True)
     c = cmd("start", cmd_start, "start a task's agent (no tab: an hc child of the space's coordinator)")
     agent_opts(c)
     c.add_argument("--space")

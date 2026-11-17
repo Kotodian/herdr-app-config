@@ -1,23 +1,19 @@
 // Worktree: a task view's Pull request tab, as the window's (mods/task-pr), and the views of the space's Files and
 // Changes side panels (web/plugins/coordinators SpacePanel), all read only. Files browses a folder one folder at a
 // time, with each changed file's letter, and shows a file, highlighted; Changes lists what changed (committed or not,
-// new files too), each file's diff under the list; Pull request shows the task's PR on GitHub (state, size, branch,
-// checks, a link). Their words are the window's own (core/worktree.js VIEW_WORDS). The server reads only that task's
+// new files too), each file's diff under the list; Pull request reviews local commits and inline comments. Their words are the window's own (core/worktree.js VIEW_WORDS). The server reads only that task's
 // or space's folder (service/worktree.ts).
 import clsx from 'clsx'
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { useCopy } from '@client/copy.ts'
 import { definePlugin, setUI, useStore } from '@client/kernel.ts'
 import { escapeHtml, highlighter, HIGHLIGHT_MAX, highlightLine, highlightLines, languageOf, loadHighlighter } from '@client/highlight.ts'
-import { BackIcon, CheckCircleIcon, ClockIcon, CopyIcon, DiffIcon, FileIcon, FolderIcon, ic, IconButton, MinusCircleIcon, NextIcon, OpenIcon, PrIcon, Small, XCircleIcon } from '@client/ui.tsx'
-import type { Diff, DiffFile, FileText, Patch, PrCheck, PullRequest, Task } from '@shared/types.ts'
+import { BackIcon, DiffIcon, FileIcon, FolderIcon, ic, IconButton, NextIcon, OpenIcon, PrIcon, Small } from '@client/ui.tsx'
+import type { Diff, DiffFile, FileText, Patch, Task } from '@shared/types.ts'
 import * as W from '@core/worktree.js'
+import { PrReview } from './review.tsx'
 
 const WORDS = W.VIEW_WORDS as Record<string, string>
 const CHANGE = W.CHANGE_WORDS as Record<string, string>
-const CHECK = W.CHECK_WORDS as Record<string, string>
-const STATE = W.PR_STATES as Record<string, string>
-const checksLine = W.checksLine as (cs: PrCheck[]) => string
 const noChanges = W.noChanges as (label: string | null) => string
 const againstLine = W.againstLine as (label: string | null) => string
 const filesCount = W.filesCount as (n: number) => string
@@ -355,133 +351,12 @@ function PatchView({ task, file }: { task: Task; file: DiffFile }) {
 /* ---------- Pull request ---------- */
 
 /** a state is a soft tint with its word in the colour (red is for what needs you, so Closed is grey) */
-const PR_TONE: Record<PullRequest['state'], string> = {
-  open: 'bg-ready/14 text-ready-fg',
-  draft: 'bg-sel text-fg2',
-  merged: 'bg-merged/14 text-merged',
-  closed: 'bg-sel text-fg2',
-}
-
-const CHECK_ICON: Record<PrCheck['state'], [typeof CheckCircleIcon, string]> = {
-  pass: [CheckCircleIcon, 'text-ready'],
-  fail: [XCircleIcon, 'text-need'],
-  pending: [ClockIcon, 'text-work'],
-  skip: [MinusCircleIcon, 'text-fg3'],
-}
-
-/** the window's branch mark (lucide's git-branch) */
-function BranchIcon({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <line x1="6" x2="6" y1="3" y2="15" />
-      <circle cx="18" cy="6" r="3" />
-      <circle cx="6" cy="18" r="3" />
-      <path d="M18 9a9 9 0 0 1-9 9" />
-    </svg>
-  )
-}
-
-/** a secondary button, as the window's: a thin outline, its icon then its words */
-const outline = 'press-dim relative inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[0.8125rem] whitespace-nowrap text-fg2 shadow-[inset_0_0_0_1px_var(--line2)] after:absolute after:-inset-x-0.5 after:-inset-y-2 hover:bg-hover coarse:h-9 phone:h-9 phone:text-[0.875rem]'
-
-/** Pull request, as the window's: GitHub asked on showing, then every 30 s */
-function PrView({ task }: { task: Task }) {
-  const p = useAsk<{ pr?: PullRequest; why?: string }>(task.id, { what: 'pr' }, 30_000)
-  const { copied: done, copy } = useCopy()
-  const copied = done === 'pr'
-  const pr = p.data?.pr
-  if (!pr) {
-    const text = p.error ? `GitHub didn't answer: ${p.error}` : p.data ? (p.data.why ?? WORDS.noPr) : WORDS.askingGitHub
-    return (
-      <div className="grid flex-1 place-items-center px-6 text-center">
-        <div className="flex max-w-[300px] flex-col items-center gap-2">
-          <PrIcon className="size-[18px] text-fg3" />
-          <Small className={clsx('text-pretty', p.error ? 'text-need-fg' : 'text-fg3')}>{text}</Small>
-        </div>
-      </div>
-    )
-  }
-  return (
-    <>
-      {/* the bar the other views have: its state and number, the size of the change */}
-      <Bar>
-        <span className={clsx('rounded-full px-2 text-[0.75rem]/5 font-medium phone:text-[0.8125rem]/6', PR_TONE[pr.state])}>{STATE[pr.state]}</span>
-        <span className="text-fg2 tabular-nums">#{pr.number}</span>
-        <span className="flex-1" />
-        {pr.files !== undefined ? <span className="shrink-0 text-fg3 tabular-nums">{filesCount(pr.files)}</span> : null}
-        {pr.add ? <span className="shrink-0 text-ready-fg tabular-nums">+{pr.add.toLocaleString('en')}</span> : null}
-        {pr.del ? <span className="shrink-0 text-need-fg tabular-nums">−{pr.del.toLocaleString('en')}</span> : null}
-      </Bar>
-      <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain">
-        <div className="flex flex-col gap-4 p-4 phone:p-5">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-[0.875rem]/6 font-semibold text-pretty phone:text-[1.0625rem]/7">{pr.title}</h3>
-            {pr.head ? (
-              <div className="flex min-w-0 items-center gap-1.5 text-[0.75rem] text-fg3 phone:text-[0.875rem]">
-                <BranchIcon className="size-3 shrink-0" />
-                <span className="min-w-0 truncate">{`${pr.head} → ${pr.base ?? ''}`}</span>
-              </div>
-            ) : null}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <a href={pr.url} target="_blank" rel="noreferrer" className={outline}>
-                <OpenIcon className={ic} />
-                {WORDS.openOnGitHub}
-              </a>
-              <button type="button" onClick={(e) => void copy(pr.url, 'pr', e)} className={outline}>
-                <CopyIcon className={ic} />
-                {copied ? WORDS.copied : WORDS.copyLink}
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-baseline justify-between gap-2 text-[0.75rem] phone:text-[0.875rem]">
-              <span className="font-medium text-fg2">{WORDS.checks}</span>
-              {pr.checks.length ? <span className="min-w-0 truncate text-fg3 tabular-nums">{checksLine(pr.checks)}</span> : null}
-            </div>
-            {pr.checks.length ? (
-              <ul role="list" className="-mx-2">
-                {pr.checks.map((c, i) => {
-                  const [Icon, color] = CHECK_ICON[c.state]
-                  const word = CHECK[c.state]
-                  const body = (
-                    <>
-                      <Icon className={clsx(ic, color)} />
-                      <span className="min-w-0 flex-1 truncate">
-                        <span className="sr-only">{word}: </span>
-                        {c.name}
-                      </span>
-                      {c.url ? <OpenIcon className={clsx('size-3 shrink-0 text-fg3')} /> : null}
-                    </>
-                  )
-                  return (
-                    <li key={`${c.name}${i}`}>
-                      {c.url ? (
-                        <a href={c.url} target="_blank" rel="noreferrer" className="press flex min-h-[30px] items-center gap-2 rounded-row px-2 text-[0.8125rem] hover:bg-hover coarse:min-h-11 phone:min-h-11 phone:text-[0.9375rem]">
-                          {body}
-                        </a>
-                      ) : (
-                        <div className="flex min-h-[30px] items-center gap-2 px-2 text-[0.8125rem] coarse:min-h-11 phone:min-h-11 phone:text-[0.9375rem]">{body}</div>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : (
-              <Small className={pr.checksError ? 'text-need' : 'text-fg3'}>{pr.checksError || WORDS.noChecks}</Small>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-
 export default definePlugin({
   name: 'worktree',
   setup(reg) {
     // as the window's task view: Pull request once the task has one (itemsFor). Files and Changes are the space's side
     // panels only (web/plugins/coordinators SpacePanel), no longer a task's tabs (SHEP-143)
-    reg.taskPanel.push({ id: 'pr', order: 20, label: 'Pull request', Icon: PrIcon, View: PrView })
+    reg.taskPanel.push({ id: 'pr', order: 20, label: 'Pull request', Icon: PrIcon, View: PrReview })
   },
 })
 

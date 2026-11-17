@@ -36,6 +36,7 @@ from .scheduler import ensure_scheduler
 from .proof import evidence, find_proof
 from .when import when_from
 from .workflow import policy as git_workflow, require_base, require_task_base, task_base
+from .human_review import required as human_review_required, require_approval
 
 
 # ---- commands -------------------------------------------------------------------------------
@@ -1076,6 +1077,9 @@ def tell(s, t, msg, args):
 
 def local_merge_msg(s, t):
     require_task_base(t)
+    if human_review_required(t):
+        raise Fail("This branch needs updating before it can fast-forward. Update and check it, then ask the person "
+                   "to review the new PR Diff; an agent must not rebase and merge after approval.")
     main, wt, br, base = s.loc["folder"], t["worktree"], t["branch"], t.get("base") or "main"
     q = shlex.quote
     return (f"Merge task {s.ref(t)} \"{t['title']}\" now:\n"
@@ -1106,6 +1110,7 @@ def merge_now(s, t):
     s.dirty = True
     note_checks(s, t, v)
     if v.get("state") != "MERGED":
+        require_approval(s, t, v)
         problem = pr_problem(v)
         if problem:
             t["attention"], t["attention_at"] = problem, now()
@@ -1179,6 +1184,7 @@ def cmd_merge(args):
         require_task_base(t)
         if t.get("mode") != "worktree" or not t.get("worktree"):
             raise Fail(f"{s.ref(t)} works in the folder itself; there is nothing to merge.")
+        require_approval(s, t)
         sent, started, how = None, False, "agent"
         if t.get("pr") or own_open_pr(s, t):
             # On GitHub: Herdr merges the pull request itself (squash), then tidies up here.
@@ -1191,6 +1197,13 @@ def cmd_merge(args):
             elif error == WAITS_APPROVAL:
                 error += " Merge again once it's approved."
         else:
+            if human_review_required(t):
+                if not ff_merge(s, t):
+                    raise Fail("The reviewed branch cannot fast-forward. Update it and request a new human review.")
+                t["merged"] = True
+                finish(s, t, even_if_busy=True)
+                say(args, view(s, t), f"{s.ref(t)}: reviewed branch merged.")
+                return
             t["merge_requested"] = now()
             s.dirty = True
             sent, started = tell(s, t, local_merge_msg(s, t), args)
@@ -1224,7 +1237,10 @@ def ff_merge(s, t):
     checked out in the main folder and the branch already holds it: exactly the tested work, no
     new combination). Returns whether it did; git refuses to touch uncommitted files."""
     require_task_base(t)
+    reviewed = require_approval(s, t)
     main, br, base = s.loc["folder"], t.get("branch"), t.get("base") or "main"
+    if reviewed:
+        br = reviewed["head"]
     ok, cur, _ = git(main, "symbolic-ref", "--short", "HEAD")
     if not (br and git(main, "merge-base", "--is-ancestor", base, br)[0]):
         return False
@@ -1266,6 +1282,7 @@ def cmd_accept(args):
         if t["state"] != "ready":
             raise Fail(f"{s.ref(t)} isn't ready ({t['state']}); only a Ready task can be accepted.")
         require_task_base(t)
+        require_approval(s, t)
         t.pop("attention", None)
         wt = t.get("worktree") if t.get("mode") == "worktree" else None
         t["accepted_at"] = now()

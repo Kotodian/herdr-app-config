@@ -23,8 +23,8 @@ from .base import run
 
 # What the person does from the window, the web app or a menu: run there whole, result read back.
 ACTIONS = {"add", "start", "done", "accept", "reopen", "unarchive", "edit", "rm", "review", "review-more", "star",
-           "fix", "merge", "resume", "switch"}
-READS = {"list", "show", "where"}
+           "fix", "merge", "resume", "switch", "approve-review", "review-comment", "request-changes"}
+READS = {"list", "show", "where", "review-diff"}
 WAIT = 25.0      # the window stops a command at 30 s: answer before that
 PENDING = 75     # exit code: still running there, follow it with _job
 STEP_MAX = 1.0

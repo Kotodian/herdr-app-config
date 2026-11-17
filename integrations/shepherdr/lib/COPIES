@@ -30,6 +30,9 @@ core/autopilot.js: pane-chat shepherdr-settings
 core/chat-reader.js: chat
 core/clean-env.js: chat
 core/worktree.js: task-pr
+core/pr-diff.js: task-pr
+core/pr-syntax.js: task-pr
+core/pr-syntax-engine.js: task-pr
 core/recipe.js: artifacts chat
 core/task-artifacts.js: chat task-artifacts
 core/newspace.js: newspace
@@ -62,4 +65,4 @@ usage.js: tabs-tasks chat shepherdr-settings artifacts jump accept-card toasts
 core/usage.js: tabs-tasks chat shepherdr-settings artifacts jump accept-card toasts
 dirs.js: accept-card artifacts chat chat-models coordinator jump menu-tasks new-menu-tasks newspace pane-chat shepherdr-settings spaces-chat tabs-tasks task-browser tasks toasts workspace-status-chat
 core/paths.js: accept-card artifacts chat chat-models coordinator jump menu-tasks new-menu-tasks newspace pane-chat shepherdr-settings spaces-chat tabs-tasks task-browser tasks toasts workspace-status-chat
-core/pending.js: tasks accept-card tasks-menu chat
+core/pending.js: tasks accept-card tasks-menu chat task-pr

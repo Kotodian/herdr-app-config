@@ -6,13 +6,13 @@ import { VIEW_WORDS, CHECK_WORDS, PR_STATES, dirEntries, markOf, noChanges, agai
 // each of them (word for word), so the two can't drift apart. Files and Changes are Herdr's own side panels in the
 // window (no task tab since SHEP-143), so only the web's views read their words.
 const mod = (name) => readFileSync(new URL(`../mods/${name}/main.js`, import.meta.url), "utf8");
-const PR_WORDS = ["askingGitHub", "noPr", "noBranch", "openOnGitHub", "copyLink", "copied", "checks", "noChecks"];
+const PR_WORDS = ["openOnGitHub"];
 
 describe("the task views' words are the window's", () => {
   test("every word of Pull request is in the window's mod", () => {
     const window = mod("task-pr");
-    const said = Object.entries({ ...Object.fromEntries(PR_WORDS.map((k) => [k, VIEW_WORDS[k]])), ...CHECK_WORDS, ...PR_STATES });
-    for (const [k, w] of said) expect([k, typeof w === "string" && window.includes(w)]).toEqual([k, true]);
+    for (const key of PR_WORDS) expect(window).toContain(`VIEW_WORDS.${key}`);
+    expect(window).not.toContain('exec("gh"');
   });
   test("the templated lines", () => {
     expect(noChanges("main")).toBe("No changes against main");

@@ -64,7 +64,7 @@
       "sha256": "d2bce1f11623eca9b3da84038295447819ce2c51ca53642f5a346050a700d0ec"
     },
     "git-workflow.json": {
-      "sha256": "a3ca0e565cc9e0a09637a3cfdbe755582e7672d39cadaf34a1e12b69d15d8b3a"
+      "sha256": "a3e5ee0bd58904209565e255bf5d40784010e127d19a0b651138b8bfcba6af48"
     },
     "integrations/shepherdr/AGENTS.md": {
       "sha256": "3622d6754547efc7fd5d2fc70c612e003a2b127126da9798dfdcdf1e30ca4454"
@@ -84,6 +84,9 @@
     "integrations/shepherdr/RECIPE.md": {
       "sha256": "7dfdffc2d93a8db5628ef3b0f79f305dbc690a68e863faa0870c344c9d66f6bc"
     },
+    "integrations/shepherdr/bin/build-pr-syntax.ts": {
+      "sha256": "823c9de75442fc30264d7dadf99d358854d368358cf8fed1964f376c8b6a022a"
+    },
     "integrations/shepherdr/bin/herdr-browser": {
       "sha256": "b991048a0dc959f793797fbf0d2f901e344380133d5abdc93c9170c88e5409a1"
     },
@@ -92,6 +95,9 @@
     },
     "integrations/shepherdr/bin/herdr-secret": {
       "sha256": "db63ed5b3938d37cd62420e57d13459b0a122960bf9129c55871ca9b489ec705"
+    },
+    "integrations/shepherdr/bin/pr-syntax-entry.js": {
+      "sha256": "788a05d54107f1ef9244e939d1f9856bdd2d12424f86c3889d0eacc35ca095d8"
     },
     "integrations/shepherdr/bin/shepherdr": {
       "sha256": "2ea20cabba73d7dcbb897e88ad14b516e7121f32bbdaccaddabb58d3292698b4"
@@ -267,6 +273,24 @@
     "integrations/shepherdr/core/person.test.js": {
       "sha256": "b2710553212a8f36c6125dac36f3c3702ea5b49d40d79670337588bba33bc3f3"
     },
+    "integrations/shepherdr/core/pr-diff.js": {
+      "sha256": "83f3f696580282436ba80abbb7c0f994db6357e3de190f03b6c9461df58bfb2e"
+    },
+    "integrations/shepherdr/core/pr-diff.test.js": {
+      "sha256": "4cf9b5fb9243f934e80feeea84a9ee637643aa7f9c79b29206240feafd7fa23e"
+    },
+    "integrations/shepherdr/core/pr-review.test.py": {
+      "sha256": "3b6748b326088d4c88c308a765f7ca61b7eba8d182efece0f25fd6551ab7f9fc"
+    },
+    "integrations/shepherdr/core/pr-syntax-engine.js": {
+      "sha256": "fc439a465d870061f0c05bcd355834ba9bf9a474b94197bcfb811e6bb70051a3"
+    },
+    "integrations/shepherdr/core/pr-syntax.js": {
+      "sha256": "65d0067f455b7ed76e701223682f42390896597671fa2d9b7d8bbb7ce820b805"
+    },
+    "integrations/shepherdr/core/pr-syntax.test.js": {
+      "sha256": "d09aefa13e2cbc5c9aebdbaf7120cb87b4e27d00c80419b7b42421107e4b1587"
+    },
     "integrations/shepherdr/core/recipe.js": {
       "sha256": "e4346ccd380a68e8757c91a17b0622e713eb04ca09dde969f31dae31e98a3f0e"
     },
@@ -355,7 +379,7 @@
       "sha256": "fa179da7c76347d1b7e73f8aa31cc5705cbed2af2a7313c71c93fa6c18113751"
     },
     "integrations/shepherdr/core/worktree.test.js": {
-      "sha256": "b58768225113b65803ac6b2d05279d8777f210751d1af20418cadae19d88d02b"
+      "sha256": "1176fb73a32a2c20543bcf4ef780c978e078322e3fe924bbd6434178b7ecdc24"
     },
     "integrations/shepherdr/docs/addons.md": {
       "sha256": "776ac6f5ade867e9e8ea7c7a4296e1fc8a52bd16c7ab6b7120d515962d7f6d49"
@@ -405,6 +429,9 @@
     "integrations/shepherdr/docs/parity/tasks.md": {
       "sha256": "78572e6fde219fc09218d83e28bb4ac59159bfb02785368d6ac5f307372b25ee"
     },
+    "integrations/shepherdr/docs/pr-review.md": {
+      "sha256": "4f13ba4680bbee21788ca168a1a50590dd84a6d69c07c217f41da019c2cadc32"
+    },
     "integrations/shepherdr/docs/settings.md": {
       "sha256": "b928d2e04b4c5419f5350cf786609f8874dd5f83a4bb3634ddb8ba1874f414b0"
     },
@@ -427,7 +454,7 @@
       "sha256": "663af52d0ffd63148f9638de409c838c958715f903b2ee18200a85cd7c0d8696"
     },
     "integrations/shepherdr/lib/COPIES": {
-      "sha256": "4c86cc95a65d00281a7d9f07549eaec727923153fca4df38f482d6ca6b23e65e"
+      "sha256": "176dec9eec98376238e30e16aeab0f18debcac9ececc48aa34d7b5542239d53d"
     },
     "integrations/shepherdr/lib/UI.md": {
       "sha256": "cb9d134dd33ba03bb996d14df1f0630f7d337a605221a085f00cc4aa69e1abee"
@@ -531,8 +558,14 @@
     "integrations/shepherdr/mods/accept-card/dirs.js": {
       "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
     },
+    "integrations/shepherdr/mods/accept-card/gpui-kit.d.ts": {
+      "sha256": "6258d95fbb65c8930f99c0ec5fc15a489bc1a04d02e3bcd76c36463c07891dae"
+    },
+    "integrations/shepherdr/mods/accept-card/jsconfig.json": {
+      "sha256": "76f43dd8eb9005eee9ed713cc437052788bd3900bfb81f9b71d6f0a609e47f5c"
+    },
     "integrations/shepherdr/mods/accept-card/main.js": {
-      "sha256": "39af10619c5ec92304cad8b7449bba1ab0c196dae2c641008346812b268af093"
+      "sha256": "629412798a9c16863262d07dc4260267098ee671078a60e8adf976e0a888c18d"
     },
     "integrations/shepherdr/mods/accept-card/mod.json": {
       "sha256": "e8e0a91d23a0addf19f9f4dab48f597f252a1d44e5063e4d6ae884a88cbf735d"
@@ -900,6 +933,12 @@
     "integrations/shepherdr/mods/chat/git-fork.svg": {
       "sha256": "b5086f76b1d2cc9d078c31b55bc71191fe46bb8fd68b6ac8d8abf0e1a52c3788"
     },
+    "integrations/shepherdr/mods/chat/gpui-kit.d.ts": {
+      "sha256": "6258d95fbb65c8930f99c0ec5fc15a489bc1a04d02e3bcd76c36463c07891dae"
+    },
+    "integrations/shepherdr/mods/chat/jsconfig.json": {
+      "sha256": "76f43dd8eb9005eee9ed713cc437052788bd3900bfb81f9b71d6f0a609e47f5c"
+    },
     "integrations/shepherdr/mods/chat/key.svg": {
       "sha256": "59464a10df711bbff7def8b14ee36f6996d82490a24cecfdfaebf0681f411d8d"
     },
@@ -937,7 +976,7 @@
       "sha256": "17af1ffe9895960160a4133d7e252e4a1e99c0e9595b9ba8db0d48d47a6bd326"
     },
     "integrations/shepherdr/mods/chat/panel.js": {
-      "sha256": "43969ee0942e69ff5db4b504e01350839a0edfe362cfe6692f98cf1a1e159d70"
+      "sha256": "ea79695905677d8895c6e1261d1d6bf37e2ebfa1b4e7880bb0ac21eea9b3e265"
     },
     "integrations/shepherdr/mods/chat/paperclip.svg": {
       "sha256": "7f169197671d317ad4c41c93e2d304bef7ffcd8adecc8f5f17ed201614402ffd"
@@ -1728,14 +1767,32 @@
     "integrations/shepherdr/mods/task-pr/circle-x.svg": {
       "sha256": "3a80fd14a83b521ac167292792138dab339c0eca0b3b8b41c3c2a83cda7a6246"
     },
+    "integrations/shepherdr/mods/task-pr/core/pending.js": {
+      "sha256": "d7ba0030309bb8bf57679c47a48f33b120a4e3c23931b52764b72a50dcd51fbd"
+    },
+    "integrations/shepherdr/mods/task-pr/core/pr-diff.js": {
+      "sha256": "83f3f696580282436ba80abbb7c0f994db6357e3de190f03b6c9461df58bfb2e"
+    },
+    "integrations/shepherdr/mods/task-pr/core/pr-syntax-engine.js": {
+      "sha256": "fc439a465d870061f0c05bcd355834ba9bf9a474b94197bcfb811e6bb70051a3"
+    },
+    "integrations/shepherdr/mods/task-pr/core/pr-syntax.js": {
+      "sha256": "65d0067f455b7ed76e701223682f42390896597671fa2d9b7d8bbb7ce820b805"
+    },
     "integrations/shepherdr/mods/task-pr/core/worktree.js": {
       "sha256": "fa179da7c76347d1b7e73f8aa31cc5705cbed2af2a7313c71c93fa6c18113751"
     },
     "integrations/shepherdr/mods/task-pr/git-pull-request.svg": {
       "sha256": "57d788bdf4d3407249c0eeb1e65e9fa18b5bed5c74b48df9a90b5b0af44fddec"
     },
+    "integrations/shepherdr/mods/task-pr/gpui-kit.d.ts": {
+      "sha256": "6258d95fbb65c8930f99c0ec5fc15a489bc1a04d02e3bcd76c36463c07891dae"
+    },
+    "integrations/shepherdr/mods/task-pr/jsconfig.json": {
+      "sha256": "76f43dd8eb9005eee9ed713cc437052788bd3900bfb81f9b71d6f0a609e47f5c"
+    },
     "integrations/shepherdr/mods/task-pr/main.js": {
-      "sha256": "954929008ba81ce817b3a2ab58bdf93ca10b8e6be5e8bdb6851a179b255b914a"
+      "sha256": "ba01222d729354a595bfb2580011b00eac679f630f55a720253e0286e78b357f"
     },
     "integrations/shepherdr/mods/task-pr/mod.json": {
       "sha256": "e8e0a91d23a0addf19f9f4dab48f597f252a1d44e5063e4d6ae884a88cbf735d"
@@ -1792,10 +1849,10 @@
       "sha256": "240854267a491d28ec62023450e19e840f574b8de79a266593250481d94f9d00"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/cli.py": {
-      "sha256": "6018a24b20b436e609af9a138f3c2884fdeac79bf7ac36431e58efb0a8695de9"
+      "sha256": "4fba3293588baa6e7d759849636af13752e5658a1593790eba8fff0bd9bdc9f4"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/commands.py": {
-      "sha256": "34b03c066713ff2bac84f06431c8fb32ee61edd5104f377c01e99e032140de5a"
+      "sha256": "86c9315c3fa5095b1735ade25c00032f644d69470b1add0376e1076883e50f2c"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/decision.py": {
       "sha256": "b5b07456e9a005a09d3f76b7d56d5b7015ab80393e26234fdf84d1b069b3f580"
@@ -1810,10 +1867,13 @@
       "sha256": "ddeff820e5594b29d9fe8144c8f3c84088babf5fbcd63815f803ed40c0dc9b95"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/github.py": {
-      "sha256": "3349b8e018723dc846828661c5707b6370b6f8221ac462fd048da9455de4c88f"
+      "sha256": "08fedca37aa9ee847932d397c9550ebdee18a4c2b97056d5e684977d5543df04"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/home.py": {
       "sha256": "77baa7d6c647664382559ac8258c49aaf083a161412754d98d9092d4d22635db"
+    },
+    "integrations/shepherdr/mods/tasks/bin/herdr_task/human_review.py": {
+      "sha256": "4aa68a7ac6b1fb4006c6a0af6702c13ba841044b1f19a45af2121b12da87dc4b"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/launch.py": {
       "sha256": "05bf72ca1eacc65091bb9543009ffa212324ab04e89762230b4c099c0611d58f"
@@ -1822,7 +1882,7 @@
       "sha256": "7ff1caf3f6c8a6400dbeafc0edbe70ea40625e5e11525aaaf0e05f38ff7c19b5"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/link.py": {
-      "sha256": "c62477ff20e5978667bf421385e4748b49ed10dc722ee530d10e9dfb09dd0f8d"
+      "sha256": "fc106bed981c525b3569f0086e0a87d09e271c0926626fe64662f28647001c02"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/machine.py": {
       "sha256": "ba5c3d36704ddebb014a0fb5f8b9852ed128125e09f577b76d8a7a19f57c8e89"
@@ -1837,7 +1897,7 @@
       "sha256": "7dcbc18493afe02e76cd2c1150be61e8be4befd43504348f3764267f90a8210b"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/proof.py": {
-      "sha256": "d3261fce3a15a0c4ea387317b284c7e237e6578a45e8912e08df3014fb14e44d"
+      "sha256": "d33114fedc2447bad3ff60ee430694a7183d70e9e9d87ac13d0a13afb995449a"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/provider.py": {
       "sha256": "e94d5a725a3b1ca8a356f36ca02f281433c8ac8630e69c3b953347e0a1f787d1"
@@ -1873,7 +1933,7 @@
       "sha256": "0d75632f2b4757c0adf2b7d48f9c7c02f03d28ad580d8a9a266d31e9bb7d7077"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/tick.py": {
-      "sha256": "c1caf0051f893906a37baf86a671191db655b36fd7c6e13403c642e606c59d43"
+      "sha256": "3b8ceba5b27e7f1ecbf5476f4c937b58ca01839ed4d4fffbb5002f436261edbd"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/when.py": {
       "sha256": "c394719c9193482722e7c3ccc141b4ebb9569a1239cc6de11fcc69fe2d1fba8d"
@@ -2233,7 +2293,7 @@
       "sha256": "7e70733286a10ecd9e3c4bf3b264f93cff738a20810722a17bf55014c53c86ed"
     },
     "integrations/shepherdr/service/actions.ts": {
-      "sha256": "336e45b99301835c4fe971ea446039c36aac39cb8f4b3480f891eae03984ad4d"
+      "sha256": "ac161add3d197101af8dd6091bf0b057ca62e4f7b817b09a5514c587c03a4127"
     },
     "integrations/shepherdr/service/agents.ts": {
       "sha256": "653e3eb5dc066176f059217f846c156577a7c65dd2e7b096071932e7332ae3c5"
@@ -2314,7 +2374,7 @@
       "sha256": "90e7f4059608e4cfe1acef3975af841defb7db476ed41d809ae6c579b01726a0"
     },
     "integrations/shepherdr/service/fake-herdr.ts": {
-      "sha256": "85eb841ef5b9663e9900be93169f329ed2382db2a9894869960d0f24b82fca8f"
+      "sha256": "37b47e07a28aa8e5e14da56bfd4b022b563319c70b91da7cf9c3ac74ef07cc9e"
     },
     "integrations/shepherdr/service/first-message.test.ts": {
       "sha256": "e69a53831a5201923c3d097e8e59f39a779da099d2383d0992a9aed449d44cae"
@@ -2396,6 +2456,9 @@
     },
     "integrations/shepherdr/service/peer.ts": {
       "sha256": "bc7530fc388097856c76a304a26caa6c43c86edf44c84f0fb3328fe873a8bd93"
+    },
+    "integrations/shepherdr/service/pr-review.test.ts": {
+      "sha256": "9019688d2fa6ced646b0bd8e9556d683cbdcdf15e8d21840d13e5ab63ac4a8ae"
     },
     "integrations/shepherdr/service/push-topics.test.ts": {
       "sha256": "5511571a54872247469b362c5c92be38878a6f53ca1709e04ef3dfaa66a414d2"
@@ -2518,7 +2581,7 @@
       "sha256": "c0dff33a5b1c24ed45330fb5115ce66dbef997d233948974deb1c92b2a35343e"
     },
     "integrations/shepherdr/service/voice-data.ts": {
-      "sha256": "27a73e03bf4e391f352172746caab7ca83b9eb6486c3780824d39ca2f86d7678"
+      "sha256": "7eba5556ee4c1d42f105263227b47d60b45bb1e671f118bc3487f0e72d72dc27"
     },
     "integrations/shepherdr/service/voice-hear.test.ts": {
       "sha256": "2be64e2b49e161b021b9c64d913a1353d23345b00abee38955c8f436e7c3e6f4"
@@ -2548,16 +2611,16 @@
       "sha256": "66dc3b724335f7d288e902918b65c73576ca028fade36717f92adfb12051c403"
     },
     "integrations/shepherdr/templates/assistant.md": {
-      "sha256": "deb33873f637c676a36cc65dc3b97205a02d00c8c42a37ab8614d8e95a14623f"
+      "sha256": "fa450f6c9605f0b269f0a352888a1196293907b30745f1c38cbef775467d7918"
     },
     "integrations/shepherdr/templates/decider.md": {
       "sha256": "8749ae86a4bc79e7d9a585ba4d6f2a237674802e586605b6921372787a243571"
     },
     "integrations/shepherdr/templates/reviewer.md": {
-      "sha256": "41d65777010d2d53c9c180d8d8a15b27399a1217ece2a3d6a0bc757aa97c832a"
+      "sha256": "05260873445a8f45f6ca6a0fd38de779b3b5d95308ddb70bc5e6bf4d062a38dd"
     },
     "integrations/shepherdr/templates/worker.md": {
-      "sha256": "05a0781db61ad2ecde0f61cfb99bfc71a70b21a04ef07b38b6d0ceba90f9ebcb"
+      "sha256": "d04915ac490c71cc57f7a5431ae54051be3a36036b0bd4e2068278ee1725ad05"
     },
     "integrations/shepherdr/tsconfig.json": {
       "sha256": "98fdd40aa0f315646b1f23bc275a3cfeffdec6718fc69d3deeb89d7686a1b73d"
@@ -2575,7 +2638,7 @@
       "sha256": "4a2f43ce46b5b6e3722c95088f88d26ef91e6a8c2e598e70642a1c54367386e4"
     },
     "integrations/shepherdr/web/dist/artifact-viewer.html": {
-      "sha256": "b4177feeee553c18fcd190bb9aba048ca0ff5d225b2d443e7869329dd78020a7"
+      "sha256": "7dcc47d5d332187335c6e006fd69f0e6afb622376315e2396818c7b0c38f1a9f"
     },
     "integrations/shepherdr/web/dist/assets/InterVariable-DiVDrmQJ.woff2": {
       "sha256": "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3"
@@ -2592,11 +2655,11 @@
     "integrations/shepherdr/web/dist/assets/emoji-data-2mkAH_hx.js": {
       "sha256": "64e7428a1eff00a2c7596592d0a0718322c3a17d2db6a7188916b7214608642c"
     },
-    "integrations/shepherdr/web/dist/assets/index-BXe8l1oS.js": {
-      "sha256": "3a0d13cf1ca39acfc109beaa0aad63ab21c7040c74d72e16e3761be733945893"
+    "integrations/shepherdr/web/dist/assets/index-CxqntTIf.js": {
+      "sha256": "2148ff3285b4cec67bfae56f9ced74550f6c1c17485ec4e30cc0d6599b090079"
     },
-    "integrations/shepherdr/web/dist/assets/index-DLhyiafy.css": {
-      "sha256": "f4dd7ab0ce3be1ff49930a3ca8998c4032ef1a57c07c933ff150f76a87e34b9e"
+    "integrations/shepherdr/web/dist/assets/index-y5dJ_Hgz.css": {
+      "sha256": "4657d95195c0a1854c2d319435a3ea12b05af31797918b833a77716a89ff3e34"
     },
     "integrations/shepherdr/web/dist/assets/rolldown-runtime-XKyaHtl9.js": {
       "sha256": "548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"
@@ -2623,7 +2686,7 @@
       "sha256": "bcf4b3373dcfc941fe3fe534e85e9d7491cccda5cd13cf18d3d243c34fa96760"
     },
     "integrations/shepherdr/web/dist/index.html": {
-      "sha256": "ea301ebf886b246ea3c558e0cc5e387392fe89e5b8bb77da7356d4c702e8ae58"
+      "sha256": "641675cc0d194bc6003e5622a51682ea57673fc0befd606f209ad43ec90034db"
     },
     "integrations/shepherdr/web/dist/manifest.webmanifest": {
       "sha256": "f01389b0b16c46d432ce59047f27ce8c347986396e32667960b41302f294e59f"
@@ -2851,7 +2914,10 @@
       "sha256": "7ad767fcedcf2f4a537caf40d4d1caf522ec6e0123b205ded61429b9b3c0a683"
     },
     "integrations/shepherdr/web/plugins/worktree/client.tsx": {
-      "sha256": "e352839549cc74107c23a12384708889ece8138753950ab6285ffeac650c4672"
+      "sha256": "80c1a95db6e1d54a822e4198141d0f2acbca6569c2c85272f4059c4fd9a25587"
+    },
+    "integrations/shepherdr/web/plugins/worktree/review.tsx": {
+      "sha256": "2fd3dfa87a1d623c579f2edfac43969e064039f2ad94df59bf5532855f246909"
     },
     "integrations/shepherdr/web/public/agents/LICENSE-LobeHub.txt": {
       "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
@@ -2983,7 +3049,7 @@
       "sha256": "90eae5ffe8cb4e9446098a04ba0b830058d3d47ddf222dd7ebb9cc9659ab6401"
     },
     "integrations/shepherdr/web/shared/types.ts": {
-      "sha256": "8faacff29195b7ff4b1191a749bc233334f3a845e82956d930acf4b88eb86db2"
+      "sha256": "adc140d10874c74d7c755e12d79f625dedeffa5123ea5932cdb76ca05049a053"
     },
     "integrations/shepherdr/web/src/App.tsx": {
       "sha256": "04a47e22339de2cf38210c94a93118149dc7abf5d341d9c0350653d5de651c5d"
@@ -2995,7 +3061,7 @@
       "sha256": "87562bbff7855b966e1698d5b788dbdd63ef58e756218d8f2684b8ed8fc7fd99"
     },
     "integrations/shepherdr/web/src/Panel.tsx": {
-      "sha256": "d48ed27ef60799491002af9c207de172775e3457e2540b09c0720aed43d57363"
+      "sha256": "ecede59878135c63fd0f7b833f124e31effbb4c0fff18a73804533600cc24452"
     },
     "integrations/shepherdr/web/src/Settings.tsx": {
       "sha256": "33696922b21d8d2c428a45aad661ace834d99cbedc803d4ecefcc6c30d291369"
@@ -3058,7 +3124,7 @@
       "sha256": "00cddebf7e80540ae3962b23d3886ce48b8236656affd88f3123e35dbe4533b6"
     },
     "integrations/shepherdr/web/src/main.tsx": {
-      "sha256": "8e204229548fb69c67b8550bf21ea2b5e897f96e39037fbdbf391c440f1d0bac"
+      "sha256": "f90723164c46febfd31a25fd342e7f3a7e10b4cd34b2690a2d7108f11c4b8f3d"
     },
     "integrations/shepherdr/web/src/meter.ts": {
       "sha256": "1ea45e1bb02d1c620954f3db21268f21a7fb7ea691786d4d91b6c27f3ef70c1e"
@@ -3100,10 +3166,10 @@
       "sha256": "e60a1d4f8ae7ca168b0a389fac49b6a60908c0a78f6fbc9cd507cef5c4991b02"
     },
     "integrations/shepherdr/web/src/rowmenu.tsx": {
-      "sha256": "8abfcde64c9baef199b9578910f9aef6289368e55230fd768c388e27be6eb8c3"
+      "sha256": "86df3c206a0945164fbb56d5e97d289284ee22d681e7a0b248b703829742635d"
     },
     "integrations/shepherdr/web/src/screens/Accept.tsx": {
-      "sha256": "ec5c7e3c263b3c337484034676ffe32f499098a3dc7c3ab6008fd1426d78cb92"
+      "sha256": "ecbe79b9906c6ab49defef8f7c58ac4d792c0a2e28e64eb5980f648bbeac7d8e"
     },
     "integrations/shepherdr/web/src/screens/AddMachine.tsx": {
       "sha256": "faa2711006de0c520b7f737717e1c77d57555b5fd1f1fd49b587647457444fae"
@@ -3127,7 +3193,7 @@
       "sha256": "0afd801f935aaf039e1ea5441d977a546339e4cf1c42620404fb158c09126a20"
     },
     "integrations/shepherdr/web/src/styles.css": {
-      "sha256": "f101622b714df502aa8595ac3de2ed0cd32b4a89d8b4163778dc03dc3a392051"
+      "sha256": "1e38221a5b5a0970678608285c8104219483ed320e0c7a30876c29e6e97d2c1c"
     },
     "integrations/shepherdr/web/src/theme.ts": {
       "sha256": "3d6614fe0556df7f8fd720e04d95de778f1d7061791c202b2f408d3eee6f9a48"

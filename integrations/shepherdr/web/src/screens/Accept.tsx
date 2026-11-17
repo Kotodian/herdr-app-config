@@ -15,8 +15,10 @@ import { Markdown } from '@plugins/chat/markdown.tsx'
 import { ArtifactFrame } from '@plugins/artifacts/client.tsx'
 // the card's words, the summary's cut and the details as bullets: the window's own (core/accept.js)
 import * as A from '@core/accept.js'
+import { openPrReview } from '@plugins/worktree/review.tsx'
 
 type Evidence = {
+  human_review_required?: boolean
   summary?: string
   details?: string
   proof?: { id: string; title: string } | null
@@ -150,6 +152,7 @@ export function AcceptCard() {
 
   const accept = async () => {
     if (!ready || busy) return
+    if (e.human_review_required) { close(); openPrReview(task); return }
     setBusy(true); setError(null); setAccepting(task, true)
     try {
       await act({ type: 'accept', task } as never)
@@ -216,7 +219,7 @@ export function AcceptCard() {
         </>
       ) : null}
       // Accept shows while it is read too, not yet pressable; once settled only Close is left
-      buttons={settled ? null : <Primary disabled={!ready || busy} onClick={accept}>{busy ? A.ACCEPT.accepting : A.acceptLabel(e)}</Primary>}>
+      buttons={settled ? null : <Primary disabled={!ready || busy} onClick={accept}>{busy ? A.ACCEPT.accepting : e.human_review_required ? '查看 Diff 并审核' : A.acceptLabel(e)}</Primary>}>
       {!t ? (
         <div className="pt-2 pb-1"><p className={error ? 'text-need-fg' : 'text-fg3'} role={error ? 'alert' : undefined}>{error ?? A.ACCEPT.reading}</p></div>
       ) : proofArt ? (

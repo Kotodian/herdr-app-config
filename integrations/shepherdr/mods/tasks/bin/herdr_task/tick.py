@@ -26,6 +26,7 @@ from .archive import archive_pass
 from .browsers import browser_pass
 from .output import progress_clock, say
 from .commands import back_to_work, begin, merge_now, MERGE_FAILED
+from .human_review import require_approval
 from .news import news_pass, typing
 from .takeover import cant_go_on, takeover
 from .ghnews import main_pass, pr_deliver, pr_news
@@ -72,6 +73,12 @@ def queue_pass(s, t, v, report):
     why = (q.get("reason") or "").strip().rstrip(".")
     head = v.get("headRefOid")
     if "timed_out" in why.lower().replace(" ", "_") and head and t.get("requeued") != head and not pr_problem(v):
+        try:
+            require_approval(s, t, v)
+        except Fail as e:
+            t["attention"], t["attention_at"] = str(e), now()
+            s.dirty = True
+            return
         ok, err = queue_merge(t, head)
         if ok:
             t["requeued"], t["merge_queued"] = head, now()
@@ -282,8 +289,14 @@ def tick_store(s, report):
                 except Exception as e:  # never stops the tick
                     report.setdefault("github_error", []).append(f"{s.ref(t)}: {e}")
             if t["state"] == "ready" and t.get("auto_merge") and t.get("pr") and not t.get("attention") and t.get("_pr_fresh"):
-                if not merge_now(s, t):
-                    report["done"].append(t["id"])
+                try:
+                    if not merge_now(s, t):
+                        report["done"].append(t["id"])
+                except Fail as e:
+                    t["attention"], t["attention_at"] = str(e), now()
+                    t.pop("auto_merge", None)
+                    t.pop("accepted_at", None)
+                    s.dirty = True
             t.pop("_pr_fresh", None)
     due_pass(s, report)
     queued = sorted((t for t in s.data["tasks"] if t["state"] == "queued"), key=lambda t: t.get("queued_at") or 0)

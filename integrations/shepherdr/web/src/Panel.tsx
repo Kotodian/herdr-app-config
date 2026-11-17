@@ -155,7 +155,7 @@ export function TabBody({ task, chatKey, children }: { task: Task; chatKey: stri
 const termRunning = (task: Task) => !!task.agent?.running
 
 /** A task's items as 3.0's task view has them: only those it has now (a pull request's once it has one) */
-export const itemsFor = (task: Task) => registry.taskPanel.filter((i) => i.id !== 'pr' || !!task.pr)
+export const itemsFor = (task: Task) => registry.taskPanel.filter((i) => i.id !== 'pr' || !!(task.pr || task.branch))
 
 /** The task view's tabs, as 3.0's (Chat, Terminal, Pull request, Artifacts, Browser): Chat is its chat; another
  *  opens its view, in the side panel on a desktop and over the chat on a phone or tablet */
