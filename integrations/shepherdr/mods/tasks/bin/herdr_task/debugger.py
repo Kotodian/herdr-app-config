@@ -1,17 +1,37 @@
 """Run a separate read-only diagnosis in the reported project's checkout."""
 
+import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import tempfile
+from uuid import uuid4
 
-from .base import Fail, git
+from .base import Fail, git, run
 from .decision import request_prompt
 from .github import remote_of
 from .output import say
 from .settings import TEMPLATES
 from .templates import FRONT
+
+
+def visible_debugger(folder, parent, message):
+    name = f"debugger-{uuid4().hex[:8]}"
+    _, root, _ = git(folder, "rev-parse", "--show-toplevel")
+    # A session override keeps project config disabled without changing saved trust.
+    paths = dict.fromkeys((str(folder), root or str(folder)))
+    projects = "projects={" + ",".join(f'{json.dumps(path)}={{trust_level="untrusted"}}' for path in paths) + "}"
+    result = run(["hc", "run", "--bg", "--json", "--parent", parent, "--name", name, "--cwd", str(folder),
+                  "--label", "herdr.role=debugger", "--label", "herdr.agent=codex", "--",
+                  "codex", "--no-daemon", "--sandbox", "read-only", "--ask-for-approval", "never",
+                  "-c", projects, "-c", "mcp_servers={}", "-c", 'web_search="disabled"',
+                  "--disable", "hooks", "--disable", "apps", "--disable", "plugins",
+                  "--disable", "multi_agent", "--no-alt-screen", "--", message], check=True)
+    try:
+        return json.loads(result.stdout)["address"]
+    except (ValueError, TypeError, KeyError):
+        raise Fail("Could not read the address of the Debugger terminal.")
 
 
 def cmd_debug(args):
@@ -42,6 +62,13 @@ def cmd_debug(args):
     instructions = FRONT.sub("", template.read_text(), count=1)
     message = (f"{instructions}\n\nAffected main revision: {main_commit}\n"
                f"Main reference: {ref} at {main_tip}\n\nReported symptoms and context:\n{symptom}\n")
+    parent = os.environ.get("HC_TERMINAL_ID")
+    if parent and not getattr(args, "headless", False):
+        address = visible_debugger(folder, parent, message)
+        say(args, {"folder": str(folder), "main_commit": main_commit, "terminal": address},
+            f"Debugger started at {address}. Check startup with `hc read {address}`. "
+            f"If it shows Folder access, select Open restricted. Use `hc wait {address}` for the report.")
+        return
     with tempfile.TemporaryDirectory(prefix="shepherdr-debugger-") as scratch:
         report = Path(scratch, "report.md")
         argv = ["codex", "exec", "--ephemeral", "--skip-git-repo-check", "--ignore-rules",

@@ -354,11 +354,11 @@ export function fitThumbs(sizes, width = Infinity) {
 
 // ---- subagents: an agent's own helper agents in herdr (SHEP-54) ----
 // What a worker (or an Assistant) starts with `hc run` for itself: a reviewer, a second opinion. Each is an hc child of
-// its terminal, labelled herdr.role reviewer or helper (herdr.task: its worker's task). Never a task's worker (an
+// its terminal, labelled herdr.role reviewer, helper or debugger. Never a task's worker (an
 // Assistant's children are mostly workers: herdr.task without a helper role) nor an Assistant. Shown over its parent's
 // chat as a subagent row: its role and CLI, working / needs / done, how long, opening to its last messages and its own
 // chat. One that ended stays a while (it reported, its parent ended it).
-export const HELPER_ROLES = ["reviewer", "helper"];
+export const HELPER_ROLES = ["reviewer", "helper", "debugger"];
 export const subagentWord = (status) => (status === "working" ? WORDS.working : status === "needs" ? WORDS.needsYou : WORDS.subDone);
 export const SUBAGENT_KEEP_MS = 60 * 60000;
 
@@ -413,6 +413,7 @@ export function subagentTitle(s) {
 export function subagentStatus(k) {
   if (k?.state && k.state !== "live") return "done";
   const st = typeof k?.status === "object" ? k.status?.state : k?.status;
+  if (!st && roleOf(k) === "debugger") return "working";
   return st === "working" ? "working" : st === "blocked" ? "needs" : "done";
 }
 

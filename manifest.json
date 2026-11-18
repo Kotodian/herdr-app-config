@@ -197,10 +197,10 @@
       "sha256": "7dd07b7adc4e9efea3f45cd4404b1993091794b2801243c807f1fa563be572dd"
     },
     "integrations/shepherdr/core/chat-view.js": {
-      "sha256": "640b5fc15e7ea353ce50600495002156da28d56442cfabe64cb13ace5210cd2a"
+      "sha256": "6d2385a84ad7458a8ef208718a848e02beb87fdb549dbcc62e2fe3d4b09af6ad"
     },
     "integrations/shepherdr/core/chat-view.test.js": {
-      "sha256": "f62f5080cbd1ec2c1a7fc76a0c5cc90867ec3a2c22b459b78ae8de227721a7f0"
+      "sha256": "d4035a4a5a2aef0d32d73531cddc526909f438024a49939bd74675ed8ad364d9"
     },
     "integrations/shepherdr/core/clean-env.js": {
       "sha256": "5eeca3b301d62c790d788e061c7e57ea85dde29832e27556977a21fc65249e1f"
@@ -224,10 +224,10 @@
       "sha256": "f1f1045e48f729c41bdb81fc5c541dbc1dea52f5e42d90aa0964d7e551f55773"
     },
     "integrations/shepherdr/core/decision.test.py": {
-      "sha256": "64e2d38cafc2cf4ed3d103049d0907545eae317cf2bb0190ef8754376dc7770c"
+      "sha256": "8038fd47257c76cd1ca2ac730735447856d9855da79339e0691daa1d2070efbd"
     },
     "integrations/shepherdr/core/git-workflow.test.py": {
-      "sha256": "35eb1d880be6307a3bca61912797a91e3a317c0704b70b2f44927f1b7a79aec9"
+      "sha256": "010653e57eb2902530f42f7b8558e36a2b827c482a6082ee42681e7592e0efd5"
     },
     "integrations/shepherdr/core/grace.cases.json": {
       "sha256": "a733b200d8d2d470d1c755b50002940b0857d4987238b73fbf18e84e809e81e3"
@@ -887,7 +887,7 @@
       "sha256": "7dd07b7adc4e9efea3f45cd4404b1993091794b2801243c807f1fa563be572dd"
     },
     "integrations/shepherdr/mods/chat/core/chat-view.js": {
-      "sha256": "640b5fc15e7ea353ce50600495002156da28d56442cfabe64cb13ace5210cd2a"
+      "sha256": "6d2385a84ad7458a8ef208718a848e02beb87fdb549dbcc62e2fe3d4b09af6ad"
     },
     "integrations/shepherdr/mods/chat/core/clean-env.js": {
       "sha256": "5eeca3b301d62c790d788e061c7e57ea85dde29832e27556977a21fc65249e1f"
@@ -1895,13 +1895,13 @@
       "sha256": "240854267a491d28ec62023450e19e840f574b8de79a266593250481d94f9d00"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/cli.py": {
-      "sha256": "a697993ac7b27c3ba16351676cd3f3fade9341d1a0269b397fe2d3f5ad9cc57c"
+      "sha256": "3f7bf455a9bf331ff0863b52921115d25bc466477f98086cb65997ac0c9f6b00"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/commands.py": {
       "sha256": "de545f550e2f4cb55887dd694d6ea0fdbc480fdb341912430300af887e04cea8"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/debugger.py": {
-      "sha256": "b21f82822196abf489aba5cd1c555a47999efb1f5f4a8ea85fa5fea4be011b00"
+      "sha256": "160d3ad868575e6b587c56c663889c5da538073f7c98c1c0619a85580906f035"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/decision.py": {
       "sha256": "12765946e42f553735c94b16ece268f5bc70c3168d1e71ca71482bb7a28c8d34"
@@ -1928,7 +1928,7 @@
       "sha256": "c5ae29ca2c3c821ed2c65726f702fdd418a7755bd34aca269eb589d92f891b54"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/launch.py": {
-      "sha256": "05bf72ca1eacc65091bb9543009ffa212324ab04e89762230b4c099c0611d58f"
+      "sha256": "0892338d64a14fa3d995e2e77975698e06128cb82c8d23016ed1c0bce5bbb476"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/layout.py": {
       "sha256": "7ff1caf3f6c8a6400dbeafc0edbe70ea40625e5e11525aaaf0e05f38ff7c19b5"
@@ -2672,7 +2672,7 @@
       "sha256": "66dc3b724335f7d288e902918b65c73576ca028fade36717f92adfb12051c403"
     },
     "integrations/shepherdr/templates/assistant.md": {
-      "sha256": "39bc6db2835088d2b039a507e63c1677af61f973079579e5251e6d8dcb8a33e5"
+      "sha256": "76d655e696c5efabfd6b03ce1c676756162daaf1a7d3abe801709d59f27f185f"
     },
     "integrations/shepherdr/templates/debugger.md": {
       "sha256": "fb22a25be254960ad55e2ada3b1caac82bfc7a9feac924c1f15dd1f516870422"
@@ -2684,7 +2684,7 @@
       "sha256": "05260873445a8f45f6ca6a0fd38de779b3b5d95308ddb70bc5e6bf4d062a38dd"
     },
     "integrations/shepherdr/templates/worker.md": {
-      "sha256": "d3e5550020e741d2cb86efbc36eb40d853d713b5e911660c62c7219313a2cd53"
+      "sha256": "71405b62de4dca4abca5a5db0258cb22c7063b98f053a5313acf4abb7b3f3cf8"
     },
     "integrations/shepherdr/tsconfig.json": {
       "sha256": "98fdd40aa0f315646b1f23bc275a3cfeffdec6718fc69d3deeb89d7686a1b73d"
@@ -2722,8 +2722,8 @@
     "integrations/shepherdr/web/dist/assets/index-BgsqbUkw.css": {
       "sha256": "5d2c1e4e1ef119a82fa08402eadc8e58b30ed08558c4ceaadbfae4b9dbc6d08f"
     },
-    "integrations/shepherdr/web/dist/assets/index-DujJhIM6.js": {
-      "sha256": "ff969b660438dce29bfe46ec6b8ec6d79a8b1dd3611d638c0de14068e6967c20"
+    "integrations/shepherdr/web/dist/assets/index-D91cGpeL.js": {
+      "sha256": "d81a2c7cadc244ed32d752b7ecef72f5041adee295fe08dd51c92828636f1c6e"
     },
     "integrations/shepherdr/web/dist/assets/rolldown-runtime-XKyaHtl9.js": {
       "sha256": "548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"
@@ -2750,7 +2750,7 @@
       "sha256": "bcf4b3373dcfc941fe3fe534e85e9d7491cccda5cd13cf18d3d243c34fa96760"
     },
     "integrations/shepherdr/web/dist/index.html": {
-      "sha256": "e52d3e3e006b6f7b41f8c6463daaf3bd3a9f07e36736288bd024bb8bdb4dfcef"
+      "sha256": "6041b7cab139cc24fc241b0e2b162df11bbfc7f6fb1982418814cb096b06d24a"
     },
     "integrations/shepherdr/web/dist/manifest.webmanifest": {
       "sha256": "f01389b0b16c46d432ce59047f27ce8c347986396e32667960b41302f294e59f"

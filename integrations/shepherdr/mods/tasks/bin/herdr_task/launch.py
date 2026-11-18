@@ -393,14 +393,28 @@ def clean_env(argv):
     return ["sh", "-c", CLEAN_ENV + ' exec "$@"', "herdr-clean", *argv]
 
 
-def in_shell(argv):
+WORKER_SCRATCH = r'''
+scratch=$(mktemp -d "${TMPDIR:-/tmp}/herdr-worker.XXXXXXXX") || exit 1
+trap 'rm -rf -- "$scratch"' EXIT
+trap 'exit 129' HUP
+trap 'exit 143' TERM
+trap ':' INT
+export TMPDIR="$scratch" HERDR_WORKER_TMP="$scratch"
+"$@"
+'''
+
+
+def in_shell(argv, worker_scratch=False):
     """Runs the agent in the person's interactive shell, as Herdr does: their functions and
     aliases apply (claude() adding flags), and the shell stays when the agent exits."""
     sh = os.environ.get("SHELL") or "/bin/sh"
     name = os.path.basename(sh)
     flag = "-lic" if sys.platform == "darwin" else "-ic"
     if name in ("bash", "zsh", "sh", "ksh", "dash"):
-        return [sh, flag, '"$@"; exec "$0" -i', sh] + argv
+        command = f"({WORKER_SCRATCH})" if worker_scratch else '"$@"'
+        return [sh, flag, command + '; exec "$0" -i', sh] + argv
+    if worker_scratch:
+        argv = ["sh", "-c", WORKER_SCRATCH, "herdr-worker-scratch", *argv]
     if name == "fish":
         return [sh, flag, " ".join(shlex.quote(a) for a in argv) + "; exec fish -i"]
     return argv
@@ -822,7 +836,8 @@ def launch(s, task, argv, space, message=None, parent=None, resume=None, role=No
     name = agent_name(s, task, "review" if role else None)
     # HERDR_BROWSER_TASK: which task's browser herdr-browser drives (HERD-57), for it and its children.
     r = run(["hc", "run", "--bg", "--json", "--keep", "--cwd", folder_for(s, task), "--name", name,
-             *labels, *rel, "--", *low_priority(clean_env(["env", f"HERDR_BROWSER_TASK={key}", *in_shell(cmd)]), name)])
+             *labels, *rel, "--", *low_priority(clean_env(
+                 ["env", f"HERDR_BROWSER_TASK={key}", *in_shell(cmd, worker_scratch=not role)]), name)])
     try:
         out = json.loads(r.stdout)
     except ValueError:

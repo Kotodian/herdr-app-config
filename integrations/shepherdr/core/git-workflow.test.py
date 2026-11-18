@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -71,6 +72,22 @@ class GitWorkflowTests(unittest.TestCase):
         self.assertEqual(t["base"], "dev")
         self.assertTrue(t["base_set"])
         self.assertEqual(self.git("branch", "--show-current"), "main")
+
+    def test_worker_removes_its_private_scratch_on_exit_and_preserves_other_files(self):
+        sentinel = self.root / "other-task"
+        sentinel.touch()
+        for code in (0, 7, 143):
+            with self.subTest(code=code):
+                result = subprocess.run(
+                    ["sh", "-c", launch.WORKER_SCRATCH, "scratch-test", "sh", "-c",
+                     'test "$TMPDIR" = "$HERDR_WORKER_TMP" && touch "$TMPDIR/test-output" && '
+                     'printf "%s\\n" "$TMPDIR" && exit "$1"', "child", str(code)],
+                    env={**os.environ, "TMPDIR": str(self.root)}, capture_output=True, text=True)
+                self.assertEqual(result.returncode, code, result.stderr)
+                scratch = Path(result.stdout.strip())
+                self.assertEqual(scratch.parent, self.root)
+                self.assertFalse(scratch.exists())
+                self.assertTrue(sentinel.is_file())
 
     def test_explicit_main_or_empty_base_is_refused(self):
         for branch in ("main", "", "origin/main", "feature/other"):
