@@ -242,6 +242,7 @@ def main():
     source.add_argument("--prompt", help="symptoms, reproduction steps and evidence that main is affected")
     source.add_argument("--prompt-file", help="read the symptoms and evidence from a file")
     c.add_argument("--main-commit", help="full SHA of the affected revision in main's history")
+    c.add_argument("--headless", action="store_true", help="return the report directly instead of opening a Debugger terminal")
     cmd("decision-models", cmd_decision_models, "list Typesafe classifiers offered by the configured agents", id=False)
     c = cmd("show", cmd_show, "one task")
     c.add_argument("--evidence", action="store_true", help="with what its Accept card shows: commits, changed files, checks and its proof")

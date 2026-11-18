@@ -193,7 +193,7 @@ describe("agent to agent as a group chat (SHEP-27)", () => {
 
 // SHEP-54: an agent's own helper agents in herdr, over its chat
 import { subagentsOf, subagentTitle, isHelper } from "./chat-view.js";
-test("subagentsOf: its own hc children labelled reviewer or helper, never workers", () => {
+test("subagentsOf: show its debugger and other helpers without including workers", () => {
   const now = 10_000_000;
   const terms = [
     { address: "t1", state: "live", labels: { "herdr.task": "x#1" } },
@@ -201,6 +201,7 @@ test("subagentsOf: its own hc children labelled reviewer or helper, never worker
     // a worker: an Assistant's child with a task, no helper role
     { address: "t3", parent: "t0", state: "live", labels: { "herdr.task": "x#2" } },
     { address: "t4", parent: "t1", state: "live", status: { state: "blocked" }, created_ms: 50, agent: "claude-code", labels: { "herdr.role": "helper" } },
+    { address: "t9", parent: "t1", state: "live", status: { state: "working" }, created_ms: 200, labels: { "herdr.role": "debugger", "herdr.agent": "codex" } },
     // ended an hour and more ago: gone
     { address: "t5", parent: "t1", state: "finished", finished_ms: now - 2 * 3600000, labels: { "herdr.role": "reviewer" } },
     { address: "t6", parent: "t1", state: "finished", created_ms: 10, finished_ms: now - 60000, labels: { "herdr.role": "reviewer", "herdr.agent": "claude" } },
@@ -209,7 +210,8 @@ test("subagentsOf: its own hc children labelled reviewer or helper, never worker
   ];
   const got = subagentsOf(terms, "t1", now);
   expect(got.map((s) => [s.address, s.title, s.status])).toEqual([
-    ["t6", "Reviewer · Claude Code", "done"], ["t4", "Helper · Claude Code", "needs"], ["t2", "Reviewer · Codex", "working"]]);
+    ["t6", "Reviewer · Claude Code", "done"], ["t4", "Helper · Claude Code", "needs"],
+    ["t2", "Reviewer · Codex", "working"], ["t9", "Debugger · Codex", "working"]]);
   expect(got[0].ended).toBe(now - 60000);
   expect(subagentsOf(terms, "vm/t7", now).map((s) => [s.address, s.status])).toEqual([["vm/t8", "done"]]);
   expect(subagentsOf(terms, "t0", now)).toEqual([]);

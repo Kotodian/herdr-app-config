@@ -168,11 +168,27 @@ class DecisionTests(fixture.GitWorkflowTests):
             return SimpleNamespace(returncode=0, stderr="")
 
         with patch.object(debugger.subprocess, "run", side_effect=run_debug), patch.object(debugger, "say") as report:
-            debugger.cmd_debug(self.args(prompt="已确认 main 有登录缺陷", main_commit=self.baseline))
+            debugger.cmd_debug(self.args(prompt="已确认 main 有登录缺陷", main_commit=self.baseline, headless=True))
             with self.assertRaisesRegex(Fail, "reachable from main"):
-                debugger.cmd_debug(self.args(prompt="已确认 main 有登录缺陷", main_commit=dev_commit))
+                debugger.cmd_debug(self.args(prompt="已确认 main 有登录缺陷", main_commit=dev_commit, headless=True))
         self.assertEqual(report.call_args.args[1]["main_commit"], self.baseline)
         self.assertEqual(self.git("branch", "--list"), before)
+
+    def test_debugger_starts_visible_readonly_child_in_the_reported_checkout(self):
+        with patch.dict(debugger.os.environ, {"HC_TERMINAL_ID": "t6"}), \
+             patch.object(debugger, "run", return_value=SimpleNamespace(stdout='{"address":"t7"}')) as run, \
+             patch.object(debugger, "say") as report:
+            debugger.cmd_debug(self.args(prompt="已确认 main 有登录缺陷", main_commit=self.baseline))
+        argv = run.call_args.args[0]
+        split = argv.index("--")
+        self.assertEqual(argv[:4], ["hc", "run", "--bg", "--json"])
+        self.assertEqual(argv[argv.index("--parent") + 1], "t6")
+        self.assertEqual(argv[argv.index("--cwd") + 1], str(self.repo.resolve()))
+        self.assertIn("herdr.role=debugger", argv[:split])
+        self.assertIn("read-only", argv[split:])
+        self.assertTrue(any('trust_level="untrusted"' in arg for arg in argv))
+        self.assertIn(self.baseline, argv[-1])
+        self.assertEqual(report.call_args.args[1]["terminal"], "t7")
 
     def test_cached_decision_reuse_is_bound_to_request_and_folder(self):
         path = self.root / "decision.json"
