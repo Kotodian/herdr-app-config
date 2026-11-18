@@ -1081,6 +1081,9 @@
     "integrations/shepherdr/mods/chat/smile-plus.svg": {
       "sha256": "b13dddca4d124a839ee9b1159408c10cd5dc4d8523aa3c544f09c0d2375f46ba"
     },
+    "integrations/shepherdr/mods/chat/source-assistant.js": {
+      "sha256": "a7c11d5c4eb6e616db231d0bdf0ac35246909e5cf3856aadf1688c34c136edde"
+    },
     "integrations/shepherdr/mods/chat/stop-chip.svg": {
       "sha256": "19cd49a8fc0827d6e49deb2e588eb6ac7e3263a96cf644e730f22507fb334b44"
     },
