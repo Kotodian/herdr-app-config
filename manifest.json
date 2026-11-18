@@ -521,7 +521,7 @@
       "sha256": "cba1173cf73465ae8858b714b8241ad53b61aa08afa7889f6e53bfad81ff379f"
     },
     "integrations/shepherdr/lib/artview.js": {
-      "sha256": "74c63c93dff6acd55be62543ad777d47561925b155be47ea7a06023f65e01385"
+      "sha256": "c0b21e71d401e63cff959b472c4929a5377f04b3935df3dc24f30c412a116a18"
     },
     "integrations/shepherdr/lib/bridge.js": {
       "sha256": "5a0b83bb07678de6d909a7a4e68b6ce92280c295ae49b6a81b56dfec4ec2ef99"
@@ -590,7 +590,7 @@
       "sha256": "bbf9f1d6e23eaeb9d1f427a04e58635470481354634346d021b028a3eab6cb7d"
     },
     "integrations/shepherdr/mods/accept-card/artview.js": {
-      "sha256": "74c63c93dff6acd55be62543ad777d47561925b155be47ea7a06023f65e01385"
+      "sha256": "c0b21e71d401e63cff959b472c4929a5377f04b3935df3dc24f30c412a116a18"
     },
     "integrations/shepherdr/mods/accept-card/core/accept.js": {
       "sha256": "375b40a182b7faaf178afa037204cf5864e97a8752f57319ce5f2a533d25a9d3"
@@ -629,7 +629,7 @@
       "sha256": "857848c5732a9c683dc00a557971afc34c3ee222f1502e77dcf489bf53e637f7"
     },
     "integrations/shepherdr/mods/artifacts/artview.js": {
-      "sha256": "74c63c93dff6acd55be62543ad777d47561925b155be47ea7a06023f65e01385"
+      "sha256": "c0b21e71d401e63cff959b472c4929a5377f04b3935df3dc24f30c412a116a18"
     },
     "integrations/shepherdr/mods/artifacts/bin/herdr-artifact": {
       "sha256": "10dc8f8944518bb907afa70249b0ea9afac3ec842a67f44e481a0e9625b7d044"
@@ -686,13 +686,13 @@
       "sha256": "128cfe9c6b8b8b5f8ab1324315a67cf241233dc369e1c66b74cd452075e7f5ef"
     },
     "integrations/shepherdr/mods/chat-image/artifact-bar.js": {
-      "sha256": "6458974c652c9861a42803cd08d351446cbee69ef5c646f26640332a1293d0c2"
+      "sha256": "4e04b61867e3e83f438d87637149655bdc058f6affc68469f8987614576b9d7d"
     },
     "integrations/shepherdr/mods/chat-image/artifact-sidebar.js": {
       "sha256": "cba1173cf73465ae8858b714b8241ad53b61aa08afa7889f6e53bfad81ff379f"
     },
     "integrations/shepherdr/mods/chat-image/artview.js": {
-      "sha256": "74c63c93dff6acd55be62543ad777d47561925b155be47ea7a06023f65e01385"
+      "sha256": "c0b21e71d401e63cff959b472c4929a5377f04b3935df3dc24f30c412a116a18"
     },
     "integrations/shepherdr/mods/chat-image/check.svg": {
       "sha256": "34d5f35561a8f9d2952fb579d7a97db67c46c0dfb8fce025200945760ed00f77"
@@ -830,7 +830,7 @@
       "sha256": "496092cd737b07b8ae8b7686c5956c544bd9d81296d10554814cc8b3817a4023"
     },
     "integrations/shepherdr/mods/chat/artview.js": {
-      "sha256": "74c63c93dff6acd55be62543ad777d47561925b155be47ea7a06023f65e01385"
+      "sha256": "c0b21e71d401e63cff959b472c4929a5377f04b3935df3dc24f30c412a116a18"
     },
     "integrations/shepherdr/mods/chat/ask-end.py": {
       "sha256": "469c6be2f5bddac15917ce32cb7e84684062e20351886807040eebc60f75b702"
@@ -1187,7 +1187,7 @@
       "sha256": "cba1173cf73465ae8858b714b8241ad53b61aa08afa7889f6e53bfad81ff379f"
     },
     "integrations/shepherdr/mods/jump/artview.js": {
-      "sha256": "74c63c93dff6acd55be62543ad777d47561925b155be47ea7a06023f65e01385"
+      "sha256": "c0b21e71d401e63cff959b472c4929a5377f04b3935df3dc24f30c412a116a18"
     },
     "integrations/shepherdr/mods/jump/core/asks.js": {
       "sha256": "81693861a06ece6eb63be595fe70a3f4fdde85a21706ae57531949fde2fe49f4"
@@ -1781,7 +1781,7 @@
       "sha256": "69ccde33c78d83ce39972ef129e158dd09fb19d3002bd709047801802fbad51d"
     },
     "integrations/shepherdr/mods/task-artifacts/artview.js": {
-      "sha256": "74c63c93dff6acd55be62543ad777d47561925b155be47ea7a06023f65e01385"
+      "sha256": "c0b21e71d401e63cff959b472c4929a5377f04b3935df3dc24f30c412a116a18"
     },
     "integrations/shepherdr/mods/task-artifacts/core/task-artifacts.js": {
       "sha256": "450b814d6ac5b1b6c41f69053c22a2e9bcc38b09dc66aaeaf75fc446b3c7fc4c"

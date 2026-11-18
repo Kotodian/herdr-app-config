@@ -25,10 +25,13 @@ export async function artifactCli(machine, args) {
 // The latest version's mod name, from any version's (art-<id>--v<n>).
 export const baseMod = (mod) => String(mod).replace(/--v\d+$/, "");
 
+// Theme colors can already include alpha (e.g. the glass theme).
+export const viewerBackground = (color) => `${color.slice(0, 7)}f2`;
+
 // The viewer's layout: the toolbar over the artifact's own mod, on the backdrop.
 export function viewerLayout(artifact) {
   return {
-    type: "column", background: `${theme().background}f2`, children: [
+    type: "column", background: viewerBackground(theme().background), children: [
       { type: "block", size: { px: 48 }, content: { mod: "chat-image", props: { artifact } } },
       { type: "column", padding: [8, 24], children: [
         { type: "block", radius: 8, background: "background", border: { width: 1, color: "border" }, content: { mod: artifact.mod } }] }],

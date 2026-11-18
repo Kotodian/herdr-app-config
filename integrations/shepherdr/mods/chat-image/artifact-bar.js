@@ -10,7 +10,7 @@ import { div, svg } from "gpui-kit";
 import { h_flex } from "gpui-base";
 import { props, closeOverlay, shared, setShared, theme } from "herdr";
 import { showInSidebar, hasSidebarView } from "./artifact-sidebar.js";
-import { artifactCli as cli, showViewer } from "./artview.js";
+import { artifactCli as cli, showViewer, viewerBackground } from "./artview.js";
 import { toast, plainError, TEXT, RADIUS } from "./ui.js";
 
 const MARKUP = "artifacts.markup";
@@ -100,7 +100,7 @@ export function artifactBar(view, a, handle) {
   const busy = view.art?.busy;
   // In a modal (opened from a dialog) the bar sits on the modal's own surface, without "Open in
   // the sidebar": the dialog under it covers the sidebar.
-  return h_flex().id("bar").size_full().pl(16).pr(8).gap(2).items_center().bg(a.modal ? t.popover : `${t.background}f2`)
+  return h_flex().id("bar").size_full().pl(16).pr(8).gap(2).items_center().bg(a.modal ? t.popover : viewerBackground(t.background))
     .track_focus(handle)
     .child(h_flex().flex_1().min_w(0).gap(8).items_center().text_size(TEXT.body)
       .child(svg("mods/artifacts/artifacts.svg").size(14).flex_none().text_color(t.muted))
