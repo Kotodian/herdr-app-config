@@ -374,6 +374,33 @@ class ShepherdrSyncTests(unittest.TestCase):
                 sync.snapshot(files,mods)
                 self.assertEqual(sync.validate()[1],files)
 
+    def test_sync_ignores_legacy_entries_for_generated_mod_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve()
+            app,source=self.make_app(root)
+            generated=source/"mods/chat/gpui-kit.d.ts"
+            generated.parent.mkdir(parents=True)
+            generated.write_text("// generated on this machine")
+            name=generated.relative_to(app).as_posix()
+            old={name:b"// generated on another machine"}
+            current={"settings.json":b"{}\n"}
+            repo=root/"repo"
+            repo.mkdir()
+            (repo/"settings.json").write_bytes(current["settings.json"])
+            (repo/"manifest.json").write_text(json.dumps(sync.manifest({**old,**current},[])))
+            self.assertNotIn(name,sync.collect(app)[0])
+            self.assertEqual(sync.validate(repo)[1],current)
+            self.assertEqual(sync.merge_files(sync.hashes(old),{},current),current)
+            self.assertEqual(generated.read_text(),"// generated on this machine")
+
+    def test_new_task_artifact_stays_local(self):
+        name="mods/art-proof-1234/artifact.js"
+        generated={name:b"// Written by herdr-artifact each time this artifact is installed.\n",
+                   "mods/art-proof-1234/main.js":b"// artifact"}
+        custom={"mods/art-tools/main.js":b"// custom mod"}
+        self.assertEqual(sync.merge_files({},{**generated,**custom},{}),custom)
+        self.assertEqual(sync.merge_files(sync.hashes(generated),generated,generated),generated)
+
     def test_extensionless_helpers_are_portable_on_another_home(self):
         path=sync.SHEPHERDR/"bin/shepherdr"
         self.assertTrue(sync.text_file(path))
