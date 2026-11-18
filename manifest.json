@@ -433,6 +433,9 @@
     "integrations/shepherdr/docs/addons.md": {
       "sha256": "776ac6f5ade867e9e8ea7c7a4296e1fc8a52bd16c7ab6b7120d515962d7f6d49"
     },
+    "integrations/shepherdr/docs/assistant-sources.md": {
+      "sha256": "d6c3007480069b0d5fd5c7e317904e61702a8d0b91680d279f5ce7664ee76b41"
+    },
     "integrations/shepherdr/docs/decision-model.md": {
       "sha256": "aa5e4f57a67ccd632392b2662bfac687d90e71822e9ef6bbbd2a8413a05546c5"
     },
@@ -2592,6 +2595,9 @@
     },
     "integrations/shepherdr/service/sock-path.test.ts": {
       "sha256": "7b6e51fbdc1c3511493e2c9189917fd0611a23ab427bd962dad1d8b235156d1e"
+    },
+    "integrations/shepherdr/service/source-assistant.test.ts": {
+      "sha256": "9eadda3f343fba9de04e79bc183070a2e629e450729c1161c31ca74368194cda"
     },
     "integrations/shepherdr/service/spaces-sidebar.test.ts": {
       "sha256": "ad1b4674d9e8f1c3e1d927b94b58ae53e2d6ab28f82584b13d3944ad031a256d"
