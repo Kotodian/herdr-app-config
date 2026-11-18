@@ -2975,18 +2975,43 @@ export default class Chat extends View {
     const ownQ = cards.find((c) => c.question && c.owner === this.cards);
     let qAt = -1;
     if (ownQ) for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === "ask" && !items[i].closed) { qAt = i; break; }
+    const st = this.status();
+    const queue = st === "working" || st === "blocked" ? this.conv?.queued?.() ?? [] : [];
+    const inQueue = new Set(queue.map((q) => norm(q.text)));
+    const timeOf = (at) => Number.isFinite(at) && at > 0 ? at : Infinity;
     const tasks = [...news.extra, ...this.askEnds.map((e) => ({ at: e.at, row: { kind: "askend", id: `ae:${e.id}`, text: `${e.title} · ${e.how}` } })), ...screenEnds,
-      ...cards.filter((c) => !(c === ownQ && qAt >= 0)).map((c) => ({ at: c.at, card: c }))]
+      ...cards.filter((c) => !(c === ownQ && qAt >= 0)).map((c) => ({ at: c.at, card: c })),
+      ...this.replied.map((reply) => ({ at: timeOf(reply.at), reply })),
+      ...this.pending.map((pending) => ({ at: timeOf(pending.at), pending })),
+      ...queue.filter((queued) => !this.pending.some((p) => norm(p.text) === norm(queued.text)))
+        .map((queued) => ({ at: timeOf(queued.at), queued }))]
       .sort((a, b) => a.at - b.at);
     // A card is a run of strips, one list row each (strips.js), kept together as one block.
     const putCard = (c) => c.strips.forEach((s, j) => out.push({ kind: "cardstrip", id: `cs:${c.id}:${s.key}`, s, blk: c.id, first: j === 0, last: j === c.strips.length - 1,
       sig: strips.sig(s), owner: c.owner, ask: c.ask }));
-    const put = (e) => { if (e.card) putCard(e.card); else out.push(e.row); };
+    const put = (e) => {
+      if (e.card) putCard(e.card);
+      else if (e.reply) out.push({ kind: "user", id: `rp:${e.reply.id}`, text: e.reply.text });
+      else if (e.pending) {
+        const p = e.pending, from = out.length;
+        if (p.replyTo) out.push({ kind: "replyref", id: `rr:${p.id}`, to: p.replyTo, of: p.id, side: "user" });
+        const queued = !p.waiting && p.delivered && inQueue.has(norm(p.text));
+        out.push({ kind: "pending", id: p.id, text: p.text, files: p.files, failed: p.failed, late: p.late, waiting: p.waiting, delivered: p.delivered });
+        if (p.paths?.length) out.push({ kind: "imgs", id: `i:${p.id}`, paths: p.paths, faded: !p.delivered });
+        if (queued) out.push(this.queuedLine(p.id));
+        block(from, p.id);
+      } else if (e.queued) {
+        const q = e.queued, id = `q:${q.id}`, from = out.length;
+        out.push({ kind: "pending", id, text: q.text, files: q.images ? [imagesLine(q.images)] : [], delivered: true });
+        out.push(this.queuedLine(id));
+        block(from, id);
+      } else out.push(e.row);
+    };
     let ti = 0;
     // A day's line where a new day starts (Today, Yesterday, a weekday, a date), the first too.
     const days = new Set();
     const dated = (at) => {
-      if (!(at > 1e12)) return;
+      if (!Number.isFinite(at) || !(at > 1e12)) return;
       const d = dayOf(at);
       if (!days.has(d) && d > Math.max(-1, ...days)) { days.add(d); out.push({ kind: "day", id: `day:${d}`, text: dayLabel(at) }); }
     };
@@ -3086,31 +3111,6 @@ export default class Chat extends View {
       } else if (x.kind !== "mark") out.push(x);
     }
     while (ti < tasks.length) { dated(tasks[ti].at); put(tasks[ti++]); }
-    // Words that answered a card, shown at once, until the log has them right after their
-    // question (log.js answers()): they are the newest thing said, so they go last.
-    // What was typed while it works (here, in the web app or its terminal) waits in its CLI's
-    // queue until it takes it at its next step: shown at once, quietly, as Queued.
-    const st = this.status();
-    const queue = st === "working" || st === "blocked" ? this.conv?.queued?.() ?? [] : [];
-    const inQueue = new Set(queue.map((q) => norm(q.text)));
-    if (this.replied.length || this.pending.length || queue.length) dated(Date.now());
-    for (const r of this.replied) out.push({ kind: "user", id: `rp:${r.id}`, text: r.text });
-    for (const p of this.pending) {
-      const from = out.length;
-      if (p.replyTo) out.push({ kind: "replyref", id: `rr:${p.id}`, to: p.replyTo, of: p.id, side: "user" });
-      const queued = !p.waiting && p.delivered && inQueue.has(norm(p.text));
-      out.push({ kind: "pending", id: p.id, text: p.text, files: p.files, failed: p.failed, late: p.late, waiting: p.waiting, delivered: p.delivered });
-      if (p.paths?.length) out.push({ kind: "imgs", id: `i:${p.id}`, paths: p.paths, faded: !p.delivered });
-      if (queued) out.push(this.queuedLine(p.id));
-      block(from, p.id);
-    }
-    for (const q of queue) {
-      if (this.pending.some((p) => norm(p.text) === norm(q.text))) continue;
-      const from = out.length;
-      out.push({ kind: "pending", id: `q:${q.id}`, text: q.text, files: q.images ? [imagesLine(q.images)] : [], delivered: true });
-      out.push(this.queuedLine(`q:${q.id}`));
-      block(from, `q:${q.id}`);
-    }
     if (this.note) out.push({ kind: "note", id: this.note.id, text: this.note.text });
     if (out.length) out.push({ kind: "end", id: "end" });
     return this.spaced(out);
