@@ -8,7 +8,7 @@ import shutil
 
 from .base import Fail, GH, git, hc_json, now, run, STORE
 from .agents import agent_running, detail, live_agents, live_helpers, mid_turn_agents
-from .workflow import require_task_base
+from .workflow import policy as git_workflow, require_task_base
 
 
 # ---- GitHub ---------------------------------------------------------------------------------
@@ -99,6 +99,15 @@ def pr_open(s, task, repo, summary=None):
     each ready (#1004) when Herdr wrote it."""
     require_task_base(task)
     br = task["branch"]
+    pr = task.get("pr") or {}
+    if pr.get("number") and git_workflow():
+        ok, target, error = gh("pr", "view", str(pr["number"]), "--repo", repo, "--json", "baseRefName", "-q", ".baseRefName")
+        if not ok:
+            raise Fail(f"Couldn't verify the target of pull request #{pr['number']}: {error}")
+        expected = task.get("base") or "main"
+        if target.strip() != expected:
+            raise Fail(f"Pull request #{pr['number']} targets {target.strip()}, but this task targets {expected}. "
+                       "Check its commits against the intended base before opening a replacement PR.")
     # Continuing a pull request already open on another branch, its work pushed there (#828): that
     # one is the task's, never a second with the same commits.
     if not (task.get("pr") or {}).get("number") and pr_at_tip(task, repo):

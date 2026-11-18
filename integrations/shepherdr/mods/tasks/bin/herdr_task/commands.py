@@ -102,7 +102,9 @@ def cmd_add(args):
     at = scheduled_at(args)  # refused before anything is added
     from . import decision
     space = bare(args.space) if args.space else caller_space()
+    workflow = getattr(args, "workflow", None)
     classified = decision.prepare(args, prompt, space)
+    policy = git_workflow()
     with open_store(args) as s:
         repo = s.loc["kind"] == "repo"
         wrong = None if repo else bare_by_mistake(s.loc["folder"])
@@ -110,10 +112,21 @@ def cmd_add(args):
             raise Fail(wrong)
         if args.worktree and not repo:
             raise Fail("Worktrees need a git repo; this folder isn't one.")
+        if repo and policy and not workflow and classified and classified["result"]["task_type"] == "bug":
+            raise Fail("Confirm where the defect occurs and record the evidence in the brief. "
+                       "Use --workflow hotfix --base main for a confirmed main defect, "
+                       "or --workflow development for a defect confined to dev or a worker.")
         # The person's setting wins: worktrees off for this repo means in the folder, --worktree or not.
         mode = "here" if args.here or not worktrees_on(s) else "worktree"
+        if policy and workflow == "hotfix":
+            if not repo or args.here:
+                raise Fail("A production fix needs a Git worktree based on main.")
+            mode = "worktree"
         t = s.new(args.title.strip(), prompt, mode)
-        decision.apply(t, classified, getattr(args, "workflow", None))
+        if classified:
+            t["decision"] = classified
+        if workflow:
+            t["workflow"] = workflow
         set_opts(t, args)
         set_base(s, t, args.base, space, new=True)
         set_branch(s, t, getattr(args, "branch", None))
@@ -852,6 +865,7 @@ def cmd_unarchive(args):
 
 
 def cmd_edit(args):
+    workflow = getattr(args, "workflow", None)
     with open_store(args) as s:
         t = s.find(args.id)
         old = t["title"]
@@ -863,12 +877,10 @@ def cmd_edit(args):
             with open(args.prompt_file) as f:
                 t["prompt"] = f.read()
         pick = [t.get(k) for k in ("agent", "model", "effort")]
-        workflow = getattr(args, "workflow", None)
         if workflow and workflow != t.get("workflow"):
-            from .decision import apply
             if t.get("worktree") and args.base is None:
                 raise Fail("Changing a started task's workflow also needs --base; only equivalent bases without a PR can be retargeted.")
-            apply(t, None, workflow)
+            t["workflow"] = workflow
         set_opts(t, args)
         if [t.get(k) for k in ("agent", "model", "effort")] != pick:
             # The next agent started for it runs on the new choice (start_again), a queued one too.

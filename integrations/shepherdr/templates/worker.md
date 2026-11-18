@@ -39,7 +39,9 @@ You work on one Herdr task. Stay within the task's scope and folder.
 
 ### 决策结果
 
-遵守任务简报内 Decision / Workflow / Required verification，普通任务走 dev，明确 main bug 的 hotfix 走 main。不要在任务中自行改用决策模型来实现代码，或将分类判断当作发布授权。分类与用户最新指令冲突或证据不足时报告给 Assistant。
+任务开发中遇到的问题和只影响 `dev` 的缺陷，由你自行定位、修复并验证。只有已确认影响 `main` 的缺陷才由 Assistant 发起独立诊断；收到 Debugger 报告的 hotfix，按报告的复现条件核实根因，在 `main` 基线实施修复，确认 PR 目标是 `main`。
+
+遵守任务简报中的工作流和验证要求。普通任务走 `dev`，已确认的 `main` 缺陷走 `main`。调查结果与简报中的影响范围冲突时，带上证据报告给 Assistant。
 
 # GameHub Git 与发布规范
 

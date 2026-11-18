@@ -28,6 +28,7 @@ from .assistant_settings import cmd_session_note
 from .feedback import cmd_feedback
 from .sandbox import cmd_sandbox
 from .decision import cmd_decide
+from .debugger import cmd_debug
 from .human_review import cmd_review_diff, cmd_approve_review
 from .decision_provider import cmd_models as cmd_decision_models
 
@@ -231,11 +232,16 @@ def main():
                                    "machine's with the machine first (vm-b:HAT-12)")
     c.add_argument("--space", help="the space it's for, whose settings it takes (default: yours)")
     when_opts(c)
-    c = cmd("decide", cmd_decide, "classify a request using Settings' independent Decision model (no task is created)", id=False)
+    c = cmd("decide", cmd_decide, "classify a code request as bug or feature using Settings' Decision model", id=False)
     c.add_argument("title", help="the request to classify")
     c.add_argument("--prompt")
     c.add_argument("--prompt-file")
     c.add_argument("--space")
+    c = cmd("debug", cmd_debug, "investigate a confirmed main-branch defect in a read-only agent (no task is created)", id=False)
+    source = c.add_mutually_exclusive_group(required=True)
+    source.add_argument("--prompt", help="symptoms, reproduction steps and evidence that main is affected")
+    source.add_argument("--prompt-file", help="read the symptoms and evidence from a file")
+    c.add_argument("--main-commit", help="full SHA of the affected revision in main's history")
     cmd("decision-models", cmd_decision_models, "list Typesafe classifiers offered by the configured agents", id=False)
     c = cmd("show", cmd_show, "one task")
     c.add_argument("--evidence", action="store_true", help="with what its Accept card shows: commits, changed files, checks and its proof")

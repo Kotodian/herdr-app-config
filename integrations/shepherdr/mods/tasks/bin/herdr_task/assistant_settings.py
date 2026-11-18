@@ -108,7 +108,7 @@ def rows(space, d=None, auto=None):
         repo = feedback_repo(d)
         return [
             ("decider", "Decision model", pick_words(cfg.get("decider"), "not selected; choose in Settings > Agents > Decision model")
-             + ("; run herdr-task decide before planning each new request; add also classifies code tasks" if cfg.get("decider") else ""),
+             + ("; herdr-task decide and add label code requests as bug or feature. You decide the workflow" if cfg.get("decider") else ""),
              pick_words(cfg.get("decider"), "unset"), [("decider", None)]),
             ("review", "Review", review, "on" if rounds > 0 else "off",
              [("tasks", "review_rounds"), ("tasks", "must_fix"), ("reviewer", None)]),

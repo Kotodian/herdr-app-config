@@ -61,8 +61,8 @@ export const SAME_AS_ALL_MACHINES = "Inherited from all machines";
 
 // ---- Agents ----------------------------------------------------------------------------------------------------
 export const ROLES = [
-  { id: "decider", title: "Decision model · 决策模型", about: "Classifies requests, chooses a workflow and explains the validation needed. Runs separately before task creation.", file: "decider.md",
-    told: "What the decision model is told first" },
+  { id: "decider", title: "Decision model · 决策模型", about: "Labels a code request as bug or feature.", file: "decider.md",
+    told: "What the bug and feature classifier is told first" },
   { id: "coordinator", title: "Assistant", about: "Plans the work and starts a task for each part.", file: "assistant.md",
     told: "What every Assistant is told first" },
   { id: "worker", title: "Workers", about: "Do one task each.", file: "worker.md", told: "What every worker is told first" },
@@ -75,7 +75,7 @@ export const EDIT_INSTRUCTIONS = "Edit instructions";
 export const INSTRUCTIONS = {
   title: "Instructions", done: "Done", saved: "Saved.", notSaved: (why) => `Not saved: ${why}`,
   notes: {
-    decider: "Used for each decision. Classifies and recommends only; never implements or releases. Changes apply to the next decision.",
+    decider: "Classifies code requests as bug or feature. The Assistant decides how to handle them.",
     coordinator: "Every Assistant uses this. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply when an Assistant restarts.",
     worker: "Every worker gets this first. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply to the next task that starts.",
     reviewer: "Every reviewer gets this first. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply to the next review.",

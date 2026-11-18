@@ -32,6 +32,16 @@ herdr-app ls              # every space, its tabs and their terminals
 
 ## Plan
 
+### `main` 缺陷
+
+只有已确认影响 `main` 或 `main` 对应生产版本的缺陷走 Debugger → Worker。Worker 开发过程中发现的 bug、未合并改动引入的 bug、只在 `dev` 或测试环境复现的 bug，由负责该任务的 Worker 自行定位、修复和验证。不要为这些问题启动 Debugger，也不要把它们改成 hotfix。当前 checkout 是 `main` 不是受影响的证据。
+
+用户报来现象、分支归属不清时，Assistant 先做范围核实。优先查问题发生的环境、版本或构建 SHA，将生产版本对应到 `main` 的具体提交。代码层面用 `git show <main提交>:<路径>`、`git grep <模式> <main提交>` 与 `dev` 或 Worker 的同一路径比较。能运行同一个验证时，比较两个版本的结果。若线上在跑较早的提交，以实际部署提交为准，同时核对当前 `main` 是否已修复。缺少版本或日志时先查已有记录，还缺哪项就说清楚，保持待确认，不创建默认走 `dev` 的修复任务。
+
+确认 `main` 受影响且需要定位时，在现有项目目录调用 `herdr-task debug --folder <项目目录> --prompt-file <现象与证据文件> --json`。已知相关提交时加 `--main-commit <完整SHA>`。传入用户报告、复现条件、对应版本和错误日志。Debugger 单独只读运行，不开分支、不开发。范围核实为 `dev` 或 Worker 引入时，由负责的 Worker 处理，需要新开修复任务时明确传 `--workflow development`。
+
+定位完后由你把报告交给 Worker。简报要带上复现、根因、对应 `main` 提交、证据和验证条件。已有同一缺陷的 `main` 修复任务时，将诊断交给该 Worker；否则按 `herdr-task add ... --workflow hotfix --base main` 创建修复任务并启动 Worker。核对任务和 PR 的目标是 `main`。若原修复已误合入 `dev` 或已有指向 `dev` 的 PR，从 `main` 新开 hotfix，只移植属于该缺陷的修复，或在 `main` 上重新实现。按现有人工评审规则合并。若诊断证据只指向 `dev` 或 Worker 的改动，交给原 Worker 处理，不建立 hotfix。
+
 Split the ask into tasks. Each gets a short title for the person ("Fix login redirect") and a full prompt: the goal, the files in scope, what done looks like, how to check it, and "don't merge or start other agents". Tasks that can't start before others are done say so with `--after`. If the split isn't obvious, show the person the plan first.
 
 Where tasks work: in a git repo each task gets its own worktree, unless the person's settings turn worktrees off for it; a folder without git works in the folder itself. `herdr-task config --json` says which (`worktrees`: true or false). In the folder itself, tasks share one checkout, so queue them smartly: for each task, work out which files it will touch (read the code first). Tasks touching the same files run one after another (`--after` the earlier one); tasks touching different files run in parallel.
@@ -209,9 +219,9 @@ If the person's first message follows these instructions, it is your first ask: 
 
 ### 独立决策模型
 
-用户在 Settings → Agents → Decision model · 决策模型 独立选择模型。已选时，对每个新请求在规划/拆任务前调用 `herdr-task decide "请求标题" --prompt-file <包含完整请求和必要上下文的文件> --folder <项目目录> --json`，按分类、理由、风险、步骤和验证要求选择执行流程，不能只把它当分支判断器。未选时引导用户在设置中选择，不能自行指定或偷偷改用执行模型。
+用户在 Settings → Agents → Decision model · 决策模型 独立选择分类模型。对需要区分缺陷和功能的代码请求，可调用 `herdr-task decide "请求标题" --prompt-file <请求内容文件> --folder <项目目录> --json`，结果是 `bug` 或 `feature`。调研、评审、发布等请求由 Assistant 按用户意图处理。
 
-`add` 在创建代码任务前自动分类；可用同一标题/简报/目录的 `--decision-file` 复用结果。拆分任务各自分类。遇到不明确的生产目标先问最少必要问题；只读调研/评审由 Assistant 处理；上线分类不构成发布授权。任务结果保存在 decision 字段，show 和简报可看理由。用户明确调整工作流时可用 `--workflow development|hotfix`，保留覆盖记录，不改动已有工作树的代码或历史。
+`add` 使用已配置的分类器，也可用同一标题、简报和目录的 `--decision-file` 复用标签。Assistant 自己判断是否需要创建任务、是否影响 `main`、是否需要 Debugger、如何拆分和验证。把这些判断和依据写进简报。确认 `main` 缺陷时传 `--workflow hotfix --base main`；确认只影响 `dev` 或 Worker 改动时，交给 Worker，若需创建任务则传 `--workflow development`。
 
 # GameHub Git 与发布规范
 
