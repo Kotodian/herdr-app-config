@@ -36,9 +36,14 @@ SHEPHERDR_ROOT_FILES={'package.json','bun.lock','bunfig.toml','install.sh','keys
 SHEPHERDR_EXECUTABLES={'install.sh','bin/shepherdr','bin/herdr-browser','bin/herdr-browser-view','bin/herdr-secret',
                        'bin/sync-shared','guard/herdr-app','mods/tasks/bin/herdr-task','mods/artifacts/bin/herdr-artifact'}
 
+def generated_mod_file(rel):
+    parts=rel.parts
+    return (len(parts)==5 and parts[:3]==(*SHEPHERDR.parts,'mods') and
+            rel.name in {'gpui-kit.d.ts','herdr.d.ts','jsconfig.json'})
+
 def shepherdr_source(rel):
     """Portable release code, including helpers and built web assets; never machine data."""
-    if rel.parts[:2]!=SHEPHERDR.parts:return False
+    if rel.parts[:2]!=SHEPHERDR.parts or generated_mod_file(rel):return False
     tail=rel.parts[2:]
     if len(tail)==1:return tail[0] in SHEPHERDR_ROOT_FILES
     if len(tail)<2 or tail[0] not in SHEPHERDR_FOLDERS:return False
@@ -151,6 +156,10 @@ def validate(folder=None):
     for name,info in m['files'].items():
         rel=PurePosixPath(name)
         if rel.is_absolute() or '..' in rel.parts or not rel.parts:raise RuntimeError('Unsafe snapshot path')
+        p=folder.joinpath(*rel.parts)
+        if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent!=folder.parent):raise RuntimeError('Snapshot contains a symlink')
+        # Older manifests listed these local files even though Git ignored them.
+        if generated_mod_file(rel):continue
         shepherdr=shepherdr_source(rel)
         integration=coordinator_source(rel) or shepherdr
         screenshot=rel.parts[:2]==('docs','screenshots') and len(rel.parts)==3 and rel.suffix=='.png'
@@ -158,8 +167,6 @@ def validate(folder=None):
         if not allowed or any((x.startswith('.') and name!='.gitignore' and not integration) or
                               (x in OMIT and not (shepherdr and x in ('bin','dist'))) for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
         if rel.parts[0]=='mods' and (rel.suffix not in TEXT|ASSETS and rel.name not in ('LICENSE','NOTICE')):raise RuntimeError('Unexpected mod file')
-        p=folder.joinpath(*rel.parts)
-        if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent!=folder.parent):raise RuntimeError('Snapshot contains a symlink')
         data=p.read_bytes()
         if digest(data)!=info['sha256'] or SECRET.search(data):raise RuntimeError('Snapshot integrity/secret check failed: '+name)
         files[name]=data
@@ -426,8 +433,21 @@ def save_conflicts(details):
 
 def merge_files(baseline,local,remote,resolved=None):
     """Merge disjoint edits against exact baselines; retain both sides of ambiguous edits."""
+    # New task artifacts are local session data, even after Herdr installs a mod to view them.
+    # Keep existing repository mods under the usual merge rules.
+    tracked_mods={name.split('/')[1] for name in set(baseline)|set(remote) if name.startswith('mods/')}
+    local_artifacts=set()
+    for name,data in local.items():
+        parts=PurePosixPath(name).parts
+        if (len(parts)==3 and parts[0]=='mods' and parts[1].startswith('art-')
+            and parts[1] not in tracked_mods and parts[2]=='artifact.js'
+            and data.startswith(b'// Written by herdr-artifact each time this artifact is installed.')):
+            local_artifacts.add(parts[1])
     merged={};conflicts=[]
     for name in sorted(set(baseline)|set(local)|set(remote)):
+        rel=PurePosixPath(name)
+        if generated_mod_file(rel):continue
+        if len(rel.parts)>2 and rel.parts[0]=='mods' and rel.parts[1] in local_artifacts:continue
         left=local.get(name);right=remote.get(name);old=baseline.get(name)
         lh=None if left is None else digest(left);rh=None if right is None else digest(right)
         if lh==rh:
