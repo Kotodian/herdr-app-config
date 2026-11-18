@@ -1001,7 +1001,7 @@
       "sha256": "bb7f49c0d1db74ac4245a0112d072ec85b9e3d57c1ca94033d33ca25fc94a689"
     },
     "integrations/shepherdr/mods/chat/main.js": {
-      "sha256": "20f28cd17ae4a54ddd561f00802fc343b764b902d01cfbbdb4239c295f916c59"
+      "sha256": "e2b42b6f96c6b5d8f36747c78ab3ac861f3e5bb311f67b1c8d76af319e66ca48"
     },
     "integrations/shepherdr/mods/chat/message.svg": {
       "sha256": "02b280ca9c74aa6c4bb082031f22718f4ab89d22c5c8adc0ef4de9bbd9d06eb4"
@@ -1074,6 +1074,9 @@
     },
     "integrations/shepherdr/mods/chat/settings.js": {
       "sha256": "9e39eb4bee57ca126c8b37d9520464d1ce6be0cf41b90252c95c2a5fc4adce88"
+    },
+    "integrations/shepherdr/mods/chat/skills.js": {
+      "sha256": "2ef2e30f8726eaa5b5f0869442e9d14c4da8d6fb077aec577048addb02c3ec57"
     },
     "integrations/shepherdr/mods/chat/slash.js": {
       "sha256": "759d2a25a1e6dde9b84fe2c06735fd07a5ab0c784411cb3364914f2ab795857f"
@@ -2675,7 +2678,7 @@
       "sha256": "66dc3b724335f7d288e902918b65c73576ca028fade36717f92adfb12051c403"
     },
     "integrations/shepherdr/templates/assistant.md": {
-      "sha256": "76d655e696c5efabfd6b03ce1c676756162daaf1a7d3abe801709d59f27f185f"
+      "sha256": "cdd1a3dfc22de7acc0a465f897f2fad986cd9aeac7556f14f84ce1b5b9af2384"
     },
     "integrations/shepherdr/templates/debugger.md": {
       "sha256": "fb22a25be254960ad55e2ada3b1caac82bfc7a9feac924c1f15dd1f516870422"

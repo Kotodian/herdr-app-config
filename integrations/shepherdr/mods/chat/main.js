@@ -51,6 +51,7 @@ import * as attach from "./attach.js";
 import { SourceAssistant } from "./source-assistant.js";
 import { SOURCES, spaceIssues } from "./core/context-source.js";
 import * as slash from "./slash.js";
+import * as skills from "./skills.js";
 import * as mentions from "./core/mentions.js";
 import { SH } from "./core/paths.js";
 import { settle } from "./core/pending.js";
@@ -265,7 +266,7 @@ export default class Chat extends View {
     this.inner = _props?.inner === true;
     if (this.inner) inner.chat = this;
     const P = this.inner ? _props : props();
-    this.origin = P?.terminal ?? null;
+    this.origin = this.resolveTerminal(P?.terminal ?? null);
     this.addr = this.origin;
     // No agent yet (a Coordinator tab): it may have started one already (this slot's label).
     this.role = P?.role ?? null;
@@ -340,6 +341,7 @@ export default class Chat extends View {
         this.box.set_value(v.split("\n").filter((l) => !/^file:\/\/\S+$/.test(l.trim())).join("\n"));
       }
       this.slashSel = 0;
+      if (skills.typing(this.box.value()) !== null) this.loadSkills(cx);
       // Editing a recalled message makes it a new one: arrows move in it again.
       if (this.recall >= 0 && this.box.value() !== this.recalled) this.recall = -1;
       this.sizeBox();
@@ -386,6 +388,7 @@ export default class Chat extends View {
     this.slashSel = 0;
     this.slashOff = null;
     this.cmds = [];
+    this.skillCatalog = null;
     // "#": the spaces this agent's machine reaches (core/mentions.js) and the ones picked into the box
     this.reach = null;
     this.picked = [];
@@ -597,6 +600,7 @@ export default class Chat extends View {
         if (c === "mute") this.callMute(cx);
         if (c === "find") this.openFind(cx);
         if (c === "attachments") this.attachMenu = !this.attachMenu;
+        if (c === "skills") this.openSkills(cx);
         cx.notify();
       }
     });
@@ -643,6 +647,7 @@ export default class Chat extends View {
     try { d = JSON.parse(text ?? "null"); } catch {}
     if (!d) return;
     if (d.text && !this.box.value()) this.box.set_value(d.text);
+    if (d.text?.includes("$")) this.loadSkills(cx);
     this.files = Array.isArray(d.files) ? d.files : [];
     this.quote = d.quote ?? null;
     this.queue = Array.isArray(d.queue) ? d.queue : [];
@@ -1424,7 +1429,9 @@ export default class Chat extends View {
     this.pickedTasks = [];
     // Also while the agent asks in its terminal: the words answer it there (deliver()).
     if (!text && !this.files.length) return;
-    const msg = { id: `m${Date.now()}`, text, files: this.files, quote: this.quote };
+    const catalog = this.skillCatalog?.key === this.skillTarget()?.key ? this.skillCatalog?.list : null;
+    const msg = { id: `m${Date.now()}`, text, files: this.files, quote: this.quote,
+      skills: skills.references(text, catalog ?? []) };
     this.box.set_value("");
     // If the textarea still adds Enter's new line after this, take it out again.
     cx.timer.after(30, () => { if (!this.box.value().trim()) this.box.set_value(""); });
@@ -1452,6 +1459,7 @@ export default class Chat extends View {
     const list = this.suggestions();
     if (list.length) {
       const c = list[Math.min(this.slashSel, list.length - 1)];
+      if (c.skill) { this.pick(c, cx); const v = this.box.value(); cx.timer.after(30, () => this.box.set_value(v)); return; }
       if (c.task || c.space) { this.pick(c, cx); const v = this.box.value(); cx.timer.after(30, () => this.box.set_value(v)); return; }
       if (this.box.value().trim() !== `/${c.name}`) { this.pick(c, cx); cx.timer.after(30, () => this.box.set_value(`/${c.name} `)); return; }
     }
@@ -1486,7 +1494,10 @@ export default class Chat extends View {
       return;
     }
     // Herdr tag lines before the words: the message it replies to, the tasks it mentions.
-    const body = messageBody({ text: msg.text, quote: msg.quote?.text ?? null, tags: this.taskTags(msg.text) });
+    const taskTags = this.taskTags(msg.text);
+    const guideSkills = (this.role === "coordinator" || assistant(this.t)) && this.status() !== "blocked" && !msg.text.startsWith("/");
+    const skillTag = skills.skillTag(msg.skills, guideSkills);
+    const body = messageBody({ text: msg.text, quote: msg.quote?.text ?? null, tags: taskTags + skillTag });
     const p = { id: `pending-${msg.id}`, text: msg.text, replyTo: msg.quote ? excerpt(msg.quote.text, 80) : null, files: msg.files.filter((f) => !f.image).map((f) => f.name),
       paths: msg.files.filter((f) => f.image).map((f) => f.path), at: Date.now(), sent: body,
       match: norm(msg.text).slice(0, 60) || null, msg };
@@ -1623,12 +1634,80 @@ export default class Chat extends View {
     return true;
   }
 
+  resolveTerminal(address) {
+    if (!address || address.includes("/")) return address;
+    const chatPanes = panes().filter((p) => p.mod === "chat");
+    const matches = terminals().filter((t) => t.address?.split("/").pop() === address &&
+      chatPanes.some((p) => p.pane === chatPane(t)));
+    const tab = focused()?.tab;
+    const here = matches.find((t) => chatPanes.some((p) => p.tab === tab && p.pane === chatPane(t)));
+    return here?.address ?? (matches.length === 1 ? matches[0].address : address);
+  }
+
+  assistantSpace(rec = this.slotRec()) {
+    const id = rec?.space ?? props()?.space;
+    const all = spaces();
+    if (!id) return null;
+    if (id.includes("/")) return all.find((s) => s.id === id) ?? null;
+    const matches = all.filter((s) => s.id.split("/").pop() === id);
+    return matches.find((s) => s.id === focused()?.space) ?? (matches.length === 1 ? matches[0] : null);
+  }
+
+  skillTarget() {
+    const fresh = this.phase === "fresh";
+    const rec = fresh ? this.slotRec() : null;
+    const space = fresh ? this.assistantSpace(rec) : null;
+    const kind = fresh ? this.choice?.sel?.agent ?? props()?.settings?.agent ?? "claude" : this.kind;
+    if (kind !== "claude" && kind !== "codex") return null;
+    const machine = fresh ? space?.machine ?? null : this.machine;
+    const cwd = fresh ? props()?.folder ?? rec?.folder ?? space?.folder : this.t?.foreground?.cwd ?? this.t?.cwd;
+    return { kind, machine, cwd, key: JSON.stringify([kind, machine, cwd]) };
+  }
+
+  loadSkills(cx, refresh = false) {
+    const target = this.skillTarget();
+    if (!target) return;
+    const current = this.skillCatalog;
+    if (current?.key === target.key && (current.loading || !refresh)) return;
+    const request = { key: target.key, loading: true, list: current?.key === target.key ? current.list : [] };
+    this.skillCatalog = request;
+    cx.spawn(async (cx) => {
+      try {
+        request.list = await skills.catalog(target.kind, target.machine, target.cwd);
+      } catch {
+        request.error = true;
+      } finally {
+        request.loading = false;
+        cx.notify();
+      }
+    });
+  }
+
+  openSkills(cx) {
+    this.attachMenu = false;
+    const text = this.box.value();
+    if (skills.typing(text) === null) {
+      const next = text + (text && !/\s$/.test(text) ? " $" : "$");
+      this.box.set_value(next);
+      this.box.set_selected_range({ start: next.length, end: next.length });
+    }
+    this.slashOff = null;
+    this.slashSel = 0;
+    this.loadSkills(cx, true);
+    this.box.focus();
+  }
+
   // ---- slash commands -----------------------------------------------------------------------
 
   suggestions() {
     // Enter's new line may already be in the box when the submit comes.
     const v = this.box.value().replace(/\n+$/, "");
     if (this.slashOff === v) return [];
+    const skill = skills.typing(v);
+    if (skill !== null) {
+      const catalog = this.skillCatalog;
+      return catalog?.key === this.skillTarget()?.key ? slash.match(catalog?.list ?? [], skill) : [];
+    }
     // "#" at the end: the spaces this agent reaches (a pick names one for it).
     const h = mentions.typing(v);
     if (h !== null) {
@@ -1649,7 +1728,16 @@ export default class Chat extends View {
   }
 
   pick(c, cx) {
-    if (c.space) {
+    if (c.skill) {
+      const current = this.box.value().replace(/\n+$/, "");
+      const word = skills.typing(current);
+      if (word === null) return;
+      const next = current.slice(0, -word.length - 1) + `$${c.name} `;
+      this.box.set_value(next);
+      this.box.set_selected_range({ start: next.length, end: next.length });
+      this.slashOff = next;
+      this.saveSoon(cx);
+    } else if (c.space) {
       const next = mentions.pickInto(this.box.value(), c.space);
       this.picked = [...this.picked.filter((x) => x.name !== c.space.name), c.space];
       this.box.set_value(next);
@@ -1684,7 +1772,7 @@ export default class Chat extends View {
     if (waited.length && online(waited[0].machine)) {
       this.pending = this.pending.filter((p) => !p.waiting);
       const [first, ...rest] = waited.map((p) => p.msg);
-      this.startAgent({ ...first, text: [first, ...rest].map((m) => m.text).join("\n\n"), files: [first, ...rest].flatMap((m) => m.files) }, cx);
+      this.startAgent({ ...first, text: [first, ...rest].map((m) => m.text).join("\n\n"), files: [first, ...rest].flatMap((m) => m.files), skills: [...new Map([first, ...rest].flatMap((m) => (m.skills ?? []).map((s) => [s.name, s]))).values()] }, cx);
       return;
     }
     const a = this.slotAgent();
@@ -1708,7 +1796,7 @@ export default class Chat extends View {
     const rec = this.slotRec();
     if (rec?.pane && panes().some((p) => p.pane === rec.pane)) return rec.pane;
     const taken = new Set(terminals().filter((k) => k.state === "live").map(chatPane).filter(Boolean));
-    const tab = rec?.tab ?? focused()?.tab;
+    const tab = rec?.tab ?? this.assistantSpace(rec)?.tabs.find((t) => t.active)?.id ?? focused()?.tab;
     const free = panes().filter((p) => p.mod === "chat" && p.tab === tab && !taken.has(p.pane));
     return free.length === 1 ? free[0].pane : null;
   }
@@ -1719,7 +1807,7 @@ export default class Chat extends View {
     const pane = this.slotPane();
     if (!pane) { toast({ title: "Couldn't start the Assistant", body: "This chat hasn't found its pane. Try again in a moment.", level: "error" }); return; }
     const rec = this.slotRec();
-    const space = spaces().find((x) => x.id === (props()?.space ?? rec?.space));
+    const space = this.assistantSpace(rec);
     const machine = space?.machine ?? null;
     const folder = props()?.folder ?? rec?.folder ?? space?.folder ?? null;
     // Assistants start from the "assistant" template (chats saved before it was renamed say "coordinator").
@@ -1729,7 +1817,7 @@ export default class Chat extends View {
     const reply = msg?.quote ? `<hc reply-to="${excerpt(msg.quote.text, 80)}"/>\n` : "";
     // Files here go as their paths; on another machine they follow once it runs (hc put needs it).
     const local = machine || !msg ? [] : msg.files.map((f) => f.path);
-    const task = msg ? [reply + msg.text, ...local].filter(Boolean).join("\n\n") : "";
+    const task = msg ? [reply + skills.skillTag(msg.skills) + msg.text, ...local].filter(Boolean).join("\n\n") : "";
     const p = msg ? { id: `pending-${msg.id}`, text: msg.text, replyTo: msg.quote ? excerpt(msg.quote.text, 80) : null, files: msg.files.filter((f) => !f.image).map((f) => f.name),
       paths: msg.files.filter((f) => f.image).map((f) => f.path), at: Date.now(), sent: task, match: norm(msg.text).slice(0, 60) || null } : { failed: null };
     if (msg) this.pending.push(p);
@@ -1828,7 +1916,7 @@ export default class Chat extends View {
   // A pick there just changes it: nothing runs yet, so nothing is lost. Kept per slot, so a
   // reload keeps it. On another machine, what is installed there.
   loadChoice(cx) {
-    const space = spaces().find((x) => x.id === (props()?.space ?? this.slotRec()?.space));
+    const space = this.assistantSpace();
     if (this.choice) return;
     this.choice = { sel: null, data: null };
     cx.spawn(async (cx) => {
@@ -1840,6 +1928,7 @@ export default class Chat extends View {
         const sel = st?.agent && data.menus[st.agent] ? { perm: data.permDefault[st.agent], effort: null, fast: false, ...st } : { ...data.defaults };
         this.choice = { sel, data, key: this.choice.key };
       } catch { this.choice = null; }
+      if (skills.typing(this.box.value()) !== null) this.loadSkills(cx);
       cx.notify();
     });
   }
@@ -3883,7 +3972,7 @@ export default class Chat extends View {
         .when(i === sel, (el) => el.bg(t.selected))
         .hover((s) => s.bg(t.hover))
         .on_click((_e, cx) => { cx.stop_propagation(); this.pick(c, cx); })
-        .child(div().flex_none().text_size(12.5).font_medium().text_color(t.foreground).child(c.task || c.space ? c.name : `/${c.name}`))
+        .child(div().flex_none().text_size(12.5).font_medium().text_color(t.foreground).child(c.skill ? `$${c.name}` : c.task || c.space ? c.name : `/${c.name}`))
         .child(div().flex_1().min_w(0).truncate().text_size(12).text_color(c.task ? t.muted : t.dim).child(c.about))
         .when(Boolean(c.state), (el) => el.child(div().flex_none().text_size(11).text_color(t.dim).child(c.state)))));
   }
@@ -4342,7 +4431,13 @@ export default class Chat extends View {
     const ready = this.phase === "ready" || this.phase === "fresh";
     const empty = !this.box.value().trim() && !this.files.length;
     const can = ready && !empty;
-    const list = !this.attachMenu && (this.focused || this.paneFocused) ? this.suggestions() : [];
+    const showSuggestions = !this.attachMenu && (this.focused || this.paneFocused);
+    const list = showSuggestions ? this.suggestions() : [];
+    const skillQuery = skills.typing(this.box.value().replace(/\n+$/, ""));
+    const skillState = this.skillCatalog?.key === this.skillTarget()?.key ? this.skillCatalog : null;
+    const skillStatus = showSuggestions && skillQuery !== null && !list.length && this.slashOff !== this.box.value()
+      ? !skillState || skillState.loading ? "正在读取技能…" : skillState.error ? "技能读取失败，点击「技能」重试" : "没有匹配的技能"
+      : null;
     const rec = this.dict.state;
     const recallable = !list.length && (!this.box.value() || this.recall >= 0);
     const take = (fn) => (_e, cx) => { fn(cx); cx.stop_propagation(); cx.notify(); };
@@ -4383,6 +4478,7 @@ export default class Chat extends View {
       .on_mouse_move((e) => { if (e.bounds) this.composerAt = e.bounds; })
       .border_color(this.focused ? t.accent : t.input).bg(t.background)
       .child(this.slashList(t, list) ?? div())
+      .when(Boolean(skillStatus), (el) => el.child(div().px(12).py(6).text_size(12).text_color(t.dim).child(skillStatus)))
       .child(this.attachmentMenu(t) ?? div())
       .when(Boolean(this.dropBusy), (el) => el.child(div().px(12).pt(8).text_size(12).text_color(t.dim).child("正在读取拖入的附件…")))
       .child(this.tiles(t) ?? div())
@@ -4408,6 +4504,11 @@ export default class Chat extends View {
       .when(rec === "idle", (el) => el.child(h_flex().h(36).pl(6).pr(6).gap(4).items_center()
         // Attach on the left, as ChatGPT and Claude have it: the desktop's file picker.
         .child(this.round("chat-attach", "mods/chat/plus.svg", t, this.attachMenu ? "quiet" : "ghost", () => { this.attachMenu = !this.attachMenu; }))
+        .when(ready && Boolean(this.skillTarget()), (el) => el.child(h_flex().id("chat-skills").h(28).px(7)
+          .flex_none().items_center().rounded(6).cursor_pointer().text_size(12).text_color(t.muted)
+          .hover((s) => s.bg(t.hover).text_color(t.foreground))
+          .tooltip("选择当前 Agent 的技能，也可输入 $ 后搜索")
+          .on_click((_e, cx) => { cx.stop_propagation(); this.openSkills(cx); cx.notify(); }).child("技能")))
         .child(div().flex_1().min_w(0).truncate().text_size(12).text_color(t.blocked).child(rec === "idle" ? this.dict.error ?? "" : ""))
         .when(Boolean(this.addr), (el) => el.children(this.pickParts(t, true)))
         .when(!this.addr && this.phase === "fresh" && Boolean(this.choice?.sel) && Boolean(cx), (el) => el.child(this.freshPick(t, cx)))
