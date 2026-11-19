@@ -842,7 +842,7 @@
       "sha256": "469c6be2f5bddac15917ce32cb7e84684062e20351886807040eebc60f75b702"
     },
     "integrations/shepherdr/mods/chat/ask-hook.sh": {
-      "sha256": "a57aa74b7f3f721675e987bbfc15ff6f69058b95d5d772c930c5fff3592f48f6"
+      "sha256": "88e7f5dd37c779629302ab46cbb802e66a785fdd73f4ce6358d404376e1949d5"
     },
     "integrations/shepherdr/mods/chat/attach.js": {
       "sha256": "9ebd8baa9c0fb75a6f98b9ddd1832fadb35f48bb7710115097cfd21cf14c9288"

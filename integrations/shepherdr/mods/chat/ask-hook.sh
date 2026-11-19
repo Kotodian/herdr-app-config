@@ -8,8 +8,8 @@
 # In a Herdr terminal ($HC_TERMINAL_ID), it leaves the request in data/chat-asks/req/ and waits for
 # the chat's answer in data/chat-asks/ans/, which it prints as it is: the hook's decision, or
 # nothing (answer in the terminal). Any error, or no answer in time, also means no decision. It
-# never decides by itself. It waits whether or not a chat shows the agent right now (SHEP-91: a
-# person away from the window still gets the card on the web); only without hc and jq, when it
+# never decides by itself. Codex in a terminal pane goes straight to its native prompt. Claude
+# and Codex agents parked for chat or tasks can still wait for cards on other clients. Without hc and jq, when it
 # can't tell the terminal answered, does it wait just while a chat's flag is fresh (the window's
 # chat touches data/chat-asks/open/<terminal> every few seconds while it shows the agent).
 #
@@ -41,8 +41,10 @@ command -v hc >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && watch=1
 # --settings, SHEP-139), which hands this what it doesn't allow itself ($HERDR_ASK_CHAINED): the
 # agent waits for both, so this copy steps aside. Codex's is inside a -c value (hooks.PermissionRequest=...),
 # never a word of its own: matching only a bare "_allow" put two cards up for each ask (#866).
+terminal_info=
+[ "$watch" = 1 ] && terminal_info=$(hc get "$t" --json 2>/dev/null)
 if [ -z "${HERDR_ASK_CHAINED:-}" ] && [ "$watch" = 1 ] \
-  && hc get "$t" --json 2>/dev/null | jq -e '(.argv // []) as $a | ($a | index("_allow")) != null
+  && printf '%s\n' "$terminal_info" | jq -e '(.argv // []) as $a | ($a | index("_allow")) != null
        or any($a[]; tostring | startswith("hooks.PermissionRequest=") and contains(" _allow --command "))
        or (($a | index("--settings")) as $i | $i != null and (($a[$i + 1] // "") | tostring | contains(" _allow --command ")))' >/dev/null 2>&1; then
   exit 0
@@ -59,7 +61,15 @@ ended() { printf '%s\n' "$1" > "$end.tmp" 2>/dev/null && mv "$end.tmp" "$end" 2>
 trap 'ended "$(how declined)"' TERM INT HUP
 mkdir -p "$d/req" "$d/ans" "$d/end" 2>/dev/null || exit 0
 find "$d/end" -type f -mmin +1440 -delete 2>/dev/null
-cat > "$req.tmp" 2>/dev/null && mv "$req.tmp" "$req" 2>/dev/null || done_
+cat > "$req.tmp" 2>/dev/null || done_
+if [ "$watch" = 1 ] && jq -e 'has("turn_id")' "$req.tmp" >/dev/null 2>&1 \
+  && ! printf '%s\n' "$terminal_info" | jq -e '
+    (.labels["herdr.chat"] // "") != "" or
+    ((.labels["herdr.task"] // "") != "" and (.labels["herdr.tab"] // "") == "")
+  ' >/dev/null 2>&1; then
+  done_
+fi
+mv "$req.tmp" "$req" 2>/dev/null || done_
 
 # Claude's own status now: blocked, working, idle, done; "gone" once the terminal ended.
 status() {
