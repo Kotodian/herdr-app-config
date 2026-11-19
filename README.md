@@ -106,6 +106,12 @@ Assistant 分类并安排任务，Worker 在任务分支和 worktree 内实现�
 
 本配置仓库自身只用 `main` 自动同步，与业务仓库的开发分支分开。
 
+**Debugger**
+
+- In **Settings → Agents → Debugger**, choose the Codex model and reasoning level or edit the diagnosis instructions.
+- In the project's **Assistant** chat, click **Debugger** to add a diagnosis request to the draft. Include the symptoms, reproduction steps, and affected version, then send it. Once the Assistant confirms the defect affects `dev` or `main` and starts the read-only Debugger, it appears above the message box.
+- Debugger returns the diagnosis and proof to the Assistant. The Assistant publishes the proof and passes its link to the responsible Worker, who fixes and verifies the issue. For defects confined to other branches, the responsible Worker handles diagnosis, repair, and verification.
+
 ### 2. 在 Tasks 跟进任务
 
 点右上角 **Tasks** 看任务列表。`Working` 表示执行中；`Ready` 表示实现和规定的检查完成，等待你处理；`Needs you` 表示有问题、阻塞或待处理事项。
@@ -286,10 +292,10 @@ Artifacts、Inbox 和 Tasks 不需要额外账号连接，随 Shepherdr 安装�
 - **同步 ✓**：上次成功；点击可以立即同步。
 - **同步中 / 待同步**：正在处理，或有更新等待下一轮。
 - **同步 !**：失败，需要检查原因；断网恢复后会重试。
-- Sync includes layouts, themes, key bindings, custom panels, README screenshots, and Shepherdr source and helpers.
+- 同步布局、主题、键位、自定义面板、README 截图和 Shepherdr 发行文件。
 - 任务、聊天、worktree、登录、凭据、终端会话和窗口状态留在各自机器。
 - Herdr 生成的模组类型声明、编辑器配置和新任务 Artifact 留在本机。
-- Each machine builds its own Shepherdr `web/dist` from the synced source. Rebuilds replace hashed assets under `web/dist/assets/`, and sync ignores those changes and skips any legacy build entries.
+- Shepherdr's Web build output stays local. Sync distributes the source, and each machine builds its own `web/dist`.
 - 两边内容冲突时停止覆盖并保留双方；删除差异需要明确处理。
 
 排查位置：
@@ -300,8 +306,6 @@ Artifacts、Inbox 和 Tasks 不需要额外账号连接，随 Shepherdr 安装�
 传输 checkout：~/.config/herdr-app-sync/repository
 应用前备份：~/.config/herdr-app/backups/github-sync-时间戳/
 ```
-
-If **同步 !** appears, read the `error` field in the status file first. The log shows the failing operation. For an installation error, run `shepherdr doctor` on the affected machine. Once the issue is resolved, click the sync indicator to retry and check that it returns to **同步 ✓**.
 
 一般不需要手动操作传输 checkout。不要用强制拉取覆盖正在使用的 App 配置。
 
