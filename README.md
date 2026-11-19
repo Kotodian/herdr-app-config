@@ -108,9 +108,9 @@ Assistant 分类并安排任务，Worker 在任务分支和 worktree 内实现�
 
 **Debugger**
 
-- In **Settings → Agents → Debugger**, choose the Codex model and reasoning level or edit the diagnosis instructions.
-- In the project's **Assistant** chat, click **Debugger** to add a diagnosis request to the draft. Include the symptoms, reproduction steps, and affected version, then send it. Once the Assistant confirms the defect affects `dev` or `main` and starts the read-only Debugger, it appears above the message box.
-- Debugger returns the diagnosis and proof to the Assistant. The Assistant publishes the proof and passes its link to the responsible Worker, who fixes and verifies the issue. For defects confined to other branches, the responsible Worker handles diagnosis, repair, and verification.
+- 在 **Settings → Agents → Debugger** 选择 Codex 模型和推理强度，也可以编辑诊断指令。
+- 在项目的 **Assistant** 聊天中，点击输入框旁的 **Debugger**，把诊断请求加入草稿。补充问题现象、复现步骤和受影响的版本后发送。Assistant 确认缺陷出现在 `dev` 或 `main` 后，会启动只读 Debugger。运行状态显示在输入框上方。
+- Debugger 将诊断结果和证据交给 Assistant。Assistant 把证据发布为 proof，再将链接交给对应 Worker 修复和验证。仅出现在其他分支的缺陷，由对应 Worker 自行定位、修复和验证。
 
 ### 2. 在 Tasks 跟进任务
 
