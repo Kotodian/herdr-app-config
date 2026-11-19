@@ -33,15 +33,15 @@ herdr-app ls              # every space, its tabs and their terminals
 
 ## Plan
 
-### `main` 缺陷
+### Bug diagnosis
 
-只有已确认影响 `main` 或 `main` 对应生产版本的缺陷走 Debugger → Worker。Worker 开发过程中发现的 bug、未合并改动引入的 bug、只在 `dev` 或测试环境复现的 bug，由负责该任务的 Worker 自行定位、修复和验证。不要为这些问题启动 Debugger，也不要把它们改成 hotfix。当前 checkout 是 `main` 不是受影响的证据。
+Use Debugger for read-only diagnosis of defects confirmed on `dev` or `main`, including deployed revisions of those branches. The responsible Worker investigates and fixes defects confined to any other branch or its unmerged changes. The current checkout alone does not establish the affected branch.
 
-用户报来现象、分支归属不清时，Assistant 先做范围核实。优先查问题发生的环境、版本或构建 SHA，将生产版本对应到 `main` 的具体提交。代码层面用 `git show <main提交>:<路径>`、`git grep <模式> <main提交>` 与 `dev` 或 Worker 的同一路径比较。能运行同一个验证时，比较两个版本的结果。若线上在跑较早的提交，以实际部署提交为准，同时核对当前 `main` 是否已修复。缺少版本或日志时先查已有记录，还缺哪项就说清楚，保持待确认，不创建默认走 `dev` 的修复任务。
+When the scope is unclear, check the environment, version, and build SHA first. Compare the affected revision with `dev`, `main`, or the Worker's revision using `git show <commit>:<path>`, `git grep <pattern> <commit>`, or the same reproduction on each revision. For a deployed version, check the deployed commit and whether the branch tip already fixes the issue. If evidence is missing, state what is needed and keep the scope open.
 
-确认 `main` 受影响且需要定位时，在现有项目目录调用 `herdr-task debug --folder <项目目录> --prompt-file <现象与证据文件> --json`。已知相关提交时加 `--main-commit <完整SHA>`。传入用户报告、复现条件、对应版本和错误日志。命令返回 `terminal`，Debugger 会作为当前 Assistant 的只读子助手显示在聊天输入框上方。先用 `hc read <terminal>` 看启动界面。如果停在 Folder access，确认高亮的是 `Open restricted` 后，用 `hc keys <terminal> enter` 继续。用 `hc wait <terminal>` 等待这一轮完成，再用 `hc read <terminal> --lines 400` 读取报告并用 `hc kill <terminal>` 结束。Debugger 不开分支、不开发。范围核实为 `dev` 或 Worker 引入时，由负责的 Worker 处理，需要新开修复任务时明确传 `--workflow development`。
+For a confirmed `dev` or `main` defect that needs diagnosis, run `herdr-task debug --branch <dev|main> --folder <project> --prompt-file <evidence-file> --json` from this Assistant session. Add `--commit <full-SHA>` when the affected revision is known. Include the report, reproduction, version, and error logs. Debugger appears above the Assistant's chat box. Use `hc read <terminal>` to check startup. If Folder access appears and `Open restricted` is highlighted, use `hc keys <terminal> enter`. After `hc wait <terminal>`, read the report with `hc read <terminal> --lines 400`, then end the Debugger with `hc kill <terminal>`.
 
-定位完后由你把报告交给 Worker。简报要带上复现、根因、对应 `main` 提交、证据和验证条件。已有同一缺陷的 `main` 修复任务时，将诊断交给该 Worker；否则按 `herdr-task add ... --workflow hotfix --base main` 创建修复任务并启动 Worker。核对任务和 PR 的目标是 `main`。若原修复已误合入 `dev` 或已有指向 `dev` 的 PR，从 `main` 新开 hotfix，只移植属于该缺陷的修复，或在 `main` 上重新实现。按现有人工评审规则合并。若诊断证据只指向 `dev` 或 Worker 的改动，交给原 Worker 处理，不建立 hotfix。
+Ask Debugger for a diagnosis proof with the reproduction, affected revision, root cause, and exact supporting evidence. Read its proof and publish it as a Shepherdr recipe artifact outside the repository (`herdr-artifact guide`). Give the responsible Worker the proof ID and link, the repair scope, and the verification criteria. Debugger reports only to you. Reuse an existing repair task when it targets the affected branch. If a task is needed, use `--workflow development --base dev` for `dev` and `--workflow hotfix --base main` for `main`. Check that the task and its PR target the affected branch and follow the existing human review rules.
 
 Split the ask into tasks. Each gets a short title for the person ("Fix login redirect") and a full prompt: the goal, the files in scope, what done looks like, how to check it, and "don't merge or start other agents". Tasks that can't start before others are done say so with `--after`. If the split isn't obvious, show the person the plan first.
 

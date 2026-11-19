@@ -361,9 +361,9 @@ class ShepherdrSyncTests(unittest.TestCase):
             (app/"mods/chat/main.js").write_text("// generated installed copy")
             files,mods=sync.collect(app)
             prefix=sync.SHEPHERDR.as_posix()+"/"
-            for name in list(payload)[:8]:
+            for name in list(payload)[:4]:
                 self.assertIn(prefix+name,files,name)
-            for name in list(payload)[8:]:
+            for name in list(payload)[4:]:
                 self.assertNotIn(prefix+name,files,name)
             self.assertIn(prefix+"bin/shepherdr",files)
             self.assertIn(prefix+"lib/addons.json",files)
@@ -374,7 +374,7 @@ class ShepherdrSyncTests(unittest.TestCase):
                 sync.snapshot(files,mods)
                 self.assertEqual(sync.validate()[1],files)
 
-    def test_sync_ignores_legacy_entries_for_generated_mod_files(self):
+    def test_sync_ignores_legacy_entries_for_generated_mod_files_and_web_builds(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory).resolve()
             app,source=self.make_app(root)
@@ -382,7 +382,9 @@ class ShepherdrSyncTests(unittest.TestCase):
             generated.parent.mkdir(parents=True)
             generated.write_text("// generated on this machine")
             name=generated.relative_to(app).as_posix()
-            old={name:b"// generated on another machine"}
+            old_asset=(sync.SHEPHERDR/"web/dist/assets/index-Old.js").as_posix()
+            new_asset=(sync.SHEPHERDR/"web/dist/assets/index-New.js").as_posix()
+            old={name:b"// generated on another machine",old_asset:b"old bundle"}
             current={"settings.json":b"{}\n"}
             repo=root/"repo"
             repo.mkdir()
@@ -390,7 +392,7 @@ class ShepherdrSyncTests(unittest.TestCase):
             (repo/"manifest.json").write_text(json.dumps(sync.manifest({**old,**current},[])))
             self.assertNotIn(name,sync.collect(app)[0])
             self.assertEqual(sync.validate(repo)[1],current)
-            self.assertEqual(sync.merge_files(sync.hashes(old),{},current),current)
+            self.assertEqual(sync.merge_files(sync.hashes(old),{new_asset:b"new bundle"},{**old,**current}),current)
             self.assertEqual(generated.read_text(),"// generated on this machine")
 
     def test_new_task_artifact_stays_local(self):

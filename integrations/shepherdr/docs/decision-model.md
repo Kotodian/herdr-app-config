@@ -26,7 +26,7 @@ herdr-task add "修复登录" --prompt-file /tmp/task.md --folder /path/to/repo 
 
 本例中，Assistant 已确认缺陷只影响 `dev`。缓存只接受相同目录、标题和简报。旧格式的缓存需要重新分类。结果保存在任务的 `decision` 字段，可用 `herdr-task show <id> --json` 查看。
 
-启用 `git-workflow.json` 的 Git 仓库里，分类为 `bug` 时，创建任务需要显式指定 `--workflow development` 或 `--workflow hotfix`。缺陷归属不明时，Assistant 先核实影响范围。只在 `dev` 或 Worker 的改动中出现的缺陷由 Worker 自行处理。确认影响 `main` 或其生产版本后，Assistant 可调用只读 Debugger，把定位结果交给 Worker，再用 `--workflow hotfix --base main` 创建修复任务。Worker 从 `main` 开分支并向 `main` 提 PR。
+For repositories with `git-workflow.json`, a task classified as `bug` requires an explicit `--workflow development` or `--workflow hotfix`. The Assistant verifies the affected branch before assigning the fix. For confirmed `dev` or `main` defects, it can run `herdr-task debug --branch <dev|main>` for a read-only diagnosis. Debugger returns its proof to the Assistant, who publishes it and gives the responsible Worker the artifact link. Choose the Codex model and reasoning level under Settings → Agents → Debugger. A new repair uses `--workflow development --base dev` or `--workflow hotfix --base main` as appropriate. The responsible Worker investigates and fixes defects confined to other branches or unmerged changes.
 
 普通开发从 `dev` 开分支并向 `dev` 提 PR。已创建工作树的任务修改流程须同时指定 `--base`，且新旧基线必须指向同一提交、没有 PR。`dev` 合入 `main`、打发布 tag 或部署生产遵循本次明确的上线指令。
 

@@ -65,6 +65,8 @@ export const ROLES = [
     told: "What the bug and feature classifier is told first" },
   { id: "coordinator", title: "Assistant", about: "Plans the work and starts a task for each part.", file: "assistant.md",
     told: "What every Assistant is told first" },
+  { id: "debugger", title: "Debugger", about: "Investigates bugs confirmed on dev or main with read-only access.", file: "debugger.md",
+    told: "What every Debugger is told first" },
   { id: "worker", title: "Workers", about: "Do one task each.", file: "worker.md", told: "What every worker is told first" },
   { id: "reviewer", title: "Reviewer", about: "Checks each task's work before it's ready.", file: "reviewer.md",
     told: "What every reviewer is told first" },
@@ -77,6 +79,7 @@ export const INSTRUCTIONS = {
   notes: {
     decider: "Classifies code requests as bug or feature. The Assistant decides how to handle them.",
     coordinator: "Every Assistant uses this. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply when an Assistant restarts.",
+    debugger: "These instructions apply to the next read-only diagnosis.",
     worker: "Every worker gets this first. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply to the next task that starts.",
     reviewer: "Every reviewer gets this first. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply to the next review.",
     heartbeat: "Autopilot's heartbeat, plain text: an Assistant on Autopilot gets it on every wake. Changes apply from the next wake.",
@@ -153,11 +156,18 @@ export function choicesFrom(dflts, installed = { claude: true, codex: true }) {
   const first = menus.claude ? "claude" : Object.keys(menus)[0] ?? "claude";
   const c = current(first, [], {}, dflts[first]);
   const model = rowFor(first, c) ?? menus[first]?.models?.[0]?.id ?? null;
+  const codex = current("codex", [], {}, dflts.codex);
   return { menus, permDefault, decisionModels: dflts.decisionModels ?? [],
+    debuggerDefault: menus.codex ? { agent: "codex", model: rowFor("codex", codex) ?? menus.codex.models[0]?.id ?? null,
+      effort: codex.effort ?? null, fast: false, perm: "read-only" } : null,
     defaults: { agent: first, model, effort: c.effort ?? null, fast: false, perm: permDefault[first] } };
 }
 // These classifiers are offered in both existing agent tabs, in the decision role.
 export function roleChoices(choices, role) {
+  if (choices && role === "debugger") {
+    const codex = choices.menus.codex;
+    return { ...choices, menus: codex ? { codex: { ...codex, perms: [], models: codex.models.map((model) => ({ ...model, fast: false })) } } : {} };
+  }
   if (!choices || role !== "decider") return choices;
   const extra = (choices.decisionModels ?? []).map((m) => ({
     id: m.id, name: m.name, icon: "typesafe", efforts: [], defaultEffort: null, fast: false,
@@ -169,6 +179,10 @@ export function roleChoices(choices, role) {
 }
 // What a role's model button starts from: its own choice, else for the Reviewer the other CLI, else the defaults.
 export function roleSel(role, own, choices, worker) {
+  if (role === "debugger") {
+    const sel = own?.agent === "codex" ? { ...own, fast: false, perm: "read-only" } : choices?.debuggerDefault ?? null;
+    return { sel, unset: own?.agent !== "codex" };
+  }
   if (own) return { sel: { ...own }, unset: false };
   const o = otherCli(worker);
   if (role === "reviewer" && choices?.menus?.[o])

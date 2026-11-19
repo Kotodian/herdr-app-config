@@ -173,6 +173,10 @@ test("Agents and Tasks say the window's words: the model button, Other CLI, Must
   expect(agents.rows.find((r) => r.key === "role.coordinator")?.value).toBe("Opus 5.5 · 1M · High");
   expect(agents.rows.find((r) => r.key === "role.reviewer")).toMatchObject({ value: "Other CLI (Codex)", agent: { unset: true, other: false } });
   expect(agents.rows.find((r) => r.key === "role.decider")).toMatchObject({ value: C.CHOOSE_DECIDER, agent: { unset: true } });
+  expect(agents.rows.find((r) => r.key === "role.debugger")).toMatchObject({ agent: { sel: { agent: "codex", perm: "read-only" } }, file: "debugger.md" });
+  const debuggerMenu = C.roleChoices(s.choices, "debugger").menus;
+  expect(Object.keys(debuggerMenu)).toEqual(["codex"]);
+  expect(debuggerMenu.codex.perms).toEqual([]);
   const tasks = s.sections(null).find((x) => x.name === "Tasks" && x.level === "all")!;
   expect(tasks.rows.some((r) => r.key === "tasks.must_fix")).toBe(false);
   expect(tasks.rows.find((r) => r.key === "tasks.max_running")).toMatchObject({ hint: C.ABOUT["tasks.max_running"], steps: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"] });

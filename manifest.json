@@ -65,7 +65,7 @@
       "sha256": "660a80bfa8bf605fd1dd4c1ec730b837719cda0e130c35dc098732c7e39c80d1"
     },
     "README.md": {
-      "sha256": "4584ddb015577263a7a64f5601e62f8ec517a8ff611ff68dd74e4911adc8a876"
+      "sha256": "f470e135b96c9dbc371265ed2f9501d397e287bab72fbaf63dee5b742831bf6d"
     },
     "docs/screenshots/01-workspace.png": {
       "sha256": "3058f888f033ecba558e6898afbaa6268a821fd19341930b44ba3eedb0c16810"
@@ -197,10 +197,10 @@
       "sha256": "7dd07b7adc4e9efea3f45cd4404b1993091794b2801243c807f1fa563be572dd"
     },
     "integrations/shepherdr/core/chat-view.js": {
-      "sha256": "bb68a6b6735ce8d8e165d43f75805c19590f708bfa3546f86881c7e00510b6a1"
+      "sha256": "c8d7f5a1852687d6e130f565d06397e18befdd38442b3adfa9e15760e7de7147"
     },
     "integrations/shepherdr/core/chat-view.test.js": {
-      "sha256": "d4035a4a5a2aef0d32d73531cddc526909f438024a49939bd74675ed8ad364d9"
+      "sha256": "1f9660dfc987208429c2694aa42703f6dbdd20d36bdb75e410d2300fe4ec1889"
     },
     "integrations/shepherdr/core/clean-env.js": {
       "sha256": "5eeca3b301d62c790d788e061c7e57ea85dde29832e27556977a21fc65249e1f"
@@ -224,7 +224,7 @@
       "sha256": "f1f1045e48f729c41bdb81fc5c541dbc1dea52f5e42d90aa0964d7e551f55773"
     },
     "integrations/shepherdr/core/decision.test.py": {
-      "sha256": "8038fd47257c76cd1ca2ac730735447856d9855da79339e0691daa1d2070efbd"
+      "sha256": "e05f29019a3798da288fcb3b656d0cf39c2c8dce923de1ba33abfeecfd0d1091"
     },
     "integrations/shepherdr/core/git-workflow.test.py": {
       "sha256": "010653e57eb2902530f42f7b8558e36a2b827c482a6082ee42681e7592e0efd5"
@@ -362,7 +362,7 @@
       "sha256": "b720914e06b8ce2cdbfe67489da06ec08033a549df2e26ee2f4689ec34ec7881"
     },
     "integrations/shepherdr/core/settings.js": {
-      "sha256": "495509a7c249c7710966a66fbfabf8a081fe88bc27e57808f230213772e0b3a9"
+      "sha256": "a689933126343ca9ffb9fc12b16770e475911fbd5073362863f88447fdba93fd"
     },
     "integrations/shepherdr/core/settings.test.js": {
       "sha256": "de972c546a880f22fc1941179d7caf85f7a6aeceee965cfe62b40b1307a4c6ef"
@@ -437,7 +437,7 @@
       "sha256": "d6c3007480069b0d5fd5c7e317904e61702a8d0b91680d279f5ce7664ee76b41"
     },
     "integrations/shepherdr/docs/decision-model.md": {
-      "sha256": "aa5e4f57a67ccd632392b2662bfac687d90e71822e9ef6bbbd2a8413a05546c5"
+      "sha256": "5100d9c7c72f6ac4697181c0e582e088c4af690a23463a50375eb2a82203a660"
     },
     "integrations/shepherdr/docs/develop.md": {
       "sha256": "9215a812508e0e36c7ff6ec075fa141dd84ac9bcfabce825bf322253d2c4e570"
@@ -530,7 +530,7 @@
       "sha256": "5a0b83bb07678de6d909a7a4e68b6ce92280c295ae49b6a81b56dfec4ec2ef99"
     },
     "integrations/shepherdr/lib/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/lib/dirs.js": {
       "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
@@ -572,7 +572,7 @@
       "sha256": "259e0036afb43883aa0683da28a5938bc8527d2c054bf3eb0796e6cfd0911fd8"
     },
     "integrations/shepherdr/lib/settings.js": {
-      "sha256": "9e39eb4bee57ca126c8b37d9520464d1ce6be0cf41b90252c95c2a5fc4adce88"
+      "sha256": "61ebb70c018e69ba25c6515b9b904cf7db4944c923578509264431325656eb4f"
     },
     "integrations/shepherdr/lib/spacelog.js": {
       "sha256": "9af84071be177d72ace03ecf5b2bc878a11bec2aab9f2b8d227d486e96f2cde8"
@@ -890,7 +890,7 @@
       "sha256": "7dd07b7adc4e9efea3f45cd4404b1993091794b2801243c807f1fa563be572dd"
     },
     "integrations/shepherdr/mods/chat/core/chat-view.js": {
-      "sha256": "6d2385a84ad7458a8ef208718a848e02beb87fdb549dbcc62e2fe3d4b09af6ad"
+      "sha256": "c8d7f5a1852687d6e130f565d06397e18befdd38442b3adfa9e15760e7de7147"
     },
     "integrations/shepherdr/mods/chat/core/clean-env.js": {
       "sha256": "5eeca3b301d62c790d788e061c7e57ea85dde29832e27556977a21fc65249e1f"
@@ -935,7 +935,7 @@
       "sha256": "d50a0489643979a1c8e91e274de11118f0fe4aa5162135abc84c7db41a9a839b"
     },
     "integrations/shepherdr/mods/chat/core/settings.js": {
-      "sha256": "bb0fc9da75c17213df546b7630dabf7bb84bb21148c1846d85f97e3f18bd965c"
+      "sha256": "a689933126343ca9ffb9fc12b16770e475911fbd5073362863f88447fdba93fd"
     },
     "integrations/shepherdr/mods/chat/core/slash.js": {
       "sha256": "465910e2586d1c01e6d3bef7e1ce037da01e9b73ad735bc2b97e095e232d98a2"
@@ -1076,7 +1076,7 @@
       "sha256": "9205555b40d389eb28f2c622908daa6c19bc5462199a8fab911027e942251a6d"
     },
     "integrations/shepherdr/mods/chat/settings.js": {
-      "sha256": "9e39eb4bee57ca126c8b37d9520464d1ce6be0cf41b90252c95c2a5fc4adce88"
+      "sha256": "61ebb70c018e69ba25c6515b9b904cf7db4944c923578509264431325656eb4f"
     },
     "integrations/shepherdr/mods/chat/skills.js": {
       "sha256": "2ef2e30f8726eaa5b5f0869442e9d14c4da8d6fb077aec577048addb02c3ec57"
@@ -1139,7 +1139,7 @@
       "sha256": "228d3475032832c86b5e10394f39f41fed8784547364eb927328112c28cb8f18"
     },
     "integrations/shepherdr/mods/coordinator/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/mods/coordinator/core/agents.js": {
       "sha256": "12f8765882a1b287bd621655bb91f2cb95f2a3a1b69976bbda0520ff0c914b03"
@@ -1154,7 +1154,7 @@
       "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
     },
     "integrations/shepherdr/mods/coordinator/core/settings.js": {
-      "sha256": "bb0fc9da75c17213df546b7630dabf7bb84bb21148c1846d85f97e3f18bd965c"
+      "sha256": "a689933126343ca9ffb9fc12b16770e475911fbd5073362863f88447fdba93fd"
     },
     "integrations/shepherdr/mods/coordinator/core/spaces.js": {
       "sha256": "b07cb18d3cf3994e108d42e5c4b0fde631e2b41d2da3bac3882273b9f7368f9e"
@@ -1268,7 +1268,7 @@
       "sha256": "128cfe9c6b8b8b5f8ab1324315a67cf241233dc369e1c66b74cd452075e7f5ef"
     },
     "integrations/shepherdr/mods/menu-tasks/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/mods/menu-tasks/core/menus.js": {
       "sha256": "e1ba22a3e579f6fcf1cc691f1e930cb870796897a28e0dc635fa09e840ee09d0"
@@ -1298,7 +1298,7 @@
       "sha256": "128cfe9c6b8b8b5f8ab1324315a67cf241233dc369e1c66b74cd452075e7f5ef"
     },
     "integrations/shepherdr/mods/new-menu-tasks/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/mods/new-menu-tasks/core/menus.js": {
       "sha256": "e1ba22a3e579f6fcf1cc691f1e930cb870796897a28e0dc635fa09e840ee09d0"
@@ -1331,7 +1331,7 @@
       "sha256": "69dddd0639362b2859f9daf83ae6e4db340f4ba2232631cf52ef93f6a098bcca"
     },
     "integrations/shepherdr/mods/newspace/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/mods/newspace/core/agents.js": {
       "sha256": "12f8765882a1b287bd621655bb91f2cb95f2a3a1b69976bbda0520ff0c914b03"
@@ -1346,7 +1346,7 @@
       "sha256": "18618fa16a1e13c6f3ea38652f481daff3a8e43f4f4b5acabd69b38c3720693d"
     },
     "integrations/shepherdr/mods/newspace/core/settings.js": {
-      "sha256": "bb0fc9da75c17213df546b7630dabf7bb84bb21148c1846d85f97e3f18bd965c"
+      "sha256": "a689933126343ca9ffb9fc12b16770e475911fbd5073362863f88447fdba93fd"
     },
     "integrations/shepherdr/mods/newspace/core/spaces.js": {
       "sha256": "b07cb18d3cf3994e108d42e5c4b0fde631e2b41d2da3bac3882273b9f7368f9e"
@@ -1370,7 +1370,7 @@
       "sha256": "e8e0a91d23a0addf19f9f4dab48f597f252a1d44e5063e4d6ae884a88cbf735d"
     },
     "integrations/shepherdr/mods/newspace/settings.js": {
-      "sha256": "9e39eb4bee57ca126c8b37d9520464d1ce6be0cf41b90252c95c2a5fc4adce88"
+      "sha256": "61ebb70c018e69ba25c6515b9b904cf7db4944c923578509264431325656eb4f"
     },
     "integrations/shepherdr/mods/newspace/spacelog.js": {
       "sha256": "9af84071be177d72ace03ecf5b2bc878a11bec2aab9f2b8d227d486e96f2cde8"
@@ -1466,7 +1466,7 @@
       "sha256": "e4be073ba4ac552809950d4822779d387ab90f2e83704d028d2c566d2a6afbd3"
     },
     "integrations/shepherdr/mods/shepherdr-settings/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/mods/shepherdr-settings/core/agents.js": {
       "sha256": "12f8765882a1b287bd621655bb91f2cb95f2a3a1b69976bbda0520ff0c914b03"
@@ -1493,7 +1493,7 @@
       "sha256": "717d4d4ce387e206661419066d9ec41cf556266aaff66480c9d0659eef18d8a0"
     },
     "integrations/shepherdr/mods/shepherdr-settings/core/settings.js": {
-      "sha256": "bb0fc9da75c17213df546b7630dabf7bb84bb21148c1846d85f97e3f18bd965c"
+      "sha256": "a689933126343ca9ffb9fc12b16770e475911fbd5073362863f88447fdba93fd"
     },
     "integrations/shepherdr/mods/shepherdr-settings/core/spaces.js": {
       "sha256": "b07cb18d3cf3994e108d42e5c4b0fde631e2b41d2da3bac3882273b9f7368f9e"
@@ -1541,7 +1541,7 @@
       "sha256": "78d35e5659a8bdd6e67013d35bbef6f6cf3a5a52d2db0987adf4193fbaf0e31c"
     },
     "integrations/shepherdr/mods/shepherdr-settings/main.js": {
-      "sha256": "1196af036a1aa83b1a07bd13ba01b4a326f0488a21d393d127614f67162c610a"
+      "sha256": "5124c00a9e348bf10f4b3a102caff26c23915700d3029a49b8f02b38587c2694"
     },
     "integrations/shepherdr/mods/shepherdr-settings/mod.json": {
       "sha256": "7e872739efe8a6ee97b5b5e77eb8c8dc3cfbfecdfef80dc438864044dc18bdd7"
@@ -1568,7 +1568,7 @@
       "sha256": "259e0036afb43883aa0683da28a5938bc8527d2c054bf3eb0796e6cfd0911fd8"
     },
     "integrations/shepherdr/mods/shepherdr-settings/settings.js": {
-      "sha256": "9e39eb4bee57ca126c8b37d9520464d1ce6be0cf41b90252c95c2a5fc4adce88"
+      "sha256": "61ebb70c018e69ba25c6515b9b904cf7db4944c923578509264431325656eb4f"
     },
     "integrations/shepherdr/mods/shepherdr-settings/spacelog.js": {
       "sha256": "9af84071be177d72ace03ecf5b2bc878a11bec2aab9f2b8d227d486e96f2cde8"
@@ -1604,7 +1604,7 @@
       "sha256": "deb0cfec0cb3ea2e781c0a1e0f1e902e79d8ca3049bd5d975dbfe67c1e0f4d19"
     },
     "integrations/shepherdr/mods/spaces-chat/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/mods/spaces-chat/core/asks.js": {
       "sha256": "81693861a06ece6eb63be595fe70a3f4fdde85a21706ae57531949fde2fe49f4"
@@ -1706,7 +1706,7 @@
       "sha256": "5a0b83bb07678de6d909a7a4e68b6ce92280c295ae49b6a81b56dfec4ec2ef99"
     },
     "integrations/shepherdr/mods/tabs-tasks/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/mods/tabs-tasks/core/asks.js": {
       "sha256": "81693861a06ece6eb63be595fe70a3f4fdde85a21706ae57531949fde2fe49f4"
@@ -1904,13 +1904,13 @@
       "sha256": "240854267a491d28ec62023450e19e840f574b8de79a266593250481d94f9d00"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/cli.py": {
-      "sha256": "3f7bf455a9bf331ff0863b52921115d25bc466477f98086cb65997ac0c9f6b00"
+      "sha256": "b059eda0cc226856cbc3696dd650209d2166cb77506a66f549e964978ad2b42f"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/commands.py": {
       "sha256": "de545f550e2f4cb55887dd694d6ea0fdbc480fdb341912430300af887e04cea8"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/debugger.py": {
-      "sha256": "160d3ad868575e6b587c56c663889c5da538073f7c98c1c0619a85580906f035"
+      "sha256": "79c3ec2a636d03bb6956ab5d92bbaf304e8816c8a53c7c64c2849e284c5de0ca"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/decision.py": {
       "sha256": "12765946e42f553735c94b16ece268f5bc70c3168d1e71ca71482bb7a28c8d34"
@@ -1985,7 +1985,7 @@
       "sha256": "d4a28d19a81362897a36e957e5b10e6c9e3fdfb4c12cdbd5422941b7feadcc80"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/settings.py": {
-      "sha256": "3c86e3775286df2faaaa424235157e1779abfa8e4369a3b6f33b8282a52f0822"
+      "sha256": "1d0b954892e6f194a0d9e8ffcc8e1418c5f24523be7d50f63673cb270baad09d"
     },
     "integrations/shepherdr/mods/tasks/bin/herdr_task/store.py": {
       "sha256": "08d04af01822ed11ae1b7f7ef4333b7fe4905f9adec3702ab7af66cefcbd8747"
@@ -2009,7 +2009,7 @@
       "sha256": "65e7ec7ac4fa94dd6a4304c10a52ce9ca215d14fcd44cb09d51a3934a963b1a1"
     },
     "integrations/shepherdr/mods/tasks/coordinator.js": {
-      "sha256": "ca819933877df3101e08ec57b125abc60686b8d26b298500ebbb9e4a008656b1"
+      "sha256": "147a3bfeedd164cae1db9b63a42e98502cd021c1e33cc221be1ddf8422f419f9"
     },
     "integrations/shepherdr/mods/tasks/core/asks.js": {
       "sha256": "81693861a06ece6eb63be595fe70a3f4fdde85a21706ae57531949fde2fe49f4"
@@ -2582,10 +2582,10 @@
       "sha256": "a9b53161ce1abdf77fff2a1d89eb97c94af7ca0ecfa0e946634111dfa94eda81"
     },
     "integrations/shepherdr/service/settings.test.ts": {
-      "sha256": "e1963784752436164384c25c0099f28c018ac4dd0866d50127a944c83f097350"
+      "sha256": "b7b07b585c2f42d002ddc70da4463d91b42b378e35bf53c572fe03ad1950d28d"
     },
     "integrations/shepherdr/service/settings.ts": {
-      "sha256": "6e80398bd0ecedec4297b972bb4489adc2d9c5d034fd62a8f8274e292738c2cc"
+      "sha256": "5a55d54c65c300d4f92f554c099713b81b938a650e55d17534f8bde64b0e4a57"
     },
     "integrations/shepherdr/service/show.test.ts": {
       "sha256": "07bc2d372d48fcdc65475f7cf64beb3f72a422b9b8f13aa24fbefebb4a8749f8"
@@ -2684,10 +2684,10 @@
       "sha256": "66dc3b724335f7d288e902918b65c73576ca028fade36717f92adfb12051c403"
     },
     "integrations/shepherdr/templates/assistant.md": {
-      "sha256": "205fed93897ac866ef7cebcccaac9deb3c136c054f6365055b9ca56da86a79d7"
+      "sha256": "be412c2f86be1281eef64158fc6a4ae3997408c080adfcdf796c6d0677e5f159"
     },
     "integrations/shepherdr/templates/debugger.md": {
-      "sha256": "fb22a25be254960ad55e2ada3b1caac82bfc7a9feac924c1f15dd1f516870422"
+      "sha256": "fe51fb8a62df7094ec849bda8e6b66f98980fc4bdb97d565d6372e87902f3282"
     },
     "integrations/shepherdr/templates/decider.md": {
       "sha256": "407bf12fa74a7954d1fef3f5801d6183dad00e79c3aeed46f150249a5824a116"
@@ -2703,135 +2703,6 @@
     },
     "integrations/shepherdr/web/build-plugins.ts": {
       "sha256": "79e4b93192955ba3103a2c3beb76db434751f805e9b370dd639260403ca32fff"
-    },
-    "integrations/shepherdr/web/dist/agents/LICENSE-LobeHub.txt": {
-      "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
-    },
-    "integrations/shepherdr/web/dist/agents/claude.svg": {
-      "sha256": "670b3d8d749d0815ad8f7e62a59d51cb5e2053cb19403f3541a8aed7036a877f"
-    },
-    "integrations/shepherdr/web/dist/agents/codex.svg": {
-      "sha256": "4a2f43ce46b5b6e3722c95088f88d26ef91e6a8c2e598e70642a1c54367386e4"
-    },
-    "integrations/shepherdr/web/dist/artifact-viewer.html": {
-      "sha256": "31439e5340373ff0fe85068483889ad079df15e78c18e690d66c75e2dbdf4b82"
-    },
-    "integrations/shepherdr/web/dist/assets/InterVariable-DiVDrmQJ.woff2": {
-      "sha256": "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3"
-    },
-    "integrations/shepherdr/web/dist/assets/InterVariable-Italic-FCBEiFp6.woff2": {
-      "sha256": "e564f652916db6c139570fefb9524a77c4d48f30c92928de9db19b6b5c7a262a"
-    },
-    "integrations/shepherdr/web/dist/assets/addon-unicode11-C82cyeHQ.js": {
-      "sha256": "d49b2f85407c8eeb2fe81ecdae1de417b59c60f30764d625a2fb19da96560805"
-    },
-    "integrations/shepherdr/web/dist/assets/common-CvaiMv_H.js": {
-      "sha256": "921c699f2cc6e898c5ac1e7203c73c462a98073bd9e343fd444b91f963988209"
-    },
-    "integrations/shepherdr/web/dist/assets/emoji-data-2mkAH_hx.js": {
-      "sha256": "64e7428a1eff00a2c7596592d0a0718322c3a17d2db6a7188916b7214608642c"
-    },
-    "integrations/shepherdr/web/dist/assets/index-BgsqbUkw.css": {
-      "sha256": "5d2c1e4e1ef119a82fa08402eadc8e58b30ed08558c4ceaadbfae4b9dbc6d08f"
-    },
-    "integrations/shepherdr/web/dist/assets/index-D91cGpeL.js": {
-      "sha256": "d81a2c7cadc244ed32d752b7ecef72f5041adee295fe08dd51c92828636f1c6e"
-    },
-    "integrations/shepherdr/web/dist/assets/rolldown-runtime-XKyaHtl9.js": {
-      "sha256": "548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"
-    },
-    "integrations/shepherdr/web/dist/assets/xterm-BMsy1fDS.js": {
-      "sha256": "c3486a738e868fc70309aa552bb70fd02630160cf17cb3ac1d7be34904800adc"
-    },
-    "integrations/shepherdr/web/dist/badge-96.png": {
-      "sha256": "e929e4734ef365fb519de7ce7335e4425cb7ab67d10b1ce647f1e43b31379f90"
-    },
-    "integrations/shepherdr/web/dist/icon-180.png": {
-      "sha256": "a0fc99bfc2882b07cc394efe56d9731d76c48421bec64713675ab5386b74bd5b"
-    },
-    "integrations/shepherdr/web/dist/icon-192.png": {
-      "sha256": "f6a4fb57813d109ab6f38c0f71bbdcbea123cfa07d38b34bcf92852a8dd37680"
-    },
-    "integrations/shepherdr/web/dist/icon-512.png": {
-      "sha256": "b7363369e73535b39df1e1ebd088bfe5d3372ec921f8325c2391cf7e7d36e384"
-    },
-    "integrations/shepherdr/web/dist/icon-maskable-512.png": {
-      "sha256": "a1b075efedb5d984e7230fcf1b95acc1587f5bde51c36d1b9436f0d8355a012b"
-    },
-    "integrations/shepherdr/web/dist/icon.svg": {
-      "sha256": "bcf4b3373dcfc941fe3fe534e85e9d7491cccda5cd13cf18d3d243c34fa96760"
-    },
-    "integrations/shepherdr/web/dist/index.html": {
-      "sha256": "6041b7cab139cc24fc241b0e2b162df11bbfc7f6fb1982418814cb096b06d24a"
-    },
-    "integrations/shepherdr/web/dist/manifest.webmanifest": {
-      "sha256": "f01389b0b16c46d432ce59047f27ce8c347986396e32667960b41302f294e59f"
-    },
-    "integrations/shepherdr/web/dist/providers/typesafe.png": {
-      "sha256": "86f8c025fc0e0b44de7e3c049d0719e50c81675a104e6ca8e562e89f38a858b8"
-    },
-    "integrations/shepherdr/web/dist/splash/375x667@2-dark.png": {
-      "sha256": "4fe35db9068ea2a7171ca3e84fe1b66c3add99fe7ca536b95f8530a204fdc933"
-    },
-    "integrations/shepherdr/web/dist/splash/375x667@2-light.png": {
-      "sha256": "cc72abd659bbbcf3b24e88e46042245a46fe21cde532cd7eb74f30464b505506"
-    },
-    "integrations/shepherdr/web/dist/splash/375x812@3-dark.png": {
-      "sha256": "57aa3dfc55ecbe1a0a0e4f665ae7b770a5bc34c94342565d756cf3ae39cbf1b4"
-    },
-    "integrations/shepherdr/web/dist/splash/375x812@3-light.png": {
-      "sha256": "57df52fdd64870044d1949dc644fabf4d3665008de152f2e02e5625955f47428"
-    },
-    "integrations/shepherdr/web/dist/splash/390x844@3-dark.png": {
-      "sha256": "aa52c62425e7603441b3642fc904f85b69bd8ae0cb1982b1984f235139edf83e"
-    },
-    "integrations/shepherdr/web/dist/splash/390x844@3-light.png": {
-      "sha256": "dc81a6fda4f2a5c9b1b87e0f420211709dee00a9c444dd902e6019c4e36c1165"
-    },
-    "integrations/shepherdr/web/dist/splash/393x852@3-dark.png": {
-      "sha256": "110ae8b83beab7cbfc863affaf79c07bc4f1900eee4c099835a7bbaf2dd359ea"
-    },
-    "integrations/shepherdr/web/dist/splash/393x852@3-light.png": {
-      "sha256": "b81b825c2ffd1f7a3c596bf4f2e83bfab63f0dd9e86252574b30b8b18dca2e88"
-    },
-    "integrations/shepherdr/web/dist/splash/402x874@3-dark.png": {
-      "sha256": "47063db0b55e809dcee8dc2078b1af62b82ded053ea94eadee08536ad0b63182"
-    },
-    "integrations/shepherdr/web/dist/splash/402x874@3-light.png": {
-      "sha256": "8e62ae331bdb39fbbf99fb17652749208b5a44f00ebb078e4aaba936c4e55ecc"
-    },
-    "integrations/shepherdr/web/dist/splash/414x896@2-dark.png": {
-      "sha256": "8bb034c787a7998d9e130afb2e314d8116747867e637eace61aff57249bac547"
-    },
-    "integrations/shepherdr/web/dist/splash/414x896@2-light.png": {
-      "sha256": "de31b98d0b6b10029ab47e9096f4c185f34287949f596e292b6c8fef531adced"
-    },
-    "integrations/shepherdr/web/dist/splash/414x896@3-dark.png": {
-      "sha256": "9fc8eec6c38c67287eb6c7058cb8c891c9696b5e77d75ae671bbb93e3e496979"
-    },
-    "integrations/shepherdr/web/dist/splash/414x896@3-light.png": {
-      "sha256": "bde89750568c62cd8ff8dd4d502f6b72d15491e5f2e6873fb06b24505a29f1ef"
-    },
-    "integrations/shepherdr/web/dist/splash/428x926@3-dark.png": {
-      "sha256": "8b3a2bd7b99e03fa28c8878bd5e65b2504592868cf121c739ecceca366612c60"
-    },
-    "integrations/shepherdr/web/dist/splash/428x926@3-light.png": {
-      "sha256": "b5e8dadd8af05148722a1fafe168c8088b58af0a13e48a02105c64a22b4e560c"
-    },
-    "integrations/shepherdr/web/dist/splash/430x932@3-dark.png": {
-      "sha256": "d880bb3fd2516cd745a86a4c942d5ad27176475a2899fe6a9b2c87e883dfdc67"
-    },
-    "integrations/shepherdr/web/dist/splash/430x932@3-light.png": {
-      "sha256": "014a4099a40e0f09c65cb7de1a95f473a766b37f2fb76aa4b4dcfb35948d8679"
-    },
-    "integrations/shepherdr/web/dist/splash/440x956@3-dark.png": {
-      "sha256": "79ec39d69dd49b23ba98745a66a4f4b86d06073ca719b2802300f039ee902727"
-    },
-    "integrations/shepherdr/web/dist/splash/440x956@3-light.png": {
-      "sha256": "d5c1ccf3ce73e842e6acf8757c434e155d1a208091c1312b832ae7c017cdbf3d"
-    },
-    "integrations/shepherdr/web/dist/sw.js": {
-      "sha256": "1cbe849d897a696347429215bb1687d85ba516aba01523a086eb77dbb9e27f39"
     },
     "integrations/shepherdr/web/generated/client-plugins.ts": {
       "sha256": "6698bb1f75f1d8af79d63ec0ee2f50c4231b06d581f701d600596adc63629693"
@@ -2867,7 +2738,7 @@
       "sha256": "9b0175caa4f69d3c036a003d66bfd1ce1b92fc5dbb312df5c857fd0888f222f7"
     },
     "integrations/shepherdr/web/plugins/chat/client.tsx": {
-      "sha256": "b313f0d84081f57ea282c9c6b86671ee6022a4539b4cf17b7d15d944116f1827"
+      "sha256": "82d31c572ac6b17d29f25a0e6a5628eba7bb5620b555298d1d6b7131aa0d6a37"
     },
     "integrations/shepherdr/web/plugins/chat/days.ts": {
       "sha256": "554769b46caa9ece25bc6b557e767748f34f67dea1b5a8cbbada753215c71fdc"
@@ -3140,7 +3011,7 @@
       "sha256": "ecede59878135c63fd0f7b833f124e31effbb4c0fff18a73804533600cc24452"
     },
     "integrations/shepherdr/web/src/Settings.tsx": {
-      "sha256": "b15ccf0b72dc53c5b4694084172058bc0c7bdd97d5f21e36d7351b5212603dc9"
+      "sha256": "33696922b21d8d2c428a45aad661ace834d99cbedc803d4ecefcc6c30d291369"
     },
     "integrations/shepherdr/web/src/Stack.tsx": {
       "sha256": "7612e20b05447c95a253894709a095a8b5314873fe47ce6e47088215594b51ae"
@@ -3314,7 +3185,7 @@
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
     },
     "layouts/shepherdr.json": {
-      "sha256": "92afa4631a42b1758250f3cbef54eb603b7d980d19bcea529a57a3fbc6041ab3"
+      "sha256": "5f442e8b94fce0c8f7e49095b4012df63eda8a01cc85748460e325f598972f5a"
     },
     "mods/agenttrail/agent-claude.svg": {
       "sha256": "1d8de3564ab1604c3d51954cf5b10e18d71c24d55f45d92980951f1d11e48de0"
@@ -5876,10 +5747,10 @@
       "sha256": "f1eff3f96a1da7434fb2fb235f22bdbce3d1ba4d68addd57af43aa5bcd32f7d3"
     },
     "sync-app.py": {
-      "sha256": "562066a2ca8c0ba6eaf377486abc462d06dd7059e1bbe7118f9bf8a6c4e5f95b"
+      "sha256": "22a8cc60f983e3b7e0dc8bc6aeab90c10377c9eed63da78b03a1c0ab1eb6050c"
     },
     "tests/test_sync_app.py": {
-      "sha256": "2d7105a28982ef51d42bdd4394c8428b724504ecf250ca85fd749f0535a84495"
+      "sha256": "7f4970d4274718c10590df95af1e9c2f6f80c290d65e547ef5ab6ab2c9e9c893"
     },
     "themes/kanso-day.json": {
       "sha256": "47149b8493a16c92872653f5e72f49bfd680e4a5d5926694cea0806528a5233c"

@@ -359,7 +359,7 @@ export function fitThumbs(sizes, width = Infinity) {
 // chat as a subagent row: its role and CLI, working / needs / done, how long, opening to its last messages and its own
 // chat. One that ended stays a while (it reported, its parent ended it).
 export const HELPER_ROLES = ["reviewer", "helper", "debugger"];
-const DEBUGGER_REQUEST = "请先确认这个问题是否影响 main。确认后，请启动只读 Debugger 定位原因。";
+const DEBUGGER_REQUEST = "请先核实缺陷是否影响 dev 或 main。确认后请用只读 Debugger 定位，定位完成后交给对应 Worker 修复。其他分支由对应 Worker 自行定位和修复。";
 export function debuggerDraft(text) {
   if (text.startsWith(DEBUGGER_REQUEST)) return text;
   return `${DEBUGGER_REQUEST}\n\n${text}`;

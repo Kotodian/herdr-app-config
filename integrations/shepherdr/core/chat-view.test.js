@@ -192,7 +192,14 @@ describe("agent to agent as a group chat (SHEP-27)", () => {
 });
 
 // SHEP-54: an agent's own helper agents in herdr, over its chat
-import { subagentsOf, subagentTitle, isHelper } from "./chat-view.js";
+import { debuggerDraft, subagentsOf, subagentTitle, isHelper } from "./chat-view.js";
+test("Debugger adds one diagnosis request and keeps the draft", () => {
+  const draft = debuggerDraft("A bug report with reproduction steps");
+  expect(draft).toContain("main");
+  expect(draft).toContain("只读 Debugger");
+  expect(draft.endsWith("\n\nA bug report with reproduction steps")).toBe(true);
+  expect(debuggerDraft(draft)).toBe(draft);
+});
 test("subagentsOf: show its debugger and other helpers without including workers", () => {
   const now = 10_000_000;
   const terms = [

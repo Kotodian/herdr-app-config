@@ -37,8 +37,7 @@ export async function loadChoices(machine = null, decisions = false) {
   const prog = (k) => known.find((a) => a.key === k || (a.run ?? [])[0] === k);
   const installed = Object.fromEntries(["claude", "codex"].map((k) => [k, prog(k) ? prog(k).installed !== false : k === "claude"]));
   const icons = Object.fromEntries(["claude", "codex"].map((k) => [k, { icon: prog(k)?.icon ?? null, tint: Boolean(prog(k)?.tint) }]));
-  const { menus, permDefault, defaults } = choicesFrom({ claude, codex }, installed);
-  return { menus, icons, installed, permDefault, defaults, decisionModels };
+  return { ...choicesFrom({ claude, codex, decisionModels }, installed), icons, installed };
 }
 
 // The last choice made (data/coordinator-last.json) when it still fits what is offered, else

@@ -176,6 +176,7 @@ class DecisionTests(fixture.GitWorkflowTests):
 
     def test_debugger_starts_visible_readonly_child_in_the_reported_checkout(self):
         with patch.dict(debugger.os.environ, {"HC_TERMINAL_ID": "t6"}), \
+             patch.object(debugger, "settings_for", return_value={"debugger": {"agent": "codex", "model": "gpt-5", "effort": "high", "perm": "full"}}), \
              patch.object(debugger, "run", return_value=SimpleNamespace(stdout='{"address":"t7"}')) as run, \
              patch.object(debugger, "say") as report:
             debugger.cmd_debug(self.args(prompt="已确认 main 有登录缺陷", main_commit=self.baseline))
@@ -186,9 +187,27 @@ class DecisionTests(fixture.GitWorkflowTests):
         self.assertEqual(argv[argv.index("--cwd") + 1], str(self.repo.resolve()))
         self.assertIn("herdr.role=debugger", argv[:split])
         self.assertIn("read-only", argv[split:])
+        self.assertEqual(argv[argv.index("--model") + 1], "gpt-5")
+        self.assertIn('model_reasoning_effort="high"', argv[split:])
+        self.assertNotIn("full", argv[split:])
         self.assertTrue(any('trust_level="untrusted"' in arg for arg in argv))
         self.assertIn(self.baseline, argv[-1])
         self.assertEqual(report.call_args.args[1]["terminal"], "t7")
+
+    def test_debugger_targets_dev_and_rejects_other_branches(self):
+        self.git("switch", "-q", "dev")
+        self.git("commit", "-q", "--allow-empty", "-m", "dev defect")
+        dev_commit = self.git("rev-parse", "dev")
+        with patch.dict(debugger.os.environ, {"HC_TERMINAL_ID": "t6"}), \
+             patch.object(debugger, "visible_debugger", return_value="t7") as launch, \
+             patch.object(debugger, "say") as report:
+            debugger.cmd_debug(self.args(prompt="Defect on dev", branch="dev", commit=dev_commit))
+            self.assertIn(f"Affected dev revision: {dev_commit}", launch.call_args.args[2])
+            self.assertEqual(report.call_args.args[1]["branch"], "dev")
+            self.assertEqual(report.call_args.args[1]["commit"], dev_commit)
+            with self.assertRaisesRegex(Fail, "only investigates dev or main"):
+                debugger.cmd_debug(self.args(prompt="Defect on a worker branch", branch="task/example"))
+            self.assertEqual(launch.call_count, 1)
 
     def test_cached_decision_reuse_is_bound_to_request_and_folder(self):
         path = self.root / "decision.json"

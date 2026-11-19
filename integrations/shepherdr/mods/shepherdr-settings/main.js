@@ -41,7 +41,7 @@ import { dirs } from "./dirs.js";
 // herdr-task's merge policy (MERGE): "ask" waits for the person's Accept (which merges), the others merge without it.
 // NOTES: what a task's agent is told to do first and last (tasks.start_notes / finish_notes): herdr-task puts them
 // into its starting prompt; Herdr runs nothing itself.
-import { SECTIONS, ROLES, roleChoices, CHOOSE_DECIDER, NOTES, MERGE, MUST_FIX, ROUNDS, ARCHIVE, ABOUT, BACKUP, REACTIONS, upgradeReactions, NOTIFY_ABOUT, TITLE, SPACE_TITLE,
+import { SECTIONS, ROLES, roleChoices, roleSel, CHOOSE_DECIDER, NOTES, MERGE, MUST_FIX, ROUNDS, ARCHIVE, ABOUT, BACKUP, REACTIONS, upgradeReactions, NOTIFY_ABOUT, TITLE, SPACE_TITLE,
   EVERYWHERE, CHANGED_HERE, RESET, EDIT_INSTRUCTIONS, USE_OTHER_CLI, LOADING_AGENTS, SAVED, sameAs as sameAsWords,
   spacesOwn, otherCliWords, backupProblem, notifyMachineAbout, machineLabel, TASK_ROWS, LEVEL } from "./core/settings.js";
 
@@ -321,7 +321,11 @@ export default class ShepherdrSettings extends View {
   resetRoles() {
     const eff = shepherdrFor(this.cfg, this.scope);
     for (const r of ROLES) {
-      if (r.fixedAgent) continue;
+      if (r.id === "debugger") {
+        const { sel, unset } = roleSel(r.id, eff[r.id], this.data);
+        this.roles[r.id] = { ...(this.roles[r.id] ?? {}), sel: sel ? { ...sel } : null, data: roleChoices(this.data, r.id), saved: JSON.stringify(sel), unset, chosen: false };
+        continue;
+      }
       let sel = eff[r.id] ?? null;
       const unset = !sel;
       if (!sel && r.id === "reviewer" && this.data?.menus?.[this.otherCli()]) {
@@ -498,12 +502,12 @@ export default class ShepherdrSettings extends View {
     const c = this.roles[r.id];
     const label = r.id === "decider" && c?.unset ? CHOOSE_DECIDER : r.id === "reviewer" && c?.unset ? otherCliWords(this.otherCli()) : undefined;
     const control = h_flex().gap(8).items_center()
-      .child(c?.sel ? models.modelButton(t, c, { label }, cx) : div().text_size(TEXT.label).text_color(t.dim).child(r.fixedAgent ?? LOADING_AGENTS))
+      .child(c?.sel ? models.modelButton(t, c, { label }, cx) : div().text_size(TEXT.label).text_color(t.dim).child(r.id === "debugger" && this.data ? "Codex unavailable" : LOADING_AGENTS))
       .when(!this.scope && r.id === "reviewer" && c && !c.unset,
         (el) => el.child(button("reviewer-other", USE_OTHER_CLI, { kind: "plain", onClick: (_e, cx) => this.reset("reviewer", null, cx) })))
       .when(!this.scope, (el) => el.child(button(`edit-${r.id}`, EDIT_INSTRUCTIONS,
         { onClick: () => this.edit({ id: r.id, title: r.told, file: `${TEMPLATES()}/${r.file}` }) })));
-    return this.row(t, r.title, r.about, control, r.fixedAgent ? null : this.scoped(r.id, null));
+    return this.row(t, r.title, r.about, control, this.scoped(r.id, null));
   }
 
   // Reactions, for every agent (herdr-task's reactions.py): Assistants, task workers,

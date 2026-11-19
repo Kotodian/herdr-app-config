@@ -34,7 +34,7 @@ const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, "utf8"
 /** A space Settings can scope to: its id (machine/id for another machine's), name, machine, and repo folder. */
 export type Scope = { id: string; name: string; machine: string | null; folder?: string | null };
 
-export const ROLES: { id: string; title: string; about: string; file: string; told: string; fixedAgent?: string }[] = CORE_ROLES;
+export const ROLES: { id: string; title: string; about: string; file: string; told: string }[] = CORE_ROLES;
 const NOTES: { id: string; title: string; about: string; example: string }[] = CORE_NOTES;
 // Machines: when new tasks wait (each a percent; CPU as a share of all cores), and how task agents run
 const LIMIT_STEPS: Record<string, { min: number; max: number; step: number; scale: number }> = {
@@ -191,15 +191,13 @@ export class Settings {
     const scope = s?.id ?? null;
     const worker = this.pick(scope, "worker", null).value?.agent ?? "claude";
     const rows: SettingRow[] = ROLES.map((r) => {
-      if (r.fixedAgent) return { label: r.title, key: `role.${r.id}`, value: r.fixedAgent, hint: r.about,
-        fixed: true, ...(s ? {} : { file: r.file }) };
       const menus = roleChoices(this.choices, r.id)?.menus;
       const p = this.pick(scope, r.id, null);
       // as the window's model button: what it runs, "Opus 5.5 · 1M · High"; an unset Reviewer says "Other CLI (Codex)"
       const button = (v: any) => {
         if (!this.choices) return LOADING_AGENTS;
         const { sel, unset } = roleSel(r.id, v ?? null, this.choices, worker);
-        return unset && r.id === "decider" ? CHOOSE_DECIDER : unset && r.id === "reviewer" && sel ? otherCliWords(otherCli(worker)) : sel ? modelLabel(menus, sel) : LOADING_AGENTS;
+        return unset && r.id === "decider" ? CHOOSE_DECIDER : unset && r.id === "reviewer" && sel ? otherCliWords(otherCli(worker)) : sel ? modelLabel(menus, sel) : r.id === "debugger" ? "Codex unavailable" : LOADING_AGENTS;
       };
       const { sel, unset } = roleSel(r.id, p.value ?? null, this.choices, worker);
       // on Everywhere its row has "Edit instructions" too (the same for every space), and a set Reviewer "Use other CLI"
@@ -441,7 +439,7 @@ export class Settings {
       put("tasks", "branch", v || null);
     } else if (section === "tasks" && /^(start|finish)_notes$/.test(field)) {
       put("tasks", field, word === null ? null : word.slice(0, 8000));
-    } else if (section === "role" && ROLES.some((r) => r.id === field && !r.fixedAgent)) {
+    } else if (section === "role" && ROLES.some((r) => r.id === field)) {
       // a role's agent: { agent, model, effort, fast } as the window's model button keeps it
       let v: any = null;
       if (word !== null) {
@@ -449,10 +447,12 @@ export class Settings {
         const ok = (x: unknown) => x == null || (typeof x === "string" && /^[\w.\[\]-]{1,60}$/.test(x));
         const modelOk = v?.model == null || (typeof v.model === "string" && /^[\w./:[\]-]{1,200}$/.test(v.model));
         if (!["claude", "codex"].includes(v?.agent) || !modelOk || !ok(v.effort)) throw new Error("Pick Claude Code or Codex.");
+        if (field === "debugger" && v.agent !== "codex") throw new Error("Pick a Codex model for Debugger.");
         // its permission mode, as the window's Permissions pick (one of the CLI's modes; none: the CLI's own default)
         const PERM: Record<string, string[]> = { claude: ["manual", "auto", "acceptEdits", "plan", "bypassPermissions"], codex: ["read-only", "auto", "full"] };
         if (v.perm != null && !PERM[v.agent].includes(v.perm)) throw new Error("Not one of its permission modes.");
         v = { agent: v.agent, model: v.model ?? null, effort: v.effort ?? null, fast: !!v.fast, perm: v.perm ?? null };
+        if (field === "debugger") v = { ...v, fast: false, perm: "read-only" };
       }
       put(field, null, v);
     } else if (section === "autopilot" && AP.FIELDS.includes(field)) {

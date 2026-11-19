@@ -41,14 +41,16 @@ def generated_mod_file(rel):
     return (len(parts)==5 and parts[:3]==(*SHEPHERDR.parts,'mods') and
             rel.name in {'gpui-kit.d.ts','herdr.d.ts','jsconfig.json'})
 
+def local_build_file(rel):
+    return rel.parts[:4]==(*SHEPHERDR.parts,'web','dist')
+
 def shepherdr_source(rel):
-    """Portable release code, including helpers and built web assets; never machine data."""
+    """Portable source and helpers. Build output and machine data stay local."""
     if rel.parts[:2]!=SHEPHERDR.parts or generated_mod_file(rel):return False
     tail=rel.parts[2:]
     if len(tail)==1:return tail[0] in SHEPHERDR_ROOT_FILES
     if len(tail)<2 or tail[0] not in SHEPHERDR_FOLDERS:return False
-    if any(x in OMIT-{'bin','dist'} or x.startswith('.') for x in tail):return False
-    if 'dist' in tail and tail[:2]!=('web','dist'):return False
+    if any(x in OMIT-{'bin'} or x.startswith('.') for x in tail):return False
     name=PurePosixPath(*tail).as_posix()
     return rel.suffix in TEXT|ASSETS or name in SHEPHERDR_EXECUTABLES or rel.name in ('LICENSE','NOTICE','COPIES')
 
@@ -112,7 +114,7 @@ def collect(app):
         sources.extend(coordinator/name for name in ('package.json','bun.lock','LICENSE') if (coordinator/name).exists())
     if shepherdr.exists():
         for directory,dirs,names in os.walk(shepherdr):
-            dirs[:]=[d for d in dirs if not d.startswith('.') and d not in OMIT-{'bin','dist'}]
+            dirs[:]=[d for d in dirs if not d.startswith('.') and d not in OMIT-{'bin'}]
             for name in names:
                 p=Path(directory)/name
                 if p.is_file() and shepherdr_source(PurePosixPath(p.relative_to(app).as_posix())):sources.append(p)
@@ -159,13 +161,13 @@ def validate(folder=None):
         p=folder.joinpath(*rel.parts)
         if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent!=folder.parent):raise RuntimeError('Snapshot contains a symlink')
         # Older manifests listed these local files even though Git ignored them.
-        if generated_mod_file(rel):continue
+        if generated_mod_file(rel) or local_build_file(rel):continue
         shepherdr=shepherdr_source(rel)
         integration=coordinator_source(rel) or shepherdr
         screenshot=rel.parts[:2]==('docs','screenshots') and len(rel.parts)==3 and rel.suffix=='.png'
         allowed=integration or screenshot or (rel.parts[0] in ('mods','layouts','themes') and len(rel.parts)>1) or name in ('keys.json','settings.json','programs.json','git-workflow.json','sync-app.py','tests/test_sync_app.py','README.md','.gitignore')
         if not allowed or any((x.startswith('.') and name!='.gitignore' and not integration) or
-                              (x in OMIT and not (shepherdr and x in ('bin','dist'))) for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
+                              (x in OMIT and not (shepherdr and x=='bin')) for x in rel.parts):raise RuntimeError('Refusing runtime/state file: '+name)
         if rel.parts[0]=='mods' and (rel.suffix not in TEXT|ASSETS and rel.name not in ('LICENSE','NOTICE')):raise RuntimeError('Unexpected mod file')
         data=p.read_bytes()
         if digest(data)!=info['sha256'] or SECRET.search(data):raise RuntimeError('Snapshot integrity/secret check failed: '+name)
@@ -446,7 +448,7 @@ def merge_files(baseline,local,remote,resolved=None):
     merged={};conflicts=[]
     for name in sorted(set(baseline)|set(local)|set(remote)):
         rel=PurePosixPath(name)
-        if generated_mod_file(rel):continue
+        if generated_mod_file(rel) or local_build_file(rel):continue
         if len(rel.parts)>2 and rel.parts[0]=='mods' and rel.parts[1] in local_artifacts:continue
         left=local.get(name);right=remote.get(name);old=baseline.get(name)
         lh=None if left is None else digest(left);rh=None if right is None else digest(right)
@@ -529,8 +531,9 @@ def auto_sync(app):
             # the temporary ours tree is replaced by that validated content before committing.
             git('merge','--no-commit','--no-ff','--strategy=ours',remote_ref)
             history_merge_started=True
-        _,checkout=validate()
-        if hashes(merged)!=hashes(checkout) or history_merge_started:
+        checkout_manifest,checkout=validate()
+        legacy_build=any(local_build_file(PurePosixPath(name)) for name in checkout_manifest.get('files',{}))
+        if hashes(merged)!=hashes(checkout) or legacy_build or history_merge_started:
             mods=sorted({PurePosixPath(n).parts[1] for n in merged if n.startswith('mods/')})
             snapshot(merged,mods);validate()
             git('add','-A','--','.')

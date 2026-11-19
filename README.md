@@ -289,6 +289,7 @@ Artifacts、Inbox 和 Tasks 不需要额外账号连接，随 Shepherdr 安装�
 - 同步布局、主题、键位、自定义面板、README 截图和 Shepherdr 发行文件。
 - 任务、聊天、worktree、登录、凭据、终端会话和窗口状态留在各自机器。
 - Herdr 生成的模组类型声明、编辑器配置和新任务 Artifact 留在本机。
+- Shepherdr's Web build output stays local. Sync distributes the source, and each machine builds its own `web/dist`.
 - 两边内容冲突时停止覆盖并保留双方；删除差异需要明确处理。
 
 排查位置：
