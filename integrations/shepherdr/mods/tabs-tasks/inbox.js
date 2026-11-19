@@ -57,9 +57,11 @@ export function chatOf(address) {
   return c && panes().some((p) => p.pane === c && p.mod === "chat") ? c : null;
 }
 
-// On screen as a terminal: its pane is in the shown tab, with no chat showing it.
+// A focused terminal can also be a layout block or a peek without a model pane.
 function onScreen(address) {
-  const tab = focused()?.tab;
+  const focus = focused();
+  if ((focus?.shown ?? focus?.terminal) === address) return true;
+  const tab = focus?.tab;
   return Boolean(tab) && panes().some((p) => p.terminal === address && p.tab === tab) && !chatOf(address) && !threadShown(address);
 }
 
@@ -188,7 +190,14 @@ export function toAlert(args) {
   const terminal = args?.terminal;
   if (!terminal) return;
   const k = terminals().find((x) => x.address === terminal);
-  if (k?.labels?.["herdr.task"] && hasNode(layout(), "tasks-thread")) {
+  const waiting = k?.state === "live" && (k.status === "blocked" || (shared("inbox.asks") ?? []).some((ask) => ask.terminal === terminal));
+  if (waiting && focusTerminalPane(terminal)) return;
+  const tree = layout();
+  if (k?.labels?.["herdr.task"] && findNode(tree, "tasks-thread")) {
+    if (waiting && findNode(tree, "tasks-thread-body")?.active === "tasks-thread-term") {
+      peekTerminal(terminal);
+      return;
+    }
     setShared("tasks.thread", { terminal, task: null, title: agentInfo(terminal)?.title ?? null, at: Date.now() });
     run("layout.select", { stack: "panel-body", child: "tasks" });
     run("layout.select", { stack: "tasks", child: "tasks-thread" });
@@ -386,18 +395,33 @@ export function toAgent(address) {
   // A task worker's thread, open beside its coordinator's chat (mods/chat).
   const thread = Object.entries(shared("chat.threads") ?? {}).find(([p, v]) => v?.terminal === address && panes().some((x) => x.pane === p))?.[0];
   if (thread) { selectTabOf(thread); run("pane.focus", { pane: thread }); return; }
-  const p = panes().find((x) => x.terminal === address);
-  if (p) { selectTab(p.tab); run("pane.focus", { pane: p.pane }); return; }
+  if (focusTerminalPane(address)) return;
   // No pane (a task worker runs without one): peek at its terminal over the tab.
   peekTerminal(address);
+}
+
+function focusTerminalPane(address) {
+  const pane = panes().find((x) => x.terminal === address);
+  if (!pane) return false;
+  selectTab(pane.tab);
+  run("pane.focus", { pane: pane.pane });
+  return true;
 }
 
 // A terminal with no pane (a task worker or reviewer, which has no tab by design): its raw
 // screen in the Tasks panel's task view, Terminal side (mods/chat/panel.js openTaskThread(),
 // then requestWorkerTerminal()). A layout without that view gets Herdr's own peek.
-const hasNode = (n, id) => Boolean(n && typeof n === "object") && (n.id === id || (n.children ?? []).some((c) => hasNode(c, id)));
+function findNode(node, id) {
+  if (node?.id === id) return node;
+  for (const child of node?.children ?? []) {
+    const match = findNode(child, id);
+    if (match) return match;
+  }
+  return null;
+}
+
 export function peekTerminal(terminal, task = null, title = null) {
-  if (!hasNode(layout(), "tasks-thread")) { run("terminal.peek", { terminal }); return; }
+  if (!findNode(layout(), "tasks-thread")) { run("terminal.peek", { terminal }); return; }
   setShared("tasks.thread", { terminal, task, title: title ?? agentInfo(terminal)?.title ?? null, at: Date.now() });
   run("layout.select", { stack: "panel-body", child: "tasks" });
   run("layout.select", { stack: "tasks", child: "tasks-thread" });

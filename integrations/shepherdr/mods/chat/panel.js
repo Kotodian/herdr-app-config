@@ -108,7 +108,7 @@ export class PanelHost {
   constructor(Chat, head) {
     this.Chat = Chat;
     this.head = head === true;
-    this.termReqAt = shared("tasks.thread.termreq")?.at ?? null;
+    this.termReqAt = null;
     this.restartReqAt = shared("chat.restartreq")?.at ?? null;
     this.busy = false;     // the header's swap to the terminal, under way
     this.cur = null;

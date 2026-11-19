@@ -238,6 +238,9 @@
     "integrations/shepherdr/core/host.test.js": {
       "sha256": "985de305366944230198f13fdb7fb9b3af38ffc613f00975b0caf483cb1e75f5"
     },
+    "integrations/shepherdr/core/inbox-terminal.test.js": {
+      "sha256": "54bf303ea7805857bccd500f4490f7c3dfa93ebecfda398a6d626fc5c14f36e2"
+    },
     "integrations/shepherdr/core/keys.js": {
       "sha256": "28e0032352c48dc815b63533b4c61a04087ed413ad7caa6c22ea165cb9a03e3e"
     },
@@ -545,7 +548,7 @@
       "sha256": "e84e8e87cc2d941a58ff6cf394899a8ae3b1b2d46cc193b001c8a51660deb1e5"
     },
     "integrations/shepherdr/lib/inbox.js": {
-      "sha256": "54c1508c4a569b6499a284238d3b6179d037206f95c7908656bb94f26298a3dd"
+      "sha256": "abc90aa85f05b09b6491da04fb801771d1af5980ed788f95645c19a8e1cbf1ac"
     },
     "integrations/shepherdr/lib/keyholder.js": {
       "sha256": "415f37dc996a419eb2092199c96da0e1b97946335004d340107a336d4b462523"
@@ -1022,7 +1025,7 @@
       "sha256": "17af1ffe9895960160a4133d7e252e4a1e99c0e9595b9ba8db0d48d47a6bd326"
     },
     "integrations/shepherdr/mods/chat/panel.js": {
-      "sha256": "ea79695905677d8895c6e1261d1d6bf37e2ebfa1b4e7880bb0ac21eea9b3e265"
+      "sha256": "769fdb8791957dea9aaa4f3b9c0a434925035d0d9ea8b9c81d82f9d5c6d58bfb"
     },
     "integrations/shepherdr/mods/chat/paperclip.svg": {
       "sha256": "7f169197671d317ad4c41c93e2d304bef7ffcd8adecc8f5f17ed201614402ffd"
@@ -1640,7 +1643,7 @@
       "sha256": "35b7579151c76436d634070217f807e7dd1d6e07375a039274c1543ed8fe4e75"
     },
     "integrations/shepherdr/mods/spaces-chat/inbox.js": {
-      "sha256": "54c1508c4a569b6499a284238d3b6179d037206f95c7908656bb94f26298a3dd"
+      "sha256": "abc90aa85f05b09b6491da04fb801771d1af5980ed788f95645c19a8e1cbf1ac"
     },
     "integrations/shepherdr/mods/spaces-chat/inbox.svg": {
       "sha256": "6520fc46984d8baf82917442d8a35bb9a72355595f3c3b3266f8016aaa8abf9f"
@@ -1739,7 +1742,7 @@
       "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
     },
     "integrations/shepherdr/mods/tabs-tasks/inbox.js": {
-      "sha256": "54c1508c4a569b6499a284238d3b6179d037206f95c7908656bb94f26298a3dd"
+      "sha256": "abc90aa85f05b09b6491da04fb801771d1af5980ed788f95645c19a8e1cbf1ac"
     },
     "integrations/shepherdr/mods/tabs-tasks/live.js": {
       "sha256": "eb9aa31a4e0e08b223afbe5b4052efb3207fc8ad1b1703c5591eaa4ac6f9ae81"
@@ -2045,7 +2048,7 @@
       "sha256": "419dd9d3323d61093e9851921f2ae192ceff7985c3964f51bdc8a563248ef581"
     },
     "integrations/shepherdr/mods/tasks/inbox.js": {
-      "sha256": "54c1508c4a569b6499a284238d3b6179d037206f95c7908656bb94f26298a3dd"
+      "sha256": "abc90aa85f05b09b6491da04fb801771d1af5980ed788f95645c19a8e1cbf1ac"
     },
     "integrations/shepherdr/mods/tasks/keyholder.js": {
       "sha256": "415f37dc996a419eb2092199c96da0e1b97946335004d340107a336d4b462523"
@@ -2333,7 +2336,7 @@
       "sha256": "0522e062f8ce06cfe25c59ffd88faea7a21904b95f0cef97567991048d0b2c0f"
     },
     "integrations/shepherdr/mods/workspace-status-chat/inbox.js": {
-      "sha256": "54c1508c4a569b6499a284238d3b6179d037206f95c7908656bb94f26298a3dd"
+      "sha256": "abc90aa85f05b09b6491da04fb801771d1af5980ed788f95645c19a8e1cbf1ac"
     },
     "integrations/shepherdr/mods/workspace-status-chat/live.js": {
       "sha256": "eb9aa31a4e0e08b223afbe5b4052efb3207fc8ad1b1703c5591eaa4ac6f9ae81"
