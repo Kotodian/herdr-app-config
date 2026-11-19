@@ -619,13 +619,13 @@ function Control({ row, phone, set, edit, level }: { row: SettingRow; phone: boo
   const action = row.key in registry.settingActions
   // a role's agent: the window's model button, and on Everywhere "Use other CLI" (a set Reviewer) and Edit
   // instructions (the file every agent of the role is told first)
-  if (row.agent) {
+  if (row.agent || (row.file && row.key.startsWith('role.'))) {
     const role = row.key.split('.')[1]
     const told = ST.ROLES.find((r: { id: string }) => r.id === role)?.told ?? row.label
     return (
       <span className="flex max-w-full flex-wrap items-center justify-end gap-1.5">
-        <ModelButton row={row} level={level ?? 'all'} />
-        {row.agent.other ? <Ghost onClick={() => set(null as unknown as string)}>{ST.USE_OTHER_CLI}</Ghost> : null}
+        {row.agent ? <ModelButton row={row} level={level ?? 'all'} /> : <span className="text-fg2">{row.value}</span>}
+        {row.agent?.other ? <Ghost onClick={() => set(null as unknown as string)}>{ST.USE_OTHER_CLI}</Ghost> : null}
         {row.file ? <Ghost onClick={() => openRole({ kind: 'file', role, title: told, file: row.file! })}>{ST.EDIT_INSTRUCTIONS}</Ghost> : null}
       </span>
     )

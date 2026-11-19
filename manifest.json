@@ -197,7 +197,7 @@
       "sha256": "7dd07b7adc4e9efea3f45cd4404b1993091794b2801243c807f1fa563be572dd"
     },
     "integrations/shepherdr/core/chat-view.js": {
-      "sha256": "6d2385a84ad7458a8ef208718a848e02beb87fdb549dbcc62e2fe3d4b09af6ad"
+      "sha256": "bb68a6b6735ce8d8e165d43f75805c19590f708bfa3546f86881c7e00510b6a1"
     },
     "integrations/shepherdr/core/chat-view.test.js": {
       "sha256": "d4035a4a5a2aef0d32d73531cddc526909f438024a49939bd74675ed8ad364d9"
@@ -362,7 +362,7 @@
       "sha256": "b720914e06b8ce2cdbfe67489da06ec08033a549df2e26ee2f4689ec34ec7881"
     },
     "integrations/shepherdr/core/settings.js": {
-      "sha256": "bb0fc9da75c17213df546b7630dabf7bb84bb21148c1846d85f97e3f18bd965c"
+      "sha256": "495509a7c249c7710966a66fbfabf8a081fe88bc27e57808f230213772e0b3a9"
     },
     "integrations/shepherdr/core/settings.test.js": {
       "sha256": "de972c546a880f22fc1941179d7caf85f7a6aeceee965cfe62b40b1307a4c6ef"
@@ -1004,7 +1004,7 @@
       "sha256": "bb7f49c0d1db74ac4245a0112d072ec85b9e3d57c1ca94033d33ca25fc94a689"
     },
     "integrations/shepherdr/mods/chat/main.js": {
-      "sha256": "e2b42b6f96c6b5d8f36747c78ab3ac861f3e5bb311f67b1c8d76af319e66ca48"
+      "sha256": "62234bf26b7ec5ba1ac46f895a2d1b7c9de7e38418391960078a793dbbe39ff5"
     },
     "integrations/shepherdr/mods/chat/message.svg": {
       "sha256": "02b280ca9c74aa6c4bb082031f22718f4ab89d22c5c8adc0ef4de9bbd9d06eb4"
@@ -1541,7 +1541,7 @@
       "sha256": "78d35e5659a8bdd6e67013d35bbef6f6cf3a5a52d2db0987adf4193fbaf0e31c"
     },
     "integrations/shepherdr/mods/shepherdr-settings/main.js": {
-      "sha256": "9f2d8b07cb963e7e87e68339902e2f68cb1d789fa969013d84139b3baa572a52"
+      "sha256": "1196af036a1aa83b1a07bd13ba01b4a326f0488a21d393d127614f67162c610a"
     },
     "integrations/shepherdr/mods/shepherdr-settings/mod.json": {
       "sha256": "7e872739efe8a6ee97b5b5e77eb8c8dc3cfbfecdfef80dc438864044dc18bdd7"
@@ -2585,7 +2585,7 @@
       "sha256": "e1963784752436164384c25c0099f28c018ac4dd0866d50127a944c83f097350"
     },
     "integrations/shepherdr/service/settings.ts": {
-      "sha256": "71eefa6fb986645e84e8e080c96fbfca11935a6b379d6da82a19a7c1989689c5"
+      "sha256": "6e80398bd0ecedec4297b972bb4489adc2d9c5d034fd62a8f8274e292738c2cc"
     },
     "integrations/shepherdr/service/show.test.ts": {
       "sha256": "07bc2d372d48fcdc65475f7cf64beb3f72a422b9b8f13aa24fbefebb4a8749f8"
@@ -2867,7 +2867,7 @@
       "sha256": "9b0175caa4f69d3c036a003d66bfd1ce1b92fc5dbb312df5c857fd0888f222f7"
     },
     "integrations/shepherdr/web/plugins/chat/client.tsx": {
-      "sha256": "094c6b7453f1b5126c4e63ffdfc598301275740fce8561b4298eb7f1d8cc6dbd"
+      "sha256": "b313f0d84081f57ea282c9c6b86671ee6022a4539b4cf17b7d15d944116f1827"
     },
     "integrations/shepherdr/web/plugins/chat/days.ts": {
       "sha256": "554769b46caa9ece25bc6b557e767748f34f67dea1b5a8cbbada753215c71fdc"
@@ -3140,7 +3140,7 @@
       "sha256": "ecede59878135c63fd0f7b833f124e31effbb4c0fff18a73804533600cc24452"
     },
     "integrations/shepherdr/web/src/Settings.tsx": {
-      "sha256": "33696922b21d8d2c428a45aad661ace834d99cbedc803d4ecefcc6c30d291369"
+      "sha256": "b15ccf0b72dc53c5b4694084172058bc0c7bdd97d5f21e36d7351b5212603dc9"
     },
     "integrations/shepherdr/web/src/Stack.tsx": {
       "sha256": "7612e20b05447c95a253894709a095a8b5314873fe47ce6e47088215594b51ae"

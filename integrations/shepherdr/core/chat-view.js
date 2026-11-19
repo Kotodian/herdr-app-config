@@ -359,6 +359,11 @@ export function fitThumbs(sizes, width = Infinity) {
 // chat as a subagent row: its role and CLI, working / needs / done, how long, opening to its last messages and its own
 // chat. One that ended stays a while (it reported, its parent ended it).
 export const HELPER_ROLES = ["reviewer", "helper", "debugger"];
+const DEBUGGER_REQUEST = "请先确认这个问题是否影响 main。确认后，请启动只读 Debugger 定位原因。";
+export function debuggerDraft(text) {
+  if (text.startsWith(DEBUGGER_REQUEST)) return text;
+  return `${DEBUGGER_REQUEST}\n\n${text}`;
+}
 export const subagentWord = (status) => (status === "working" ? WORDS.working : status === "needs" ? WORDS.needsYou : WORDS.subDone);
 export const SUBAGENT_KEEP_MS = 60 * 60000;
 

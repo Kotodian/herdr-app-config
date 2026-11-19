@@ -65,6 +65,8 @@ export const ROLES = [
     told: "What the bug and feature classifier is told first" },
   { id: "coordinator", title: "Assistant", about: "Plans the work and starts a task for each part.", file: "assistant.md",
     told: "What every Assistant is told first" },
+  { id: "debugger", title: "Debugger", about: "Investigates bugs confirmed on main.", file: "debugger.md",
+    told: "What every Debugger is told first", fixedAgent: "Codex · Read only" },
   { id: "worker", title: "Workers", about: "Do one task each.", file: "worker.md", told: "What every worker is told first" },
   { id: "reviewer", title: "Reviewer", about: "Checks each task's work before it's ready.", file: "reviewer.md",
     told: "What every reviewer is told first" },
@@ -77,6 +79,7 @@ export const INSTRUCTIONS = {
   notes: {
     decider: "Classifies code requests as bug or feature. The Assistant decides how to handle them.",
     coordinator: "Every Assistant uses this. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply when an Assistant restarts.",
+    debugger: "These instructions apply to the next read-only diagnosis.",
     worker: "Every worker gets this first. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply to the next task that starts.",
     reviewer: "Every reviewer gets this first. Repo-specific rules go in the repo's AGENTS.md or CLAUDE.md. Changes apply to the next review.",
     heartbeat: "Autopilot's heartbeat, plain text: an Assistant on Autopilot gets it on every wake. Changes apply from the next wake.",

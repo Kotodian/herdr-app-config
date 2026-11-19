@@ -34,7 +34,7 @@ const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, "utf8"
 /** A space Settings can scope to: its id (machine/id for another machine's), name, machine, and repo folder. */
 export type Scope = { id: string; name: string; machine: string | null; folder?: string | null };
 
-export const ROLES: { id: string; title: string; about: string; file: string; told: string }[] = CORE_ROLES;
+export const ROLES: { id: string; title: string; about: string; file: string; told: string; fixedAgent?: string }[] = CORE_ROLES;
 const NOTES: { id: string; title: string; about: string; example: string }[] = CORE_NOTES;
 // Machines: when new tasks wait (each a percent; CPU as a share of all cores), and how task agents run
 const LIMIT_STEPS: Record<string, { min: number; max: number; step: number; scale: number }> = {
@@ -191,6 +191,8 @@ export class Settings {
     const scope = s?.id ?? null;
     const worker = this.pick(scope, "worker", null).value?.agent ?? "claude";
     const rows: SettingRow[] = ROLES.map((r) => {
+      if (r.fixedAgent) return { label: r.title, key: `role.${r.id}`, value: r.fixedAgent, hint: r.about,
+        fixed: true, ...(s ? {} : { file: r.file }) };
       const menus = roleChoices(this.choices, r.id)?.menus;
       const p = this.pick(scope, r.id, null);
       // as the window's model button: what it runs, "Opus 5.5 · 1M · High"; an unset Reviewer says "Other CLI (Codex)"
@@ -439,7 +441,7 @@ export class Settings {
       put("tasks", "branch", v || null);
     } else if (section === "tasks" && /^(start|finish)_notes$/.test(field)) {
       put("tasks", field, word === null ? null : word.slice(0, 8000));
-    } else if (section === "role" && ROLES.some((r) => r.id === field)) {
+    } else if (section === "role" && ROLES.some((r) => r.id === field && !r.fixedAgent)) {
       // a role's agent: { agent, model, effort, fast } as the window's model button keeps it
       let v: any = null;
       if (word !== null) {

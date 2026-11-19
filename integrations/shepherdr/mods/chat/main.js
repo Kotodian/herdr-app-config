@@ -34,7 +34,7 @@ import { ChatReader } from "./core/chat-reader.js";
 import { preview } from "./core/recipe.js";
 import { words, howAnswered, codexOnScreen, codexSteps } from "./core/asks.js";
 // The rows' words and rules the web app's chat draws by too (core/chat-view.js).
-import { WORDS, clock, bgGroups, subagentsOf, subagentWord, senderName, briefLabel, firstUser, firstKeys, literal, fromName, sentTo, selfName, initialOf, newsWords, resolveArtifacts, unsigned, ownWords, fitThumbs, bandActs, bandOrder, imagesLine, questionsBelow, notSent, published, artifactLine, videoLine, mediaIn, elapsed, reportMsg, doingWords, LOST, lostMessage, shellWord, sessionStarted, sessionFailed } from "./core/chat-view.js";
+import { WORDS, clock, bgGroups, subagentsOf, subagentWord, debuggerDraft, senderName, briefLabel, firstUser, firstKeys, literal, fromName, sentTo, selfName, initialOf, newsWords, resolveArtifacts, unsigned, ownWords, fitThumbs, bandActs, bandOrder, imagesLine, questionsBelow, notSent, published, artifactLine, videoLine, mediaIn, elapsed, reportMsg, doingWords, LOST, lostMessage, shellWord, sessionStarted, sessionFailed } from "./core/chat-view.js";
 // Sending the person's words, as the web app does (core/send.js).
 import { refusal, taskTag, messageBody, replyInstead, steerNow, reactionLine, mentionedIn, sendTyped, SETTLE } from "./core/send.js";
 // hc whose send goes as the person, with no caller: never "Another agent" on another machine (SHEP-3, core/person.js).
@@ -4509,6 +4509,17 @@ export default class Chat extends View {
           .hover((s) => s.bg(t.hover).text_color(t.foreground))
           .tooltip("选择当前 Agent 的技能，也可输入 $ 后搜索")
           .on_click((_e, cx) => { cx.stop_propagation(); this.openSkills(cx); cx.notify(); }).child("技能")))
+        .when(ready && (this.role === "coordinator" || assistant(this.t)), (el) => el.child(
+          h_flex().id("chat-debugger").h(28).px(7).flex_none().items_center().rounded(6).cursor_pointer()
+            .text_size(12).text_color(t.muted).hover((s) => s.bg(t.hover).text_color(t.foreground))
+            .tooltip("Draft a read-only bug diagnosis request")
+            .on_click((_e, cx) => {
+              cx.stop_propagation();
+              this.box.set_value(debuggerDraft(this.box.value()));
+              this.box.focus();
+              this.saveSoon(cx);
+              cx.notify();
+            }).child("Debugger")))
         .child(div().flex_1().min_w(0).truncate().text_size(12).text_color(t.blocked).child(rec === "idle" ? this.dict.error ?? "" : ""))
         .when(Boolean(this.addr), (el) => el.children(this.pickParts(t, true)))
         .when(!this.addr && this.phase === "fresh" && Boolean(this.choice?.sel) && Boolean(cx), (el) => el.child(this.freshPick(t, cx)))

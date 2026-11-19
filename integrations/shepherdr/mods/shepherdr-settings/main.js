@@ -321,6 +321,7 @@ export default class ShepherdrSettings extends View {
   resetRoles() {
     const eff = shepherdrFor(this.cfg, this.scope);
     for (const r of ROLES) {
+      if (r.fixedAgent) continue;
       let sel = eff[r.id] ?? null;
       const unset = !sel;
       if (!sel && r.id === "reviewer" && this.data?.menus?.[this.otherCli()]) {
@@ -497,12 +498,12 @@ export default class ShepherdrSettings extends View {
     const c = this.roles[r.id];
     const label = r.id === "decider" && c?.unset ? CHOOSE_DECIDER : r.id === "reviewer" && c?.unset ? otherCliWords(this.otherCli()) : undefined;
     const control = h_flex().gap(8).items_center()
-      .child(c?.sel ? models.modelButton(t, c, { label }, cx) : div().text_size(TEXT.label).text_color(t.dim).child(LOADING_AGENTS))
+      .child(c?.sel ? models.modelButton(t, c, { label }, cx) : div().text_size(TEXT.label).text_color(t.dim).child(r.fixedAgent ?? LOADING_AGENTS))
       .when(!this.scope && r.id === "reviewer" && c && !c.unset,
         (el) => el.child(button("reviewer-other", USE_OTHER_CLI, { kind: "plain", onClick: (_e, cx) => this.reset("reviewer", null, cx) })))
       .when(!this.scope, (el) => el.child(button(`edit-${r.id}`, EDIT_INSTRUCTIONS,
         { onClick: () => this.edit({ id: r.id, title: r.told, file: `${TEMPLATES()}/${r.file}` }) })));
-    return this.row(t, r.title, r.about, control, this.scoped(r.id, null));
+    return this.row(t, r.title, r.about, control, r.fixedAgent ? null : this.scoped(r.id, null));
   }
 
   // Reactions, for every agent (herdr-task's reactions.py): Assistants, task workers,

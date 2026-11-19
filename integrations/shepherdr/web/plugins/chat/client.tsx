@@ -2164,6 +2164,13 @@ function Composer({ chatKey, placeholder, cli, suggest = null }: { chatKey: stri
                   <PlusIcon className={ic} />
                 </IconButton>
               ) : null}
+              {chatKey.startsWith('p:') ? (
+                <button type="button" title="Draft a read-only bug diagnosis request"
+                  className="rounded-row px-2 py-1.5 text-[0.8125rem] text-fg2 hover:bg-hover hover:text-fg"
+                  onClick={() => { setText(CV.debuggerDraft(text)); ref.current?.focus() }}>
+                  Debugger
+                </button>
+              ) : null}
               <div className="flex-1" />
               <AgentLineKept chatKey={chatKey} cli={cli} />
               {Mic ? <MicKept chatKey={chatKey} /> : null}
