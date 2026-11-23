@@ -1,0 +1,5 @@
+{
+  "title": "LazyVim Keys",
+  "place": "none",
+  "overlay": { "kind": "popup", "at": "top", "offset": 48, "width": 560, "height": 344 }
+}

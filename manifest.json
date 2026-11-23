@@ -44,6 +44,7 @@
     "kanso-strip",
     "kanso-tabs",
     "kanso-toast",
+    "lazyvim-keys",
     "local-agenttrail-entry",
     "local-cloudflare",
     "local-cloudflare-entry",
@@ -3182,7 +3183,7 @@
       "sha256": "7236b10373017c27b62d323441aab3fb3da7ce0f87c865207ddd33f4c6775940"
     },
     "keys.json": {
-      "sha256": "3cff76d48fc89b4ee03310a9cb251ca4277854406e5d79b4cc3718839485be3a"
+      "sha256": "373faaedb75e23d72e146fbae96a830d604d7582850f36187987438efa672bdb"
     },
     "layouts/herdr-skillshare.json": {
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
@@ -5478,6 +5479,12 @@
     },
     "mods/kanso-toast/stack.js": {
       "sha256": "a10c663d81fac2d35017622940d3b665a9ab4e132b18fafd762fad07fb6c4592"
+    },
+    "mods/lazyvim-keys/main.js": {
+      "sha256": "c5dd59c9b792ceaad6e779775c8d9f1bb3a07f629d292ca737150d24e0d1170a"
+    },
+    "mods/lazyvim-keys/mod.json": {
+      "sha256": "c63200564b037be7275c3d17d4dd630392180b1fe33463c1a9d41845e554e485"
     },
     "mods/local-agenttrail-entry/layout.js": {
       "sha256": "9e953a6cb5e02bec601fed45fd8f2f12e8dcf3870b691c6868892dc9c1463de4"
