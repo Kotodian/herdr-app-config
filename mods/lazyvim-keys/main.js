@@ -137,8 +137,8 @@ export default class LazyVimKeys extends View {
         if (entry) this.select(entry, cx);
       })
       .child(div().text_size(14).child(this.menu.label))
-      .child(h_flex().flex_1().min_h(0).gap(8).children(columns.map((column, index) =>
-        v_flex().id(`lazyvim-key-list-${index}`).flex_1().min_w(0).min_h(0).overflow_y_scrollbar()
+      .child(h_flex().h(middle * 27).flex_none().gap(8).children(columns.map((column, index) =>
+        v_flex().id(`lazyvim-key-list-${index}`).flex_1().min_w(0)
           .children(column.map(([key, entry]) =>
             h_flex().id(`lazyvim-key-${keyLabel(key)}`).flex_none().h(27).px(6).gap(8)
               .items_center().rounded(4).cursor_pointer().hover(style => style.bg(colors.hover))
