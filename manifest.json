@@ -3187,6 +3187,9 @@
     "layouts/herdr-skillshare.json": {
       "sha256": "e9191066717e6c20815d8afd2745cf4a0be42a81b1aaa3c85c5bcdb9b61e3de7"
     },
+    "layouts/shepherdr-roxy.json": {
+      "sha256": "ee36108d730ceb34bf5f8d5ff5cf99eea9aa280130d7758603f770ee88fe54a2"
+    },
     "layouts/shepherdr.json": {
       "sha256": "5f442e8b94fce0c8f7e49095b4012df63eda8a01cc85748460e325f598972f5a"
     },
