@@ -83,6 +83,10 @@
             {
               "id": "main",
               "type": "block",
+              "background": {
+                "image": "backgrounds/roxy-casual.jpg",
+                "fit": "cover"
+              },
               "content": {
                 "tab": "active",
                 "pane": {
@@ -94,7 +98,7 @@
                     "height": 30,
                     "position": "top"
                   },
-                  "background": "background",
+                  "background": "#062a3199",
                   "border": {
                     "width": 1,
                     "color": "border"
